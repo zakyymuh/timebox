@@ -1,10 +1,8 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
     // No versions: all declared with versions in the root project's plugins block, which
     // is what keeps them in a single classloader scope so KGP can see AGP's types.
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    // No kotlin-android: AGP 9 compiles Kotlin itself and rejects that plugin.
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
 }
@@ -46,11 +44,6 @@ android {
     }
 }
 
-kotlin {
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
-    }
-}
 
 dependencies {
     implementation(project(":core"))
