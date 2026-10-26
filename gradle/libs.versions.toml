@@ -1,6 +1,14 @@
 [versions]
 # All resolved from the registries at implementation time, never from memory.
-agp = "9.4.1"
+#
+# AGP is deliberately NOT the latest (9.4.1). AGP 9 removed
+# com.android.build.gradle.api.BaseVariant, which Kotlin 2.4.21's Android target still
+# references, so the two newest stable releases cannot be used together:
+#   Failed to apply plugin 'com.android.internal.application'
+#     > Could not create an instance of type KotlinAndroidTarget
+#       > com/android/build/gradle/api/BaseVariant
+# AGP 9 needs Kotlin 2.5.0-Beta. A stable AGP one major behind beats a beta compiler.
+agp = "8.13.2"
 kotlin = "2.4.21"
 junit = "4.13.2"
 coreKtx = "1.19.1"
