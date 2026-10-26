@@ -40,6 +40,14 @@ kotlin {
 }
 
 dependencies {
+    // :core and the Android framework, nothing else. The spike has no androidx
+    // dependency at all — not one of its sources imports androidx — and adding
+    // core-ktx cost two CI runs: core-ktx 1.19.1 demands compileSdk 37 and AGP 9.1+,
+    // which it drags in through the AAR metadata check.
+    //
+    // When Tasks 2+ add Compose, Room and Glance this has to be faced properly:
+    // that means AGP 9.1+, compileSdk 37, and Gradle 9.6+ (AGP 9 does not have AGP 8's
+    // InternalProblems restriction). The classloader scoping that made AGP 9 look
+    // broken earlier is fixed, so that route should now be open.
     implementation(project(":core"))
-    implementation(libs.androidx.core.ktx)
 }
