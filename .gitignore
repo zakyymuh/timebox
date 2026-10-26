@@ -1,0 +1,15 @@
+# Superpowers execution scratch — the git history is the real record.
+.superpowers/
+
+# Gradle
+.gradle/
+build/
+local.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# macOS
+.DS_Store
