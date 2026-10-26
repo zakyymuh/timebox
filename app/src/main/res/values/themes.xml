@@ -1,9 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Timebox" parent="@android:style/Theme.Material.Light.NoActionBar" />
-
-    <!-- The gate covers whatever is underneath it completely. -->
-    <style name="Theme.Timebox.Gate" parent="@android:style/Theme.Material.NoActionBar.Fullscreen">
-        <item name="android:windowBackground">#101014</item>
-    </style>
 </resources>

@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Timebox</string>
-    <string name="accessibility_description">Lets Timebox see which app comes to the foreground, so it can stop you opening the ones that are off your plan for today. It reads app names only, never screen content.</string>
 </resources>

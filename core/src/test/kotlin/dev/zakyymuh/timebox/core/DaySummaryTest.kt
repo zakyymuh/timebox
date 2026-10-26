@@ -1,64 +1,53 @@
 package dev.zakyymuh.timebox.core
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 
 class DaySummaryTest {
 
-    private val t0 = Instant.parse("2026-10-27T09:00:00Z")
+    private val now = Instant.parse("2026-10-27T09:14:00Z")
     private val date = LocalDate.of(2026, 10, 27)
 
-    private fun b(id: Long, pos: Int, mins: Long) =
-        Block(id, pos, "block $id", Duration.ofMinutes(mins))
+    private fun item(id: Long, done: Boolean) =
+        TodoItem(id, id.toInt(), "item $id", if (done) now else null)
 
-    private fun day(vararg blocks: Block) = DayTimebox(date, "x", blocks.toList())
-
-    @Test
-    fun `summarise totals the planned durations of every block`() {
-        val s = DaySummaries.summarise(day(b(1, 0, 30), b(2, 1, 90)), t0)
-        assertEquals(Duration.ofMinutes(120), s.plannedTotal)
-    }
+    private fun day(vararg items: TodoItem) = DayList(date, "x", items.toList())
 
     @Test
-    fun `summarise totals actual time from done blocks only`() {
-        val done = b(1, 0, 30).copy(startedAt = t0, finishedAt = t0.plusSeconds(600))
-        val s = DaySummaries.summarise(day(done, b(2, 1, 90)), t0.plusSeconds(600))
-        assertEquals(Duration.ofMinutes(10), s.actualTotal)
-    }
-
-    @Test
-    fun `summarise includes the running block's elapsed time in actualTotal`() {
-        val done = b(1, 0, 30).copy(startedAt = t0, finishedAt = t0.plusSeconds(600))
-        val running = b(2, 1, 90).copy(startedAt = t0.plusSeconds(600))
-        val s = DaySummaries.summarise(day(done, running), t0.plusSeconds(1200))
-        assertEquals(Duration.ofMinutes(20), s.actualTotal)
-    }
-
-    @Test
-    fun `summarise counts done, skipped and total`() {
-        val done = b(1, 0, 30).copy(startedAt = t0, finishedAt = t0.plusSeconds(60))
-        val skipped = b(2, 1, 30).copy(skipped = true)
-        val s = DaySummaries.summarise(day(done, skipped, b(3, 2, 30)), t0)
-        assertEquals(1, s.done)
-        assertEquals(1, s.skipped)
+    fun `summarise counts done out of total`() {
+        val s = DaySummaries.summarise(day(item(1, true), item(2, false), item(3, true)))
+        assertEquals(2, s.done)
         assertEquals(3, s.total)
     }
 
     @Test
-    fun `summarise of an empty day is all zeroes`() {
-        val s = DaySummaries.summarise(DayTimebox(date, null, emptyList()), t0)
-        assertEquals(Duration.ZERO, s.plannedTotal)
-        assertEquals(Duration.ZERO, s.actualTotal)
+    fun `a day with no items is empty`() {
+        val s = DaySummaries.summarise(day())
+        assertTrue(s.isEmpty)
+        assertFalse(s.allDone)
+    }
+
+    @Test
+    fun `a null day is empty rather than a crash`() {
+        // Every morning starts here: no list exists yet for today.
+        val s = DaySummaries.summarise(null)
+        assertTrue(s.isEmpty)
         assertEquals(0, s.total)
     }
 
     @Test
-    fun `a skipped block contributes no actual time even if it ran`() {
-        val skipped = b(1, 0, 30).copy(startedAt = t0, finishedAt = t0.plusSeconds(600), skipped = true)
-        val s = DaySummaries.summarise(day(skipped), t0.plusSeconds(600))
-        assertEquals(Duration.ZERO, s.actualTotal)
+    fun `allDone is true only when every item is ticked`() {
+        assertTrue(DaySummaries.summarise(day(item(1, true), item(2, true))).allDone)
+        assertFalse(DaySummaries.summarise(day(item(1, true), item(2, false))).allDone)
+    }
+
+    @Test
+    fun `an empty day is not allDone`() {
+        // Nothing planned is not the same as everything finished.
+        assertFalse(DaySummaries.summarise(day()).allDone)
     }
 }

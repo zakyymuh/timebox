@@ -2,16 +2,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--
-      Not for drawing. Android 10+ blocks apps from starting an activity from the
-      background, and holding SYSTEM_ALERT_WINDOW is the documented exemption that
-      lets the accessibility service raise the gate over the app you just opened.
+      The only permission this app asks for, and only on Android 13+, so it can post the
+      morning reminder. Notably absent, and deliberately:
+        INTERNET              — the app has no network access of any kind
+        SYSTEM_ALERT_WINDOW   — nothing is drawn over other apps
+        accessibility service — nothing observes what you do on the phone
+      The last two are what made Play Protect warn about the earlier build; they belonged
+      to the app-blocking feature, which is gone.
     -->
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-
-    <!-- Deliberately absent: INTERNET. The gate is offline by design. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
-        android:allowBackup="false"
+        android:allowBackup="true"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.Timebox">
@@ -25,32 +28,5 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <!--
-          Its own task, kept out of recents, and a single instance so repeated
-          detections reuse it through onNewIntent instead of stacking.
-        -->
-        <activity
-            android:name=".ui.gate.GateActivity"
-            android:excludeFromRecents="true"
-            android:exported="false"
-            android:launchMode="singleInstance"
-            android:screenOrientation="portrait"
-            android:showWhenLocked="true"
-            android:taskAffinity=""
-            android:theme="@style/Theme.Timebox.Gate" />
-
-        <service
-            android:name=".service.AppWatcherService"
-            android:exported="true"
-            android:label="@string/app_name"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
-        </service>
     </application>
 </manifest>
