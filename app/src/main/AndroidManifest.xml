@@ -2,13 +2,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--
-      The only permission this app asks for, and only on Android 13+, so it can post the
-      morning reminder. Notably absent, and deliberately:
+      The only permissions this app asks for. Notably absent, and deliberately:
         INTERNET              — the app has no network access of any kind
         SYSTEM_ALERT_WINDOW   — nothing is drawn over other apps
         accessibility service — nothing observes what you do on the phone
-      The last two are what made Play Protect warn about the earlier build; they belonged
+      The last two are what made Play Protect warn about an earlier build; they belonged
       to the app-blocking feature, which is gone.
+
+      No exact-alarm permission either: a morning reminder a few minutes late is fine, so
+      it uses an inexact alarm and asks for nothing.
     -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -28,5 +30,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <receiver
+            android:name=".nudge.MorningReceiver"
+            android:exported="false" />
+
+        <!-- Alarms do not survive a reboot, so the nudge is re-armed on boot. -->
+        <receiver
+            android:name=".nudge.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>
