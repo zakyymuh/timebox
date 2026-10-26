@@ -150,7 +150,7 @@ All of it pure, all of it tested on the JVM. This is the task that decides wheth
       fun advance(day: DayTimebox, now: Instant): DayTimebox
       fun skip(day: DayTimebox, blockId: Long, now: Instant): DayTimebox
       fun running(day: DayTimebox): Block?
-      fun nextPending(day: DayTimebox): Block?
+      fun nextPending(day: DayTimebox, afterPosition: Int? = null): Block?
   }
 
   object Blocks {
@@ -215,7 +215,7 @@ All of it pure, all of it tested on the JVM. This is the task that decides wheth
 
 - [ ] **Step 7: Implement `TimeboxEngine`**
 
-Every method returns a new `DayTimebox`; nothing mutates. `start` finishes any running block at `now` first, then sets `startedAt = now`, `finishedAt = null`, `skipped = false` on the target. `advance` = `finishRunning` then start the lowest-position PENDING block.
+Every method returns a new `DayTimebox`; nothing mutates. `start` finishes any running block at `now` first, then sets `startedAt = now`, `finishedAt = null`, `skipped = false` on the target. `advance` = `finishRunning` then start the next PENDING block **strictly after** the position of the block that was running — "next" means forward, so finishing the middle block moves on rather than back to an earlier untouched one, and reaching the end starts nothing. With nothing running, it starts the earliest PENDING block. (Corrected during Task 2: this originally read "lowest-position PENDING block", which two tests caught as wrong.)
 
 - [ ] **Step 8: Run to verify they pass.**
 
