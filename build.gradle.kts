@@ -1,7 +1,13 @@
-// The Android plugins are deliberately NOT declared here. Plugin resolution happens
-// per-project, so naming them at the root would make Gradle resolve them even on a
-// machine with no Android SDK, where :app is not part of the build at all.
-// app/build.gradle.kts declares its own.
+// Every plugin is declared here, once, with its version and `apply false`.
+//
+// This is not stylistic. A plugin requested in a subproject's own `plugins {}` block
+// gets a child classloader scope, and a parent scope cannot see a child's classes. With
+// AGP requested down in :app, the Kotlin plugin — loaded up here — could not see
+// com.android.build.gradle.BaseExtension even though AGP ships it, and the Android
+// build died with a bare NoClassDefFoundError. Declaring both here puts them in one
+// scope. Subprojects then apply them by id with no version.
 plugins {
     alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.android.application) apply false
 }

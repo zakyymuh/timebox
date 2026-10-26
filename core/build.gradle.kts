@@ -1,7 +1,8 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    alias(libs.plugins.kotlin.jvm)
+    // No version: declared with one in the root project's plugins block.
+    id("org.jetbrains.kotlin.jvm")
 }
 
 // :core holds every decision Timebox makes and must never depend on Android.

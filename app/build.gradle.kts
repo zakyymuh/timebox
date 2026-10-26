@@ -1,14 +1,9 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    // AGP carries its version here: it is not otherwise on the build classpath, and
-    // naming it only in this file keeps it unresolved on machines with no SDK, where
-    // :app is not part of the build at all.
-    alias(libs.plugins.android.application)
-
-    // No version on purpose. The Kotlin Gradle plugin is already on the build classpath
-    // from the root project's `kotlin.jvm apply false`, and re-requesting it with a
-    // version fails with "already on the classpath with an unknown version".
+    // No versions: both are declared with versions in the root project's plugins block,
+    // which is what keeps them in a single classloader scope so KGP can see AGP's types.
+    id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
 

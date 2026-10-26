@@ -1,13 +1,18 @@
 [versions]
-# All resolved from the registries at implementation time, never from memory.
+# Resolved from the registries at implementation time, never from memory — but pinned to
+# versions that interoperate, which is not the same as "newest of each".
 #
-# AGP is deliberately NOT the latest (9.4.1). AGP 9 removed
-# com.android.build.gradle.api.BaseVariant, which Kotlin 2.4.21's Android target still
-# references, so the two newest stable releases cannot be used together:
-#   Failed to apply plugin 'com.android.internal.application'
-#     > Could not create an instance of type KotlinAndroidTarget
-#       > com/android/build/gradle/api/BaseVariant
-# AGP 9 needs Kotlin 2.5.0-Beta. A stable AGP one major behind beats a beta compiler.
+# The binding constraint is Gradle, not AGP:
+#   Gradle 9.6.0 removed org.gradle.api.problems.internal.InternalProblems, which
+#   AGP 8.13.2 still uses, so the wrapper is pinned to the 9.5 line. Gradle's own error
+#   message names 9.5 as the fix. See gradle/wrapper/gradle-wrapper.properties.
+#
+# Correction, recorded because the wrong version of it was committed here earlier:
+#   AGP 9 does NOT remove BaseExtension or BaseVariant — both classes are present in
+#   AGP 9.0.0 and 9.4.1, verified by reading the published jars. The NoClassDefFoundError
+#   that looked like a removal was a classloader-scope bug in this build's own plugin
+#   declarations (see build.gradle.kts). AGP 9 may well work here; it has not been tried
+#   since the scoping was fixed, and moving to it means moving Gradle too.
 agp = "8.13.2"
 kotlin = "2.4.21"
 junit = "4.13.2"
@@ -19,4 +24,5 @@ androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 android-application = { id = "com.android.application", version.ref = "agp" }
