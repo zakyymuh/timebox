@@ -27,8 +27,12 @@ val hasAndroidSdk = System.getenv("ANDROID_HOME") != null ||
     System.getenv("ANDROID_SDK_ROOT") != null ||
     file("local.properties").exists()
 
-if (hasAndroidSdk) {
-    include(":app")
-} else {
-    logger.lifecycle("No Android SDK found — building :core only. See docs/BUILDING.md.")
+// Gradle 9 refuses to configure a project whose directory does not exist, so the
+// module has to be on disk as well as the SDK being present.
+val appModuleExists = file("app/build.gradle.kts").exists()
+
+when {
+    hasAndroidSdk && appModuleExists -> include(":app")
+    !appModuleExists -> logger.lifecycle("No app/ module yet — building :core only.")
+    else -> logger.lifecycle("No Android SDK found — building :core only. See docs/BUILDING.md.")
 }

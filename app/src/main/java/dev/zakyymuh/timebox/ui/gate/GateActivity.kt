@@ -42,8 +42,9 @@ class GateActivity : Activity() {
         val latency = if (detectedAt > 0L) SystemClock.elapsedRealtime() - detectedAt else -1L
         detail.text = buildString {
             append(pkg)
+            append("\n\nwall mode: ACTIVITY")
             if (latency >= 0) {
-                append("\n\nwall up in ${latency}ms")
+                append("\nwall up in ${latency}ms")
             }
         }
     }
