@@ -1,24 +1,29 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    // No versions: both are declared with versions in the root project's plugins block,
-    // which is what keeps them in a single classloader scope so KGP can see AGP's types.
+    // No versions: all declared with versions in the root project's plugins block, which
+    // is what keeps them in a single classloader scope so KGP can see AGP's types.
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.devtools.ksp")
 }
 
 android {
     namespace = "dev.zakyymuh.timebox"
-    compileSdk = 36
+
+    // 37 is not optional: androidx requires libraries depending on it to compile
+    // against 37 or later, enforced by :app:checkDebugAarMetadata.
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "dev.zakyymuh.timebox"
-        // Redmi Note 8 shipped on Android 9 (API 28) and may never have been
-        // updated past it, so the floor goes below 29. Nothing in v1 needs more.
+        // The target phone is a Redmi Note 8, which shipped on Android 9 (API 28) and
+        // may never have been updated past it.
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
-        versionName = "0.1-spike"
+        versionName = "0.2"
     }
 
     buildTypes {
@@ -27,9 +32,17 @@ android {
         }
     }
 
+    buildFeatures {
+        compose = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
     }
 }
 
@@ -40,14 +53,31 @@ kotlin {
 }
 
 dependencies {
-    // :core and the Android framework, nothing else. The spike has no androidx
-    // dependency at all — not one of its sources imports androidx — and adding
-    // core-ktx cost two CI runs: core-ktx 1.19.1 demands compileSdk 37 and AGP 9.1+,
-    // which it drags in through the AAR metadata check.
-    //
-    // When Tasks 2+ add Compose, Room and Glance this has to be faced properly:
-    // that means AGP 9.1+, compileSdk 37, and Gradle 9.6+ (AGP 9 does not have AGP 8's
-    // InternalProblems restriction). The classloader scoping that made AGP 9 look
-    // broken earlier is fixed, so that route should now be open.
     implementation(project(":core"))
+
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.kotlinx.coroutines.android)
+
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.ui.graphics)
+    implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.compose.material3)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.datastore.preferences)
+
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+
+    implementation(libs.glance.appwidget)
+    implementation(libs.glance.material3)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.room.testing)
 }

@@ -18,6 +18,11 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # compileSdk 37 is required by androidx; the runner image may not ship that
+      # platform yet. Idempotent, and non-fatal if it is already installed.
+      - name: Ensure Android platform 37
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37" || true
+
       # The rule set. Pure Kotlin, no Android SDK needed.
       - name: Test :core
         run: ./gradlew :core:test

@@ -1,3 +1,10 @@
+> **PARKED — 2026-10-26.** This spec describes the app-blocking gate. It is deferred
+> to v2 at the user's request: the timeboxing half comes first. The code it produced is
+> committed and tested, not deleted — `GateDecider`, `ForegroundFilter`, `PassExpiryGuard`
+> and `WidgetStateBuilder` in `:core` (38 passing tests), and the `AppWatcherService` /
+> `GateOverlay` / `GateActivity` spike in `:app`. The current spec is
+> `2026-10-26-timeboxing-design.md`.
+
 # Timebox — Design Spec
 
 **Date:** 2026-10-26

@@ -1,26 +1,59 @@
 [versions]
-# Resolved from the registries at implementation time, never from memory — but pinned to
-# versions that interoperate, which is not the same as "newest of each".
+# Every version below was read from maven-metadata.xml at implementation time, not
+# recalled. The prior for Kotlin was two minors stale, which is why that rule exists.
 #
-# The binding constraint is Gradle, not AGP:
-#   Gradle 9.6.0 removed org.gradle.api.problems.internal.InternalProblems, which
-#   AGP 8.13.2 still uses, so the wrapper is pinned to the 9.5 line. Gradle's own error
-#   message names 9.5 as the fix. See gradle/wrapper/gradle-wrapper.properties.
-#
-# Correction, recorded because the wrong version of it was committed here earlier:
-#   AGP 9 does NOT remove BaseExtension or BaseVariant — both classes are present in
-#   AGP 9.0.0 and 9.4.1, verified by reading the published jars. The NoClassDefFoundError
-#   that looked like a removal was a classloader-scope bug in this build's own plugin
-#   declarations (see build.gradle.kts). AGP 9 may well work here; it has not been tried
-#   since the scoping was fixed, and moving to it means moving Gradle too.
-agp = "8.13.2"
+# The toolchain triple is load-bearing. History, so nobody "helpfully" bumps it back:
+#   AGP 8.x cannot run on Gradle 9.6+ (InternalProblems removed).
+#   androidx requires compileSdk 37 and AGP 9.1+, so AGP 8.x is impossible.
+#   AGP 9 once looked broken with Kotlin 2.4.21 — that was a classloader-scope bug in
+#   this build's own plugin declarations, fixed in dd4c9ca, not an AGP problem.
+# => Gradle 9.8.2 + AGP 9.4.1 + Kotlin 2.4.21, compileSdk 37.
+agp = "9.4.1"
 kotlin = "2.4.21"
+ksp = "2.3.12"
 junit = "4.13.2"
+coreKtx = "1.19.1"
+composeBom = "2026.09.00"
+activityCompose = "1.13.0"
+lifecycle = "2.11.0"
+navigationCompose = "2.10.2"
+room = "2.8.5"
+glance = "1.2.0"
+datastore = "1.3.0"
+coroutines = "1.11.0"
+robolectric = "4.17"
 
 [libraries]
 junit = { module = "junit:junit", version.ref = "junit" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
+
+glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "glance" }
+glance-material3 = { module = "androidx.glance:glance-material3", version.ref = "glance" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 android-application = { id = "com.android.application", version.ref = "agp" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
