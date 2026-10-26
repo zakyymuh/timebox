@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Timebox needs one thing from accessibility: the package name of whatever just came
+  to the front. canRetrieveWindowContent is false, so it cannot read screen content.
+  notificationTimeout is 0 so the first event of an app launch arrives immediately.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault"
+    android:canRetrieveWindowContent="false"
+    android:description="@string/accessibility_description"
+    android:notificationTimeout="0" />

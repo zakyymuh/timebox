@@ -1,9 +1,15 @@
 [versions]
+# All resolved from the registries at implementation time, never from memory.
+agp = "9.4.1"
 kotlin = "2.4.21"
 junit = "4.13.2"
+coreKtx = "1.19.1"
 
 [libraries]
 junit = { module = "junit:junit", version.ref = "junit" }
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+android-application = { id = "com.android.application", version.ref = "agp" }
