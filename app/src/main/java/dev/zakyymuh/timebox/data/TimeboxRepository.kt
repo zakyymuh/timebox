@@ -28,6 +28,18 @@ class TimeboxRepository(
 
     private fun today(): LocalDate = LocalDate.now(clock)
 
+    /** Today, for callers that need to know which day is the editable one. */
+    fun todayDate(): LocalDate = today()
+
+    /**
+     * Stepping through the record skips empty days: paging one calendar day at a time
+     * through a week you did not use the app would be all blank pages.
+     */
+    suspend fun previousDayWithItems(from: LocalDate): LocalDate? =
+        dao.previousDayWithItems(from)
+
+    suspend fun nextDayWithItems(from: LocalDate): LocalDate? = dao.nextDayWithItems(from)
+
     fun todayFlow(): Flow<DayList> = dayFlow(today())
 
     fun dayFlow(date: LocalDate): Flow<DayList> =

@@ -33,6 +33,14 @@ interface TimeboxDao {
     @Query("DELETE FROM todo_item WHERE date = :date")
     suspend fun deleteItemsOf(date: LocalDate)
 
+    /** The nearest earlier day that has anything on it, for stepping back through the record. */
+    @Query("SELECT MAX(date) FROM todo_item WHERE date < :date")
+    suspend fun previousDayWithItems(date: LocalDate): LocalDate?
+
+    /** The nearest later day that has anything on it. */
+    @Query("SELECT MIN(date) FROM todo_item WHERE date > :date")
+    suspend fun nextDayWithItems(date: LocalDate): LocalDate?
+
     /** Days before [before] that actually have items, newest first — the templates. */
     @Query(
         """

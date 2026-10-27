@@ -6,7 +6,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.MaterialTheme
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -16,6 +15,7 @@ import android.content.Intent
 import dev.zakyymuh.timebox.nudge.MorningReceiver
 import dev.zakyymuh.timebox.nudge.MorningReminder
 import dev.zakyymuh.timebox.ui.today.TodayScreen
+import dev.zakyymuh.timebox.ui.theme.DailyTheme
 import dev.zakyymuh.timebox.ui.today.TodayViewModel
 
 class MainActivity : ComponentActivity() {
@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            MaterialTheme {
+            DailyTheme {
                 TodayScreen(viewModel = viewModel(factory = factory))
             }
         }

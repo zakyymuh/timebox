@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Timebox</string>
+    <string name="app_name">Daily</string>
     <string name="widget_description">Today\'s list, on your home screen.</string>
+    <string name="tagline">One day at a time</string>
 </resources>

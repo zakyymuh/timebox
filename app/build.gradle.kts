@@ -16,9 +16,10 @@ android {
 
     defaultConfig {
         applicationId = "dev.zakyymuh.timebox"
-        // The target phone is a Redmi Note 8, which shipped on Android 9 (API 28) and
-        // may never have been updated past it.
-        minSdk = 24
+        // 26, not 24: Inter and JetBrains Mono are variable fonts, which Android
+        // supports from API 26. The target phone is a Redmi Note 8 on Android 9+, so
+        // nothing reachable is lost.
+        minSdk = 26
         targetSdk = 37
         versionCode = 1
         versionName = "0.2"
