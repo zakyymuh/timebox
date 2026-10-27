@@ -12,6 +12,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.zakyymuh.timebox.ServiceLocator
+import android.content.Intent
+import dev.zakyymuh.timebox.nudge.MorningReceiver
 import dev.zakyymuh.timebox.nudge.MorningReminder
 import dev.zakyymuh.timebox.ui.today.TodayScreen
 import dev.zakyymuh.timebox.ui.today.TodayViewModel
@@ -36,7 +38,19 @@ class MainActivity : ComponentActivity() {
 
         val repo = ServiceLocator.repository(applicationContext)
         val factory: ViewModelProvider.Factory = viewModelFactory {
-            initializer { TodayViewModel(repo) }
+            initializer {
+                TodayViewModel(
+                    repo = repo,
+                    // Same path the 06:30 alarm takes, so the test exercises the real
+                    // receiver rather than a shortcut that could pass while it is broken.
+                    sendTestReminder = {
+                        sendBroadcast(
+                            Intent(applicationContext, MorningReceiver::class.java)
+                                .putExtra(MorningReceiver.EXTRA_FORCE, true),
+                        )
+                    },
+                )
+            }
         }
 
         setContent {

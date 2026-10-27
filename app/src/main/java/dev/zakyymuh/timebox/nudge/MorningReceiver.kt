@@ -29,6 +29,8 @@ class MorningReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent?) {
         val appContext = context.applicationContext
+        // A manual test must post even when the list is written, or it looks broken.
+        val forced = intent?.getBooleanExtra(EXTRA_FORCE, false) == true
         val reminder = MorningReminder(appContext)
 
         // Always re-arm first: if anything below throws, the chain must not end here.
@@ -45,7 +47,7 @@ class MorningReceiver : BroadcastReceiver() {
                 TodayWidget().updateAll(appContext)
 
                 // Nothing to nudge about if the list is already written.
-                if (day.items.isEmpty()) {
+                if (forced || day.items.isEmpty()) {
                     notify(appContext, reminder)
                 }
             } finally {
@@ -75,6 +77,10 @@ class MorningReceiver : BroadcastReceiver() {
 
         context.getSystemService(NotificationManager::class.java)
             ?.notify(MorningReminder.NOTIFICATION_ID, notification)
+    }
+
+    companion object {
+        const val EXTRA_FORCE = "force"
     }
 
     private fun canPostNotifications(context: Context): Boolean =

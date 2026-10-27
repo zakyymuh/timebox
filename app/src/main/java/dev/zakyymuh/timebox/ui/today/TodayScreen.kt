@@ -73,7 +73,7 @@ fun TodayScreen(viewModel: TodayViewModel) {
                     modifier = Modifier.padding(vertical = 24.dp),
                 )
             } else {
-                LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     items(state.items, key = { it.id }) { item ->
                         ItemRow(
                             item = item,
@@ -82,6 +82,15 @@ fun TodayScreen(viewModel: TodayViewModel) {
                         )
                     }
                 }
+            }
+
+            // The real reminder fires at 06:30, which is no use for checking it works
+            // today. Remove once the notification has been seen on a real device.
+            TextButton(onClick = viewModel::testReminder) {
+                Text(
+                    "Send the morning reminder now (test)",
+                    style = MaterialTheme.typography.labelMedium,
+                )
             }
         }
     }
@@ -97,6 +106,8 @@ private fun Header(state: TodayUiState) {
         )
         Text(
             text = when {
+                // Blank, not a placeholder date, until the database has answered.
+                state.date == null -> ""
                 state.summary.isEmpty ->
                     state.date.format(DateTimeFormatter.ofPattern("EEEE d MMMM"))
                 state.summary.allDone -> "All ${state.summary.total} done"
