@@ -11,7 +11,9 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import androidx.glance.appwidget.updateAll
 import dev.zakyymuh.timebox.ServiceLocator
+import dev.zakyymuh.timebox.widget.TodayWidget
 import dev.zakyymuh.timebox.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +38,12 @@ class MorningReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val day = ServiceLocator.repository(appContext).todayNow()
+
+                // The date has rolled over, so yesterday's list is no longer today's.
+                // This daily firing is what returns the widget to its empty state;
+                // a separate midnight alarm would buy nothing a user is awake for.
+                TodayWidget().updateAll(appContext)
+
                 // Nothing to nudge about if the list is already written.
                 if (day.items.isEmpty()) {
                     notify(appContext, reminder)

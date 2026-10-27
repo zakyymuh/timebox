@@ -18,6 +18,12 @@ import java.time.LocalDate
 class TimeboxRepository(
     private val dao: TimeboxDao,
     private val clock: Clock,
+    /**
+     * Called after every write. The home-screen widget refreshes on change rather than
+     * on a timer, and putting the hook here rather than at each call site means no
+     * caller — screen, notification receiver, or anything added later — can forget it.
+     */
+    private val onChanged: suspend () -> Unit = {},
 ) {
 
     private fun today(): LocalDate = LocalDate.now(clock)
@@ -37,6 +43,7 @@ class TimeboxRepository(
     suspend fun saveNote(text: String) {
         val trimmed = text.trim()
         dao.upsertDay(DayEntity(today(), trimmed.ifEmpty { null }))
+        onChanged()
     }
 
     suspend fun addItem(text: String) {
@@ -46,12 +53,14 @@ class TimeboxRepository(
         dao.upsertItems(
             listOf(TodoItemEntity(0L, date, existing.size, text.trim(), null)),
         )
+        onChanged()
     }
 
     suspend fun toggle(itemId: Long) {
         val date = today()
         val updated = Items.toggle(dayNow(date), itemId, clock.instant())
         dao.upsertItems(updated.items.map { it.toEntity(date) })
+        onChanged()
     }
 
     suspend fun rename(itemId: Long, text: String) {
@@ -59,6 +68,7 @@ class TimeboxRepository(
         val date = today()
         val updated = Items.rename(dayNow(date), itemId, text)
         dao.upsertItems(updated.items.map { it.toEntity(date) })
+        onChanged()
     }
 
     suspend fun remove(itemId: Long) {
@@ -66,6 +76,7 @@ class TimeboxRepository(
         dao.deleteItem(itemId)
         // Renumber what is left so positions stay contiguous.
         dao.upsertItems(Items.renumber(dao.items(date).map(TodoItemEntity::toModel)).map { it.toEntity(date) })
+        onChanged()
     }
 
     suspend fun move(fromIndex: Int, toIndex: Int) {
@@ -73,6 +84,7 @@ class TimeboxRepository(
         val items = dao.items(date).map(TodoItemEntity::toModel)
         if (fromIndex !in items.indices || toIndex !in items.indices) return
         dao.upsertItems(Items.reorder(items, fromIndex, toIndex).map { it.toEntity(date) })
+        onChanged()
     }
 
     /** Copies a previous day's items into today, without its history. */
@@ -82,6 +94,7 @@ class TimeboxRepository(
         val fresh = Items.templateFrom(source, date)
         dao.deleteItemsOf(date)
         dao.upsertItems(fresh.items.map { it.toEntity(date) })
+        onChanged()
     }
 
     /** Recent days that had items, newest first, for the one-tap morning path. */
