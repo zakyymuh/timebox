@@ -1,0 +1,32 @@
+package dev.zakyymuh.timebox.ui
+
+import android.content.Context
+import android.content.Intent
+
+/** Every screen's route, and how notifications and the widget ask for one. */
+object Destinations {
+    const val DASHBOARD = "dashboard"
+    const val TODAY = "today"
+    const val PLANTS = "plants"
+    const val CALENDAR = "plants/calendar"
+    const val EDIT = "plants/edit/{id}"
+
+    /** Route to edit plant [id]; 0 means a new plant. */
+    fun edit(id: Long): String = "plants/edit/$id"
+
+    const val EXTRA = "destination"
+
+    /**
+     * Opens the app on [destination] with the dashboard underneath, so Back always lands
+     * on the dashboard. NEW_TASK | CLEAR_TASK makes onCreate run every time, which is
+     * where the destination is read.
+     */
+    fun intent(context: Context, destination: String): Intent =
+        Intent(context, MainActivity::class.java)
+            .putExtra(EXTRA, destination)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+
+    /** The screen an intent asks for, or null to stay on the dashboard. */
+    fun from(intent: Intent?): String? =
+        intent?.getStringExtra(EXTRA)?.takeIf { it == TODAY || it == PLANTS }
+}

@@ -27,7 +27,8 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextDecoration
 import androidx.glance.text.TextStyle
 import dev.zakyymuh.timebox.ServiceLocator
-import dev.zakyymuh.timebox.ui.MainActivity
+import androidx.glance.LocalContext
+import dev.zakyymuh.timebox.ui.Destinations
 import dev.zakyymuh.timebox.core.TodoItem
 import dev.zakyymuh.timebox.core.WidgetView
 import dev.zakyymuh.timebox.core.WidgetViews
@@ -60,8 +61,8 @@ class TodayWidget : GlanceAppWidget() {
                 .background(GlanceTheme.colors.widgetBackground)
                 .cornerRadius(16.dp)
                 .padding(14.dp)
-                // Tapping anywhere opens the app; the widget is a glance, not an editor.
-                .clickable(actionStartActivity<MainActivity>()),
+                // Tapping anywhere opens today's list; the widget is a glance, not an editor.
+                .clickable(actionStartActivity(Destinations.intent(LocalContext.current, Destinations.TODAY))),
         ) {
             when (view) {
                 is WidgetView.NeedsList -> NeedsList()

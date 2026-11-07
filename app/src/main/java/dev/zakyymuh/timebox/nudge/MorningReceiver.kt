@@ -14,7 +14,7 @@ import androidx.core.content.ContextCompat
 import androidx.glance.appwidget.updateAll
 import dev.zakyymuh.timebox.ServiceLocator
 import dev.zakyymuh.timebox.widget.TodayWidget
-import dev.zakyymuh.timebox.ui.MainActivity
+import dev.zakyymuh.timebox.ui.Destinations
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -63,7 +63,7 @@ class MorningReceiver : BroadcastReceiver() {
         val open = PendingIntent.getActivity(
             context,
             0,
-            Intent(context, MainActivity::class.java),
+            Destinations.intent(context, Destinations.TODAY),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 

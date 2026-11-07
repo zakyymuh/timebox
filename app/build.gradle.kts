@@ -91,3 +91,10 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.room.testing)
 }
+
+// CI is the only place :app tests run, so print each test's outcome into the log.
+tasks.withType<Test>().configureEach {
+    testLogging {
+        events("passed", "failed", "skipped")
+    }
+}

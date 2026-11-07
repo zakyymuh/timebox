@@ -6,17 +6,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
-import dev.zakyymuh.timebox.ServiceLocator
 import android.content.Intent
 import dev.zakyymuh.timebox.nudge.MorningReceiver
 import dev.zakyymuh.timebox.nudge.MorningReminder
-import dev.zakyymuh.timebox.ui.today.TodayScreen
 import dev.zakyymuh.timebox.ui.theme.DailyTheme
-import dev.zakyymuh.timebox.ui.today.TodayViewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -36,26 +29,18 @@ class MainActivity : ComponentActivity() {
             askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
-        val repo = ServiceLocator.repository(applicationContext)
-        val factory: ViewModelProvider.Factory = viewModelFactory {
-            initializer {
-                TodayViewModel(
-                    repo = repo,
-                    // Same path the 06:30 alarm takes, so the test exercises the real
-                    // receiver rather than a shortcut that could pass while it is broken.
-                    sendTestReminder = {
-                        sendBroadcast(
-                            Intent(applicationContext, MorningReceiver::class.java)
-                                .putExtra(MorningReceiver.EXTRA_FORCE, true),
-                        )
-                    },
-                )
-            }
+        // Same path the 06:30 alarm takes, so the test exercises the real receiver
+        // rather than a shortcut that could pass while it is broken.
+        val sendTestReminder = {
+            sendBroadcast(
+                Intent(applicationContext, MorningReceiver::class.java)
+                    .putExtra(MorningReceiver.EXTRA_FORCE, true),
+            )
         }
 
         setContent {
             DailyTheme {
-                TodayScreen(viewModel = viewModel(factory = factory))
+                AppNav(start = Destinations.from(intent), sendTestReminder = sendTestReminder)
             }
         }
     }
