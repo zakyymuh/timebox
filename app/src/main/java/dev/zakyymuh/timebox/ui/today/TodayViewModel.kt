@@ -108,7 +108,7 @@ class TodayViewModel(
         val at = viewing.value
         neighbours.value = Neighbours(
             earlier = repo.previousDayWithItems(at),
-            later = repo.nextDayWithItems(at),
+            later = DayAccess.nextStep(at, repo.nextDayWithItems(at), repo.todayDate()),
         )
     }
 
@@ -119,7 +119,8 @@ class TodayViewModel(
     }
 
     fun goLater() = viewModelScope.launch {
-        repo.nextDayWithItems(viewing.value)?.let { moveTo(it) }
+        val at = viewing.value
+        DayAccess.nextStep(at, repo.nextDayWithItems(at), repo.todayDate())?.let { moveTo(it) }
     }
 
     fun jumpToToday() = moveTo(repo.todayDate())

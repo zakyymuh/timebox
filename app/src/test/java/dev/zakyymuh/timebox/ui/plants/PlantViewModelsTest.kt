@@ -105,4 +105,20 @@ class PlantViewModelsTest {
         vm.water(id)
         assertEquals("Basil", event.await().second)
     }
+
+    @Test
+    fun `tapping a future day shows the plant planned for it`() = runBlocking {
+        // Greenovia every 4 days, last watered on the 7th: planned for the 11th.
+        repo.save(0, PlantForm(
+            name = "Greenovia", colour = PlantColour.MOSS, repeats = true,
+            everyDays = 4, onceDate = d(7), lastWatered = d(7),
+        ))
+        val vm = CalendarViewModel(repo)
+
+        vm.select(d(11))
+
+        val state = withTimeout(5_000) { vm.state.first { it.selected == d(11) && it.selectedPlanned.isNotEmpty() } }
+        assertEquals(listOf("Greenovia"), state.selectedPlanned.map { it.name })
+        assertEquals(emptyList<Any>(), state.selectedWaterings)
+    }
 }

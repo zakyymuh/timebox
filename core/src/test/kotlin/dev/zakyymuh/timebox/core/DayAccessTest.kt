@@ -1,5 +1,6 @@
 package dev.zakyymuh.timebox.core
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -35,5 +36,29 @@ class DayAccessTest {
     @Test
     fun `today is not in the future`() {
         assertFalse(DayAccess.isFuture(today, today))
+    }
+
+    @Test
+    fun `stepping forward from yesterday reaches today even when today is still empty`() {
+        val today = LocalDate.of(2026, 11, 8)
+        val yesterday = LocalDate.of(2026, 11, 7)
+        // No later day has items: the morning before anything is written.
+        assertEquals(today, DayAccess.nextStep(viewing = yesterday, nextWithItems = null, today = today))
+    }
+
+    @Test
+    fun `stepping forward goes to the next written day before today`() {
+        val today = LocalDate.of(2026, 11, 8)
+        assertEquals(
+            LocalDate.of(2026, 11, 3),
+            DayAccess.nextStep(viewing = LocalDate.of(2026, 11, 1), nextWithItems = LocalDate.of(2026, 11, 3), today = today),
+        )
+    }
+
+    @Test
+    fun `stepping forward never passes today`() {
+        val today = LocalDate.of(2026, 11, 8)
+        assertEquals(today, DayAccess.nextStep(LocalDate.of(2026, 11, 7), nextWithItems = LocalDate.of(2026, 11, 9), today = today))
+        assertEquals(null, DayAccess.nextStep(viewing = today, nextWithItems = LocalDate.of(2026, 11, 9), today = today))
     }
 }
