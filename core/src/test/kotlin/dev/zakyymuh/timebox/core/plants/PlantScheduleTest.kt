@@ -93,4 +93,29 @@ class PlantScheduleTest {
         assertEquals(PlantStatus.Upcoming(13), PlantSchedule.status(once, watered(d(7)), today))
         assertEquals(PlantStatus.Done, PlantSchedule.status(once, watered(d(8)), d(8)))
     }
+
+    @Test
+    fun `snooze moves next due to tomorrow when later than the schedule`() {
+        // Due today (anchor 1st + 7 = 8th); checked on the 8th: still moist → 9th.
+        val snoozed = monstera.copy(snoozedUntil = d(9))
+        assertEquals(d(9), PlantSchedule.nextDue(snoozed, emptyList()))
+        assertEquals(PlantStatus.Upcoming(1), PlantSchedule.status(snoozed, emptyList(), d(8)))
+    }
+
+    @Test
+    fun `snooze earlier than the schedule changes nothing`() {
+        assertEquals(d(8), PlantSchedule.nextDue(monstera.copy(snoozedUntil = d(5)), emptyList()))
+    }
+
+    @Test
+    fun `snoozing again next day moves one more day`() {
+        assertEquals(d(10), PlantSchedule.nextDue(monstera.copy(snoozedUntil = d(10)), emptyList()))
+    }
+
+    @Test
+    fun `one-time plant respects snooze until done`() {
+        val once = monstera.copy(recurrence = Recurrence.Once(d(4)), snoozedUntil = d(8))
+        assertEquals(d(8), PlantSchedule.nextDue(once, emptyList()))
+        assertNull(PlantSchedule.nextDue(once, watered(d(8))))
+    }
 }

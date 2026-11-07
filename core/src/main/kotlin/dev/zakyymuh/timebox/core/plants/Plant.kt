@@ -24,6 +24,11 @@ data class Plant(
      * Not history: never drawn as a solid dot.
      */
     val anchor: LocalDate,
+    /**
+     * "Soil still moist — check again tomorrow." Never a watering: the schedule still
+     * counts from the last real one; this only stops the plant being due before it.
+     */
+    val snoozedUntil: LocalDate? = null,
 )
 
 /** One tap of "I watered it". Only the date matters to the schedule. */

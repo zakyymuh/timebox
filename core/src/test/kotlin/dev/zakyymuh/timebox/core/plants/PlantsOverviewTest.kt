@@ -82,4 +82,27 @@ class PlantsOverviewTest {
         assertEquals("2 / 5 done", PlantCopy.habit(DaySummary(2, 5)))
         assertEquals("Nothing written yet", PlantCopy.habit(DaySummary(0, 0)))
     }
+
+    @Test
+    fun `last watered copy`() {
+        assertEquals("Watered today", PlantCopy.lastWatered(today, today))
+        assertEquals("Watered yesterday", PlantCopy.lastWatered(today.minusDays(1), today))
+        assertEquals("Watered 3 days ago", PlantCopy.lastWatered(today.minusDays(3), today))
+        assertEquals("Not watered yet", PlantCopy.lastWatered(null, today))
+    }
+
+    @Test
+    fun `checked, usually and use copy`() {
+        assertEquals("Checked Basil", PlantCopy.checked("Basil"))
+        assertEquals("You usually water every 8 days", PlantCopy.usually(8))
+        assertEquals("Use 8", PlantCopy.use(8))
+    }
+
+    @Test
+    fun `PlantRow carries last watered and suggested interval`() {
+        val waterings = listOf(1L to 20L, 2L to 12L, 3L to 4L, 4L to 0L).map { (id, ago) -> Watering(id, 1, today.minusDays(ago)) }
+        val row = PlantsOverview.of(listOf(basil), waterings, today).let { it.due + it.upcoming }.single()
+        assertEquals(today, row.lastWatered)
+        assertEquals(8, row.suggestedInterval)
+    }
 }

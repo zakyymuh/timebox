@@ -12,6 +12,12 @@ object PlantSchedule {
 
     /** Next due date, or null for a one-time plant that has been watered. */
     fun nextDue(plant: Plant, waterings: List<Watering>): LocalDate? {
+        val scheduled = scheduledDue(plant, waterings) ?: return null
+        val snooze = plant.snoozedUntil
+        return if (snooze != null && snooze.isAfter(scheduled)) snooze else scheduled
+    }
+
+    private fun scheduledDue(plant: Plant, waterings: List<Watering>): LocalDate? {
         val latest = waterings.filter { it.plantId == plant.id }.maxOfOrNull { it.date }
         return when (val r = plant.recurrence) {
             // Only waterings after the day it became one-time count, so switching a

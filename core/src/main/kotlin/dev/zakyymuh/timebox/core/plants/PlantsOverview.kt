@@ -3,7 +3,14 @@ package dev.zakyymuh.timebox.core.plants
 import dev.zakyymuh.timebox.core.DaySummary
 import java.time.LocalDate
 
-data class PlantRow(val plant: Plant, val status: PlantStatus, val nextDue: LocalDate?)
+data class PlantRow(
+    val plant: Plant,
+    val status: PlantStatus,
+    val nextDue: LocalDate?,
+    val lastWatered: LocalDate? = null,
+    /** A better interval learned from history, when there is one. */
+    val suggestedInterval: Int? = null,
+)
 
 /** What the plant page shows: what needs you now, then what is coming. */
 data class PlantsOverview(val due: List<PlantRow>, val upcoming: List<PlantRow>) {
@@ -16,7 +23,13 @@ data class PlantsOverview(val due: List<PlantRow>, val upcoming: List<PlantRow>)
     companion object {
         fun of(plants: List<Plant>, waterings: List<Watering>, today: LocalDate): PlantsOverview {
             val rows = plants.map { p ->
-                PlantRow(p, PlantSchedule.status(p, waterings, today), PlantSchedule.nextDue(p, waterings))
+                PlantRow(
+                    plant = p,
+                    status = PlantSchedule.status(p, waterings, today),
+                    nextDue = PlantSchedule.nextDue(p, waterings),
+                    lastWatered = waterings.filter { it.plantId == p.id }.maxOfOrNull { it.date },
+                    suggestedInterval = IntervalAdvice.suggest(p, waterings),
+                )
             }
             val due = rows.filter { it.status is PlantStatus.Due }
                 .sortedWith(compareByDescending<PlantRow> { (it.status as PlantStatus.Due).daysLate }.thenBy { it.plant.name })
@@ -56,6 +69,22 @@ object PlantCopy {
         1 -> "${overview.due.single().plant.name} needs water"
         else -> "${overview.due.size} plants need water"
     }
+
+    fun lastWatered(date: LocalDate?, today: LocalDate): String {
+        if (date == null) return "Not watered yet"
+        return when (val days = java.time.temporal.ChronoUnit.DAYS.between(date, today).toInt()) {
+            0 -> "Watered today"
+            1 -> "Watered yesterday"
+            else -> "Watered $days days ago"
+        }
+    }
+
+    /** The Undo snackbar after "Still moist". */
+    fun checked(name: String): String = "Checked $name"
+
+    fun usually(days: Int): String = "You usually water every $days days"
+
+    fun use(days: Int): String = "Use $days"
 
     /** The Undo snackbar after watering. */
     fun watered(name: String): String = "Watered $name"
