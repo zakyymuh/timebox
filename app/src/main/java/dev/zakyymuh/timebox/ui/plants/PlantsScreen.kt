@@ -1,6 +1,7 @@
 package dev.zakyymuh.timebox.ui.plants
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,10 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -28,25 +26,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.core.plants.PlantCopy
 import dev.zakyymuh.timebox.core.plants.PlantRow
 import dev.zakyymuh.timebox.core.plants.PlantsOverview
+import dev.zakyymuh.timebox.ui.common.Pill
 import dev.zakyymuh.timebox.ui.common.RoundButton
+import dev.zakyymuh.timebox.ui.common.SectionTitle
 import dev.zakyymuh.timebox.ui.common.SoftCard
 import dev.zakyymuh.timebox.ui.common.TopBar
-import dev.zakyymuh.timebox.ui.common.SectionTitle
+import dev.zakyymuh.timebox.ui.theme.Fresh
 import dev.zakyymuh.timebox.ui.theme.Label
-import dev.zakyymuh.timebox.ui.theme.Small
 import java.time.format.DateTimeFormatter
 
-private val nextDate = DateTimeFormatter.ofPattern("EEEE d MMM")
+private val nextDate = DateTimeFormatter.ofPattern("EEEE d MMMM")
 
 /**
- * Shows what matters today, not a calendar: the big watering button when a plant is
- * due, otherwise when the next watering is. The calendar is behind the 📅 button.
+ * Shows what matters today, not a calendar: a pastel green card with the big watering
+ * button when a plant is due, otherwise when the next watering is. Calendar behind 📅.
  */
 @Composable
 fun PlantsScreen(
@@ -65,27 +65,24 @@ fun PlantsScreen(
     }
 
     LaunchedEffect(viewModel) {
-        viewModel.undo.collect { wateringId ->
-            val result = snackbar.showSnackbar("Watered", actionLabel = "Undo", duration = SnackbarDuration.Short)
+        viewModel.undo.collect { (wateringId, name) ->
+            val result = snackbar.showSnackbar(PlantCopy.watered(name), actionLabel = "Undo", duration = SnackbarDuration.Short)
             if (result == SnackbarResult.ActionPerformed) viewModel.undo(wateringId)
         }
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbar) },
-    ) { insets ->
+    Scaffold(containerColor = Fresh.Page, snackbarHost = { SnackbarHost(snackbar) }) { insets ->
         Column(
             modifier = Modifier
                 .padding(insets)
-                .padding(horizontal = 22.dp)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp),
         ) {
-            TopBar(title = "Plant schedule", onBack = onBack) {
+            TopBar(title = "Plants", onBack = onBack) {
                 RoundButton("📅", onClick = onCalendar, description = "Calendar")
                 Spacer(Modifier.width(8.dp))
-                RoundButton("+", onClick = onAdd, description = "Add a plant")
+                RoundButton("+", onClick = onAdd, container = Fresh.Ink, content = Color.White, description = "Add a plant")
             }
 
             val o = overview ?: return@Column
@@ -101,37 +98,42 @@ fun PlantsScreen(
 
 @Composable
 private fun Empty() {
-    Text(
-        text = "No plants yet.",
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.padding(top = 24.dp),
-    )
-    Text(
-        text = "Tap + to add one, with how often it needs water.",
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 4.dp),
-    )
+    SoftCard(modifier = Modifier.padding(top = 8.dp)) {
+        Text("No plants yet", style = MaterialTheme.typography.titleLarge, color = Fresh.Ink)
+        Text(
+            "Tap + to add one, with how often it needs water.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Fresh.InkSoft,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+    }
 }
 
 @Composable
 private fun DueToday(o: PlantsOverview, onWater: (Long) -> Unit, onEdit: (Long) -> Unit) {
-    SectionTitle("Due today")
     o.due.forEach { row ->
-        SoftCard(modifier = Modifier.padding(bottom = 12.dp)) {
-            PlantTitle(row, onEdit)
-            Spacer(Modifier.height(18.dp))
-            Button(
-                onClick = { onWater(row.plant.id) },
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = row.plant.colour.toColor(),
-                    contentColor = Color.White,
-                ),
-                modifier = Modifier.fillMaxWidth().height(64.dp),
+        SoftCard(color = Fresh.Pastel, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)) {
+            PlantName(row, onEdit, color = Fresh.GreenDeep)
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Pill(PlantCopy.interval(row.plant.recurrence))
+                Pill(PlantCopy.whenLabel(row.status))
+            }
+            Spacer(Modifier.height(20.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().clickable { onWater(row.plant.id) },
             ) {
-                Text("💧  I watered it", style = MaterialTheme.typography.titleMedium)
+                RoundButton(
+                    glyph = "💧",
+                    onClick = { onWater(row.plant.id) },
+                    container = Fresh.Green,
+                    content = Color.White,
+                    size = 56.dp,
+                    description = "I watered ${row.plant.name}",
+                )
+                Spacer(Modifier.width(14.dp))
+                Text("I watered it", style = MaterialTheme.typography.titleMedium, color = Fresh.GreenDeep)
             }
         }
     }
@@ -144,20 +146,22 @@ private fun DueToday(o: PlantsOverview, onWater: (Long) -> Unit, onEdit: (Long) 
 @Composable
 private fun NothingDue(o: PlantsOverview, onWater: (Long) -> Unit, onEdit: (Long) -> Unit) {
     val next = o.next ?: return
-    Spacer(Modifier.height(8.dp))
-    SoftCard {
+    SoftCard(modifier = Modifier.padding(top = 8.dp)) {
+        Text("Next watering", style = Label, color = Fresh.InkSoft)
+        Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("NEXT WATERING", style = Label, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+            Column(Modifier.weight(1f)) {
+                PlantName(next, onEdit)
+                Text(
+                    next.nextDue?.format(nextDate) ?: "",
+                    style = Label,
+                    color = Fresh.InkSoft,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 10.dp),
+                )
+                Pill(PlantCopy.whenLabel(next.status), color = Fresh.Page)
+            }
             WaterEarly(next, onWater)
         }
-        Spacer(Modifier.height(14.dp))
-        PlantTitle(next, onEdit)
-        Text(
-            text = "${next.nextDue?.format(nextDate) ?: ""}  ·  ${PlantCopy.whenLabel(next.status)}",
-            style = Small,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 6.dp),
-        )
     }
     val later = o.upcoming.drop(1)
     if (later.isNotEmpty()) {
@@ -167,41 +171,51 @@ private fun NothingDue(o: PlantsOverview, onWater: (Long) -> Unit, onEdit: (Long
 }
 
 @Composable
-private fun PlantTitle(row: PlantRow, onEdit: (Long) -> Unit) {
+private fun PlantName(row: PlantRow, onEdit: (Long) -> Unit, color: Color = Fresh.Ink) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.clickable { onEdit(row.plant.id) },
     ) {
         PlantDot(row.plant.colour, size = 12.dp)
         Spacer(Modifier.width(10.dp))
-        Text(row.plant.name, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-        Spacer(Modifier.width(10.dp))
-        Text(PlantCopy.interval(row.plant.recurrence), style = Small, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            row.plant.name,
+            style = MaterialTheme.typography.titleLarge,
+            color = color,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
 /** One plant that is not due: name, when, and a small button for watering early. */
 @Composable
 private fun PlantLine(row: PlantRow, onWater: (Long) -> Unit, onEdit: (Long) -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f).clickable { onEdit(row.plant.id) },
-        ) {
+    SoftCard(corner = 20.dp, modifier = Modifier.padding(bottom = 10.dp), onClick = { onEdit(row.plant.id) }) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             PlantDot(row.plant.colour)
-            Spacer(Modifier.width(10.dp))
-            Text(row.plant.name, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-            Text(PlantCopy.whenLabel(row.status), style = Small, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    row.plant.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Fresh.Ink,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    "${PlantCopy.interval(row.plant.recurrence)} · ${PlantCopy.whenLabel(row.status)}",
+                    style = Label,
+                    color = Fresh.InkSoft,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            WaterEarly(row, onWater)
         }
-        Spacer(Modifier.width(12.dp))
-        WaterEarly(row, onWater)
     }
 }
 
 @Composable
 private fun WaterEarly(row: PlantRow, onWater: (Long) -> Unit) {
-    RoundButton("💧", onClick = { onWater(row.plant.id) }, description = "Watered ${row.plant.name} early")
+    RoundButton("💧", onClick = { onWater(row.plant.id) }, container = Fresh.Page, description = "Watered ${row.plant.name} early")
 }

@@ -27,13 +27,16 @@ class PlantsViewModel(private val repo: PlantRepository) : ViewModel() {
 
     val todayDate: StateFlow<LocalDate> = today
 
-    private val _undo = MutableSharedFlow<Long>(extraBufferCapacity = 1)
+    private val _undo = MutableSharedFlow<Pair<Long, String>>(extraBufferCapacity = 1)
 
-    /** The id of each watering just recorded, so the screen can offer Undo. */
-    val undo: SharedFlow<Long> = _undo.asSharedFlow()
+    /** Each watering just recorded (its id, the plant's name), so the screen can offer Undo. */
+    val undo: SharedFlow<Pair<Long, String>> = _undo.asSharedFlow()
 
     fun water(plantId: Long) {
-        viewModelScope.launch { _undo.emit(repo.water(plantId)) }
+        viewModelScope.launch {
+            val name = repo.plant(plantId)?.name ?: return@launch
+            _undo.emit(repo.water(plantId) to name)
+        }
     }
 
     fun undo(wateringId: Long) {
