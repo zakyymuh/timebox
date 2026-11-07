@@ -162,4 +162,12 @@ class DashboardViewModelTest {
 
         assertEquals(1, db.plantDao().waterings().size)
     }
+
+    @Test
+    fun `the fun fact is about a plant you have`() = runBlocking {
+        plants.save(0, form("Greenovia", 4, d(7)))
+        val vm = DashboardViewModel(timebox, plants)
+        val state = withTimeout(5_000) { vm.state.first { it.fact?.entry?.id == "greenovia" } }
+        assertEquals("greenovia", state.fact?.entry?.id)
+    }
 }
