@@ -57,6 +57,9 @@ object PlantCopy {
         else -> "${overview.due.size} plants need water"
     }
 
+    /** The Undo snackbar after watering. */
+    fun watered(name: String): String = "Watered $name"
+
     fun habit(summary: DaySummary): String =
         if (summary.isEmpty) "Nothing written yet" else "${summary.done} / ${summary.total} done"
 }
