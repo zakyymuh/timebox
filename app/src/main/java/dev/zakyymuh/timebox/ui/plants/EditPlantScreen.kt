@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.core.plants.PlantColour
 import dev.zakyymuh.timebox.core.plants.PlantForm
@@ -58,6 +59,11 @@ fun EditPlantScreen(viewModel: EditPlantViewModel, onDone: () -> Unit) {
     val canSave by viewModel.canSave.collectAsStateWithLifecycle()
     val loaded by viewModel.loaded.collectAsStateWithLifecycle()
     var confirmDelete by remember { mutableStateOf(false) }
+
+    LifecycleResumeEffect(Unit) {
+        viewModel.refresh()
+        onPauseOrDispose { }
+    }
 
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { insets ->
         Column(

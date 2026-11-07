@@ -10,6 +10,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.lifecycle.Lifecycle
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -38,7 +41,7 @@ fun AppNav(start: String?, sendTestReminder: () -> Unit) {
     val nav = rememberNavController()
 
     NavHost(navController = nav, startDestination = Destinations.DASHBOARD) {
-        composable(Destinations.DASHBOARD) {
+        composable(Destinations.DASHBOARD) { entry ->
             val vm: DashboardViewModel = viewModel(
                 factory = viewModelFactory {
                     initializer {
@@ -51,8 +54,8 @@ fun AppNav(start: String?, sendTestReminder: () -> Unit) {
             )
             DashboardScreen(
                 viewModel = vm,
-                onOpenHabit = { nav.navigate(Destinations.TODAY) },
-                onOpenPlants = { nav.navigate(Destinations.PLANTS) },
+                onOpenHabit = { entry.ifResumed { nav.go(Destinations.TODAY) } },
+                onOpenPlants = { entry.ifResumed { nav.go(Destinations.PLANTS) } },
             )
         }
 
@@ -67,24 +70,24 @@ fun AppNav(start: String?, sendTestReminder: () -> Unit) {
             TodayScreen(viewModel = vm)
         }
 
-        composable(Destinations.PLANTS) {
+        composable(Destinations.PLANTS) { entry ->
             val vm: PlantsViewModel = viewModel(
                 factory = viewModelFactory { initializer { PlantsViewModel(ServiceLocator.plantRepository(context)) } },
             )
             PlantsScreen(
                 viewModel = vm,
-                onBack = { nav.popBackStack() },
-                onCalendar = { nav.navigate(Destinations.CALENDAR) },
-                onAdd = { nav.navigate(Destinations.edit(0)) },
-                onEdit = { id -> nav.navigate(Destinations.edit(id)) },
+                onBack = { entry.ifResumed { nav.popBackStack() } },
+                onCalendar = { entry.ifResumed { nav.go(Destinations.CALENDAR) } },
+                onAdd = { entry.ifResumed { nav.go(Destinations.edit(0)) } },
+                onEdit = { id -> entry.ifResumed { nav.go(Destinations.edit(id)) } },
             )
         }
 
-        composable(Destinations.CALENDAR) {
+        composable(Destinations.CALENDAR) { entry ->
             val vm: CalendarViewModel = viewModel(
                 factory = viewModelFactory { initializer { CalendarViewModel(ServiceLocator.plantRepository(context)) } },
             )
-            CalendarScreen(viewModel = vm, onBack = { nav.popBackStack() })
+            CalendarScreen(viewModel = vm, onBack = { entry.ifResumed { nav.popBackStack() } })
         }
 
         composable(
@@ -97,7 +100,7 @@ fun AppNav(start: String?, sendTestReminder: () -> Unit) {
                     initializer { EditPlantViewModel(ServiceLocator.plantRepository(context), id) }
                 },
             )
-            EditPlantScreen(viewModel = vm, onDone = { nav.popBackStack() })
+            EditPlantScreen(viewModel = vm, onDone = { entry.ifResumed { nav.popBackStack() } })
         }
     }
 
@@ -105,7 +108,18 @@ fun AppNav(start: String?, sendTestReminder: () -> Unit) {
     LaunchedEffect(Unit) {
         if (!routed) {
             routed = true
-            if (start != null) nav.navigate(start)
+            if (start != null) nav.go(start)
         }
     }
 }
+
+/**
+ * Runs [block] only while this screen is the one in front. Navigating or popping moves the
+ * screen out of RESUMED at once, so a double tap cannot pop twice (leaving a blank screen
+ * with no destination) or push the same screen twice.
+ */
+private inline fun NavBackStackEntry.ifResumed(block: () -> Unit) {
+    if (lifecycle.currentState == Lifecycle.State.RESUMED) block()
+}
+
+private fun NavHostController.go(route: String) = navigate(route) { launchSingleTop = true }

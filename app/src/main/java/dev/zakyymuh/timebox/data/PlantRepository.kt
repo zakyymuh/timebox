@@ -41,12 +41,26 @@ class PlantRepository(
             colour = form.colour.name,
             everyDays = if (form.repeats) form.everyDays else null,
             onceDate = if (form.repeats) null else form.onceDate,
-            // "Last watered" is only asked for new repeating plants; an edit keeps the
-            // original anchor, so editing never moves the schedule by itself.
-            anchor = existing?.anchor ?: if (form.repeats) form.lastWatered else today,
+            anchor = anchorFor(existing, form, today),
         )
         val rowId = dao.upsertPlant(entity)
         return if (id != 0L) id else rowId
+    }
+
+    /**
+     * New plants: "last watered" for repeating ones, today for one-time ones. Edits keep
+     * the anchor, so renaming or recolouring never moves the schedule, except when the
+     * plant switches between repeating and one-time or its one-time date changes: then
+     * it starts fresh from today. Otherwise a watered plant switched to one-time would
+     * count as already done, and an old one-time plant switched to repeating would be
+     * weeks overdue.
+     */
+    private fun anchorFor(existing: PlantEntity?, form: PlantForm, today: LocalDate): LocalDate {
+        if (existing == null) return if (form.repeats) form.lastWatered else today
+        val wasRepeating = existing.everyDays != null
+        val kindChanged = wasRepeating != form.repeats
+        val onceMoved = !form.repeats && existing.onceDate != form.onceDate
+        return if (kindChanged || onceMoved) today else existing.anchor
     }
 
     suspend fun delete(id: Long) = dao.deletePlant(id)

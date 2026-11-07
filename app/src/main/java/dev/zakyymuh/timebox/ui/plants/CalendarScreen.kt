@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.core.plants.Mark
 import dev.zakyymuh.timebox.core.plants.MarkKind
@@ -44,6 +45,11 @@ private const val MAX_DOTS = 3
 @Composable
 fun CalendarScreen(viewModel: CalendarViewModel, onBack: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    LifecycleResumeEffect(Unit) {
+        viewModel.refresh()
+        onPauseOrDispose { }
+    }
 
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { insets ->
         Column(

@@ -27,8 +27,8 @@ data class CalendarState(
 
 class CalendarViewModel(private val repo: PlantRepository) : ViewModel() {
 
-    private val today = repo.todayDate()
-    private val month = MutableStateFlow(YearMonth.from(today))
+    private val today = MutableStateFlow(repo.todayDate())
+    private val month = MutableStateFlow(YearMonth.from(today.value))
     private val selected = MutableStateFlow<LocalDate?>(null)
 
     val state: StateFlow<CalendarState> = combine(
@@ -36,7 +36,8 @@ class CalendarViewModel(private val repo: PlantRepository) : ViewModel() {
         repo.wateringsFlow(),
         month,
         selected,
-    ) { plants, waterings, m, sel ->
+        today,
+    ) { plants, waterings, m, sel, today ->
         val byId = plants.associateBy { it.id }
         CalendarState(
             month = m,
@@ -50,7 +51,7 @@ class CalendarViewModel(private val repo: PlantRepository) : ViewModel() {
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
-        CalendarState(YearMonth.from(today), today, emptyMap(), null, emptyList()),
+        CalendarState(YearMonth.from(today.value), today.value, emptyMap(), null, emptyList()),
     )
 
     fun previousMonth() {
@@ -65,7 +66,12 @@ class CalendarViewModel(private val repo: PlantRepository) : ViewModel() {
 
     /** Only past days and today hold waterings, so only those can be opened. */
     fun select(date: LocalDate?) {
-        selected.value = date?.takeIf { !it.isAfter(today) && it != selected.value }
+        selected.value = date?.takeIf { !it.isAfter(today.value) && it != selected.value }
+    }
+
+    /** Re-reads today, for when the calendar comes back after midnight. */
+    fun refresh() {
+        today.value = repo.todayDate()
     }
 
     fun removeWatering(id: Long) {
