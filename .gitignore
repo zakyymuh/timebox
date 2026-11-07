@@ -13,3 +13,7 @@ local.properties
 
 # macOS
 .DS_Store
+
+# Eclipse/Buildship output
+core/bin/
+app/bin/

@@ -77,9 +77,9 @@ fun TodayScreen(viewModel: TodayViewModel) {
             Spacer(Modifier.height(16.dp))
 
             if (state.isEmpty) {
-                EmptyDay(state, viewModel)
+                EmptyDay(state, viewModel, Modifier.weight(1f))
             } else {
-                Items(state, viewModel)
+                Items(state, viewModel, Modifier.weight(1f))
             }
 
             if (state.editable) {
@@ -231,8 +231,12 @@ private fun NoteField(note: String, editable: Boolean, onNoteChanged: (String) -
 }
 
 @Composable
-private fun EmptyDay(state: DayUiState, viewModel: TodayViewModel) {
-    Column(Modifier.weight(1f)) {
+private fun EmptyDay(
+    state: DayUiState,
+    viewModel: TodayViewModel,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier) {
         Text(
             text = if (state.isToday) "Clean slate for today." else "Nothing was written this day.",
             style = MaterialTheme.typography.titleMedium,
@@ -278,8 +282,12 @@ private fun TemplateChip(day: DayList, onUse: (LocalDate) -> Unit) {
 }
 
 @Composable
-private fun Items(state: DayUiState, viewModel: TodayViewModel) {
-    LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
+private fun Items(
+    state: DayUiState,
+    viewModel: TodayViewModel,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(modifier = modifier.fillMaxWidth()) {
         items(state.items, key = { it.id }) { item ->
             ItemRow(
                 item = item,
