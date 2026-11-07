@@ -23,6 +23,7 @@ object IntervalAdvice {
         val mid = gaps.size / 2
         // Even count: average the two middles, rounding half up.
         val median = if (gaps.size % 2 == 1) gaps[mid] else (gaps[mid - 1] + gaps[mid] + 1) / 2
-        return median.takeIf { kotlin.math.abs(it - interval) >= 1 && it >= 1 }
+        // Only suggest what the form can save (1–90 days); "Use 100" would be rejected.
+        return median.takeIf { kotlin.math.abs(it - interval) >= 1 && it in PlantForm.INTERVAL }
     }
 }

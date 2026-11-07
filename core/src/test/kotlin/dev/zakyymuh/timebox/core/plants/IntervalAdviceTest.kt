@@ -58,4 +58,10 @@ class IntervalAdviceTest {
         assertNull(IntervalAdvice.suggest(every4.copy(recurrence = Recurrence.Once(start)), history(8, 8, 8)))
         assertNull(IntervalAdvice.suggest(every4.copy(id = 2), history(8, 8, 8)))
     }
+
+    @Test
+    fun `no advice beyond the 90-day limit the form allows`() {
+        // A cactus watered every ~100 days: "Use 100" would be rejected on save.
+        assertNull(IntervalAdvice.suggest(every4, history(100, 100, 100)))
+    }
 }
