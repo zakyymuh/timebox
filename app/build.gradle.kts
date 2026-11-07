@@ -17,15 +17,30 @@ android {
     defaultConfig {
         applicationId = "dev.zakyymuh.timebox"
         // 26, not 24: Inter and JetBrains Mono are variable fonts, which Android
-        // supports from API 26. The target phone is a Redmi Note 8 on Android 9+, so
+        // supports from API 26. The target phone is a Redmi Note 14 on Android 16, so
         // nothing reachable is lost.
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.2"
+        versionCode = 2
+        versionName = "0.3"
+    }
+
+    // A committed debug key, so every CI build is signed the same way and installs as an
+    // upgrade. CI used to generate a fresh key per run, which forced an uninstall — and an
+    // uninstall deletes the user's lists. Debug keys are not secret; never ship with this.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             isMinifyEnabled = false
         }
