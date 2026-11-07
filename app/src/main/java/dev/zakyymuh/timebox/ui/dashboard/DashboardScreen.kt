@@ -1,5 +1,6 @@
 package dev.zakyymuh.timebox.ui.dashboard
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,6 +35,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.core.TodayAgenda
 import dev.zakyymuh.timebox.core.TodayEntry
+import dev.zakyymuh.timebox.core.plants.FunFact
 import dev.zakyymuh.timebox.core.plants.PlantCopy
 import dev.zakyymuh.timebox.ui.common.Pill
 import dev.zakyymuh.timebox.ui.common.RoundButton
@@ -48,7 +50,13 @@ private const val GREETING = "Hello, Zaky 👋"
 
 /** The front door: a greeting, two big cards, and everything that needs you today. */
 @Composable
-fun DashboardScreen(viewModel: DashboardViewModel, onOpenHabit: () -> Unit, onOpenPlants: () -> Unit) {
+fun DashboardScreen(
+    viewModel: DashboardViewModel,
+    onOpenHabit: () -> Unit,
+    onOpenPlants: () -> Unit,
+    onOpenEntry: (String) -> Unit,
+    onOpenEncyclopedia: () -> Unit,
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
 
@@ -101,6 +109,8 @@ fun DashboardScreen(viewModel: DashboardViewModel, onOpenHabit: () -> Unit, onOp
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                 )
             }
+
+            state.fact?.let { FactCard(it, onOpenEntry, onOpenEncyclopedia) }
 
             SectionTitle("Today")
             val today = state.today
@@ -212,5 +222,29 @@ private fun TickCard(entry: TodayEntry.Tick, onTick: (Long) -> Unit, onOpen: () 
                 description = "Tick ${entry.item.text}",
             )
         }
+    }
+}
+
+/** "Did you know?": one plant fact a day; tap for the entry, or open the whole encyclopedia. */
+@Composable
+private fun FactCard(fact: FunFact, onOpenEntry: (String) -> Unit, onOpenEncyclopedia: () -> Unit) {
+    SoftCard(
+        color = Fresh.Pastel,
+        onClick = { onOpenEntry(fact.entry.id) },
+        modifier = Modifier.padding(top = 14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("🌵  Did you know?", style = MaterialTheme.typography.titleMedium, color = Fresh.GreenDeep, modifier = Modifier.weight(1f))
+            Pill(
+                text = "Encyclopedia",
+                color = Fresh.Page,
+                textColor = Fresh.GreenDeep,
+                modifier = Modifier.clickable(onClick = onOpenEncyclopedia),
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(fact.text, style = MaterialTheme.typography.bodyLarge, color = Fresh.GreenDeep)
+        Spacer(Modifier.height(8.dp))
+        Text("${fact.entry.name} →", style = Label, color = Fresh.GreenDeep.copy(alpha = 0.75f))
     }
 }

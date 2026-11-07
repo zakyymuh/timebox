@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import dev.zakyymuh.timebox.core.DaySummaries
 import dev.zakyymuh.timebox.core.TodayAgenda
 import dev.zakyymuh.timebox.core.TodayEntry
+import dev.zakyymuh.timebox.core.plants.FunFact
+import dev.zakyymuh.timebox.core.plants.FunFacts
 import dev.zakyymuh.timebox.core.plants.PlantCopy
 import dev.zakyymuh.timebox.core.plants.PlantsOverview
 import dev.zakyymuh.timebox.data.PlantRepository
@@ -28,6 +30,8 @@ data class DashboardState(
     val habit: String,
     val plants: String,
     val today: List<TodayEntry>?,
+    /** Today's "Did you know?", preferring plants the owner has. */
+    val fact: FunFact? = null,
 )
 
 /** What the Undo snackbar can put back. */
@@ -56,6 +60,7 @@ class DashboardViewModel(
             habit = PlantCopy.habit(DaySummaries.summarise(day)),
             plants = PlantCopy.dashboard(overview),
             today = TodayAgenda.of(day, overview),
+            fact = FunFacts.forDay(date, plantList.map { it.name }),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardState(null, "", "", null))
 

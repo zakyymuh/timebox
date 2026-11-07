@@ -10,6 +10,11 @@ object Destinations {
     const val PLANTS = "plants"
     const val CALENDAR = "plants/calendar"
     const val EDIT = "plants/edit/{id}"
+    const val ENCYCLOPEDIA = "encyclopedia"
+    const val ENTRY = "encyclopedia/{id}"
+
+    /** Route to one encyclopedia entry. */
+    fun entry(id: String): String = "encyclopedia/$id"
 
     /** Route to edit plant [id]; 0 means a new plant. */
     fun edit(id: Long): String = "plants/edit/$id"

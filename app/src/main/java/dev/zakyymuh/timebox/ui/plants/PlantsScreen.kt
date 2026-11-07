@@ -55,6 +55,7 @@ fun PlantsScreen(
     onCalendar: () -> Unit,
     onAdd: () -> Unit,
     onEdit: (Long) -> Unit,
+    onEncyclopedia: () -> Unit,
 ) {
     val overview by viewModel.overview.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
@@ -84,6 +85,8 @@ fun PlantsScreen(
                 .padding(horizontal = 20.dp),
         ) {
             TopBar(title = "Plants", onBack = onBack) {
+                RoundButton("📖", onClick = onEncyclopedia, description = "Encyclopedia")
+                Spacer(Modifier.width(8.dp))
                 RoundButton("📅", onClick = onCalendar, description = "Calendar")
                 Spacer(Modifier.width(8.dp))
                 RoundButton("+", onClick = onAdd, container = Fresh.Ink, content = Color.White, description = "Add a plant")

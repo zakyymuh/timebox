@@ -23,6 +23,8 @@ import androidx.navigation.navArgument
 import dev.zakyymuh.timebox.ServiceLocator
 import dev.zakyymuh.timebox.ui.dashboard.DashboardScreen
 import dev.zakyymuh.timebox.ui.dashboard.DashboardViewModel
+import dev.zakyymuh.timebox.ui.encyclopedia.EncyclopediaScreen
+import dev.zakyymuh.timebox.ui.encyclopedia.EntryScreen
 import dev.zakyymuh.timebox.ui.plants.CalendarScreen
 import dev.zakyymuh.timebox.ui.plants.CalendarViewModel
 import dev.zakyymuh.timebox.ui.plants.EditPlantScreen
@@ -76,6 +78,8 @@ fun AppNav(start: String?) {
                 viewModel = vm,
                 onOpenHabit = { entry.ifResumed { nav.go(Destinations.TODAY) } },
                 onOpenPlants = { entry.ifResumed { nav.go(Destinations.PLANTS) } },
+                onOpenEntry = { id -> entry.ifResumed { nav.go(Destinations.entry(id)) } },
+                onOpenEncyclopedia = { entry.ifResumed { nav.go(Destinations.ENCYCLOPEDIA) } },
             )
         }
 
@@ -100,6 +104,24 @@ fun AppNav(start: String?) {
                 onCalendar = { entry.ifResumed { nav.go(Destinations.CALENDAR) } },
                 onAdd = { entry.ifResumed { nav.go(Destinations.edit(0)) } },
                 onEdit = { id -> entry.ifResumed { nav.go(Destinations.edit(id)) } },
+                onEncyclopedia = { entry.ifResumed { nav.go(Destinations.ENCYCLOPEDIA) } },
+            )
+        }
+
+        composable(Destinations.ENCYCLOPEDIA) { entry ->
+            EncyclopediaScreen(
+                onBack = { entry.ifResumed { nav.popBackStack() } },
+                onOpen = { id -> entry.ifResumed { nav.go(Destinations.entry(id)) } },
+            )
+        }
+
+        composable(
+            route = Destinations.ENTRY,
+            arguments = listOf(navArgument("id") { type = NavType.StringType }),
+        ) { entry ->
+            EntryScreen(
+                id = entry.arguments?.getString("id").orEmpty(),
+                onBack = { entry.ifResumed { nav.popBackStack() } },
             )
         }
 
