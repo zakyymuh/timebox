@@ -1,6 +1,12 @@
 package dev.zakyymuh.timebox.ui.plants
 
 import androidx.compose.foundation.border
+import dev.zakyymuh.timebox.ui.theme.Fresh
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,11 +57,11 @@ fun CalendarScreen(viewModel: CalendarViewModel, onBack: () -> Unit) {
         onPauseOrDispose { }
     }
 
-    Scaffold(containerColor = MaterialTheme.colorScheme.background) { insets ->
+    Scaffold(containerColor = Fresh.Page) { insets ->
         Column(
             modifier = Modifier
                 .padding(insets)
-                .padding(horizontal = 22.dp)
+                .padding(horizontal = 20.dp)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
         ) {
@@ -65,8 +71,8 @@ fun CalendarScreen(viewModel: CalendarViewModel, onBack: () -> Unit) {
                 RoundButton("‹", onClick = viewModel::previousMonth, description = "Previous month")
                 Text(
                     text = state.month.atDay(1).format(monthTitle),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Fresh.Ink,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f),
                 )
@@ -75,7 +81,7 @@ fun CalendarScreen(viewModel: CalendarViewModel, onBack: () -> Unit) {
 
             Row(Modifier.fillMaxWidth()) {
                 weekdays.forEach {
-                    Text(it, style = Small, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+                    Text(it, style = Small, color = Fresh.InkSoft, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
                 }
             }
             Spacer(Modifier.height(6.dp))
@@ -101,21 +107,21 @@ fun CalendarScreen(viewModel: CalendarViewModel, onBack: () -> Unit) {
             }
 
             Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("● watered", style = Small, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("● watered", style = Small, color = Fresh.InkSoft)
                 Spacer(Modifier.width(16.dp))
-                Text("○ planned", style = Small, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("○ planned", style = Small, color = Fresh.InkSoft)
             }
 
             val selected = state.selected
             if (selected != null) {
                 Spacer(Modifier.height(18.dp))
-                SoftCard {
-                    Text(selected.format(dayTitle).uppercase(), style = Label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                SoftCard(corner = 20.dp) {
+                    Text(selected.format(dayTitle), style = MaterialTheme.typography.titleMedium, color = Fresh.Ink)
                     if (state.selectedWaterings.isEmpty()) {
                         Text(
                             "Nothing watered this day.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = Fresh.InkSoft,
                             modifier = Modifier.padding(top = 10.dp),
                         )
                     }
@@ -123,7 +129,7 @@ fun CalendarScreen(viewModel: CalendarViewModel, onBack: () -> Unit) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
                             PlantDot(plant.colour)
                             Spacer(Modifier.width(10.dp))
-                            Text(plant.name, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                            Text(plant.name, style = MaterialTheme.typography.bodyMedium, color = Fresh.Ink, modifier = Modifier.weight(1f))
                             TextButton(onClick = { viewModel.removeWatering(watering.id) }) {
                                 Text("Remove", color = MaterialTheme.colorScheme.error)
                             }
@@ -145,29 +151,37 @@ private fun DayCell(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(8.dp)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
-            .height(54.dp)
-            .padding(2.dp)
-            .let { if (isToday || isSelected) it.border(1.dp, MaterialTheme.colorScheme.onSurface, shape) else it }
+            .height(58.dp)
             .let { if (date != null) it.clickable(onClick = onClick) else it }
-            .padding(top = 6.dp),
+            .padding(top = 4.dp),
     ) {
         if (date == null) return@Column
-        Text(
-            text = date.dayOfMonth.toString(),
-            style = Small,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Spacer(Modifier.height(5.dp))
+        // Today is a filled pastel green circle; a selected day gets an ink ring — the
+        // one outline in the app, because it marks a selection.
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(if (isToday) Fresh.Pastel else Color.Transparent)
+                .let { if (isSelected) it.border(1.5.dp, Fresh.Ink, CircleShape) else it },
+        ) {
+            Text(
+                text = date.dayOfMonth.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = if (isToday) Fresh.GreenDeep else Fresh.Ink,
+            )
+        }
+        Spacer(Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
             marks.take(MAX_DOTS).forEach { mark ->
-                PlantDot(mark.colour, size = 7.dp, hollow = mark.kind == MarkKind.PROJECTED)
+                PlantDot(mark.colour, size = 6.dp, hollow = mark.kind == MarkKind.PROJECTED)
             }
             if (marks.size > MAX_DOTS) {
-                Text("+${marks.size - MAX_DOTS}", style = Small, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("+${marks.size - MAX_DOTS}", style = Small, color = Fresh.InkSoft)
             }
         }
     }

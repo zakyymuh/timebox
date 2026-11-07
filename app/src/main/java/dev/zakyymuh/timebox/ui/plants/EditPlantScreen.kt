@@ -25,7 +25,9 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -37,6 +39,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -45,6 +49,7 @@ import dev.zakyymuh.timebox.core.plants.PlantColour
 import dev.zakyymuh.timebox.core.plants.PlantForm
 import dev.zakyymuh.timebox.ui.common.TopBar
 import dev.zakyymuh.timebox.ui.common.SectionTitle
+import dev.zakyymuh.timebox.ui.theme.Fresh
 import dev.zakyymuh.timebox.ui.theme.Small
 import java.time.Instant
 import java.time.LocalDate
@@ -65,22 +70,25 @@ fun EditPlantScreen(viewModel: EditPlantViewModel, onDone: () -> Unit) {
         onPauseOrDispose { }
     }
 
-    Scaffold(containerColor = MaterialTheme.colorScheme.background) { insets ->
+    Scaffold(containerColor = Fresh.Page) { insets ->
         Column(
             modifier = Modifier
                 .padding(insets)
-                .padding(horizontal = 22.dp)
+                .padding(horizontal = 20.dp)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
         ) {
             TopBar(title = if (viewModel.isNew) "New plant" else "Edit plant", onBack = onDone)
             if (!loaded) return@Column
 
-            OutlinedTextField(
+            TextField(
                 value = form.name,
                 onValueChange = { viewModel.update(form.copy(name = it.take(PlantForm.MAX_NAME))) },
-                label = { Text("Name") },
+                placeholder = { Text("Plant name", color = Fresh.InkSoft) },
                 singleLine = true,
+                shape = RoundedCornerShape(20.dp),
+                colors = softFieldColors(),
+                textStyle = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -109,15 +117,21 @@ fun EditPlantScreen(viewModel: EditPlantViewModel, onDone: () -> Unit) {
             Button(
                 onClick = { viewModel.save(onDone) },
                 enabled = canSave,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = CircleShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Fresh.Ink,
+                    contentColor = Color.White,
+                    disabledContainerColor = Fresh.Card,
+                    disabledContentColor = Fresh.InkSoft,
+                ),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
             ) {
-                Text("Save")
+                Text("Save", style = MaterialTheme.typography.labelLarge)
             }
 
             if (!viewModel.isNew) {
                 TextButton(onClick = { confirmDelete = true }, modifier = Modifier.padding(top = 8.dp)) {
-                    Text("Delete plant", color = MaterialTheme.colorScheme.error)
+                    Text("Delete plant", color = Fresh.Error)
                 }
             }
             Spacer(Modifier.height(24.dp))
@@ -139,38 +153,55 @@ fun EditPlantScreen(viewModel: EditPlantViewModel, onDone: () -> Unit) {
 
 @Composable
 private fun ColourRow(selected: PlantColour, onPick: (PlantColour) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         PlantColour.entries.forEach { colour ->
+            // The chosen colour gets a green ring with a white gap, so it reads as "picked".
             Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(36.dp)
-                    .border(
-                        width = if (colour == selected) 2.dp else 0.dp,
-                        color = if (colour == selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.background,
-                        shape = CircleShape,
-                    )
-                    .padding(4.dp)
-                    .background(colour.toColor(), CircleShape)
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(if (colour == selected) Fresh.Green else Color.Transparent)
                     .clickable { onPick(colour) },
-            )
+            ) {
+                Box(
+                    Modifier
+                        .size(if (colour == selected) 36.dp else 40.dp)
+                        .clip(CircleShape)
+                        .background(Fresh.Page)
+                        .padding(3.dp)
+                        .clip(CircleShape)
+                        .background(colour.toColor()),
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(10.dp)
     Text(
         text = label,
-        style = MaterialTheme.typography.bodyMedium,
-        color = if (selected) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onSurface,
+        style = MaterialTheme.typography.labelLarge,
+        color = if (selected) Fresh.GreenDeep else Fresh.Ink,
         modifier = Modifier
-            .background(if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.background, shape)
-            .border(1.dp, MaterialTheme.colorScheme.outline, shape)
+            .clip(CircleShape)
+            .background(if (selected) Fresh.Pastel else Fresh.Card)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 20.dp, vertical = 12.dp),
     )
 }
+
+@Composable
+private fun softFieldColors() = TextFieldDefaults.colors(
+    focusedContainerColor = Fresh.Card,
+    unfocusedContainerColor = Fresh.Card,
+    focusedIndicatorColor = Color.Transparent,
+    unfocusedIndicatorColor = Color.Transparent,
+    cursorColor = Fresh.Green,
+    focusedTextColor = Fresh.Ink,
+    unfocusedTextColor = Fresh.Ink,
+)
 
 @Composable
 private fun IntervalField(days: Int, onChange: (Int) -> Unit) {
@@ -178,9 +209,9 @@ private fun IntervalField(days: Int, onChange: (Int) -> Unit) {
     // which the form rejects, so Save stays disabled until it is a real number.
     var text by remember { mutableStateOf(days.toString()) }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("Every", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+        Text("Every", style = MaterialTheme.typography.bodyMedium, color = Fresh.Ink)
         Spacer(Modifier.width(10.dp))
-        OutlinedTextField(
+        TextField(
             value = text,
             onValueChange = { value ->
                 text = value.filter(Char::isDigit).take(2)
@@ -188,12 +219,15 @@ private fun IntervalField(days: Int, onChange: (Int) -> Unit) {
             },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            shape = RoundedCornerShape(20.dp),
+            colors = softFieldColors(),
+            textStyle = MaterialTheme.typography.titleMedium,
             modifier = Modifier.width(84.dp),
         )
         Spacer(Modifier.width(10.dp))
-        Text("days", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+        Text("days", style = MaterialTheme.typography.bodyMedium, color = Fresh.Ink)
     }
-    Text("1 to 90", style = Small, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
+    Text("1 to 90", style = Small, color = Fresh.InkSoft, modifier = Modifier.padding(top = 4.dp))
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -202,10 +236,15 @@ private fun DateField(label: String, date: LocalDate, onChange: (LocalDate) -> U
     var open by remember { mutableStateOf(false) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().clickable { open = true }.padding(vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(Fresh.Card)
+            .clickable { open = true }
+            .padding(horizontal = 18.dp, vertical = 16.dp),
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-        Text(date.format(dateLabel), style = Small, color = MaterialTheme.colorScheme.onSurface)
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = Fresh.Ink, modifier = Modifier.weight(1f))
+        Text(date.format(dateLabel), style = Small, color = Fresh.Ink)
     }
 
     if (open) {
