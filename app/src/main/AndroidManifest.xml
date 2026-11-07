@@ -35,6 +35,11 @@
             android:name=".nudge.MorningReceiver"
             android:exported="false" />
 
+        <!-- The 18:00 check for plants that need water. -->
+        <receiver
+            android:name=".nudge.PlantReceiver"
+            android:exported="false" />
+
         <!--
           updatePeriodMillis is 0: the widget is refreshed when the list changes, not on
           a timer, because a timer would wake the phone all day to redraw a list that

@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import android.content.Intent
+import dev.zakyymuh.timebox.nudge.EveningReminder
 import dev.zakyymuh.timebox.nudge.MorningReceiver
 import dev.zakyymuh.timebox.nudge.MorningReminder
 import dev.zakyymuh.timebox.ui.theme.DailyTheme
@@ -24,6 +25,10 @@ class MainActivity : ComponentActivity() {
         // Re-arming an already-armed alarm is harmless, and this covers a first launch
         // and any firing that was missed while the app was not running.
         reminder.schedule()
+        EveningReminder(applicationContext).apply {
+            ensureChannel()
+            schedule()
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
