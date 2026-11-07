@@ -45,34 +45,76 @@ Back from either page returns to the dashboard. Same paper look as the existing 
 └──────────────────────────────┘
 ```
 
-### 2. Plant schedule page
+### 2. Plant schedule page — changes with the day (owner's layout)
+
+The page shows **what matters today**, not a calendar. The calendar is one tap away
+behind an icon.
+
+**When something is due today (or overdue):** big watering button(s), one per due plant.
 
 ```
 ┌──────────────────────────────┐
-│ ‹  PLANT SCHEDULE         +  │
-│  ‹  NOVEMBER 2026  ›         │
-│  Mo Tu We Th Fr Sa Su        │
-│                       1      │
-│   2  3  4  5  6 [7]  8       │
-│                 🔵  🟢       │
-│   9 10 11 12 13 14 15        │
-│         🟠     🔵            │
-│ ──────────────────────────── │
+│ ‹  PLANT SCHEDULE      📅  + │
+│                              │
 │  DUE TODAY                   │
-│  🔵 Basil     every 3 days   │
-│     [  I watered it  ]       │
-│  UPCOMING                    │
+│ ┌──────────────────────────┐ │
+│ │ 🔵 Basil   every 3 days  │ │
+│ │                          │ │
+│ │     ┌──────────────┐     │ │
+│ │     │      💧      │     │ │
+│ │     │ I watered it │     │ │
+│ │     └──────────────┘     │ │
+│ └──────────────────────────┘ │
+│                              │
+│  NEXT                        │
 │  🟢 Monstera     tomorrow    │
 │  🟠 Snake plant  in 4 days   │
 └──────────────────────────────┘
 ```
 
-- **Top bar:** back `‹`, title, **`+`** at top right to add a plant (owner's ask).
-- **Calendar:** a month grid like Google Calendar, one coloured dot per plant per
-  date, today boxed. `‹ ›` steps months *(my call)*.
-- **List below the calendar** *(my call, owner agreed):* `DUE TODAY` (includes
-  overdue, shown as e.g. `2 days late`) then `UPCOMING`, soonest first. Each due
-  plant has a big **I watered it** button.
+**When nothing is due today:** a card saying when the next watering is.
+
+```
+┌──────────────────────────────┐
+│ ‹  PLANT SCHEDULE      📅  + │
+│                              │
+│ ┌──────────────────────────┐ │
+│ │ NEXT WATERING            │ │
+│ │                          │ │
+│ │ 🟢 Monstera              │ │
+│ │ Sunday 8 Nov · tomorrow  │ │
+│ └──────────────────────────┘ │
+│                              │
+│  LATER                       │
+│  🟠 Snake plant  in 4 days   │
+│  🔵 Basil        in 6 days   │
+└──────────────────────────────┘
+```
+
+- **Top bar:** back `‹`, title, **📅 calendar icon** (opens the calendar view),
+  **`+`** to add a plant (owner's ask).
+- With several plants, due ones get the big buttons on top; everything else is
+  listed below, soonest first *(my call)*.
+- **No plants yet:** a short empty state pointing at `+` *(my call)*.
+
+**Calendar view (behind 📅):** a month grid like Google Calendar, one coloured dot
+per plant per date, today boxed, `‹ ›` to step months, back returns to the plant
+page *(my calls for the stepping and back)*.
+
+```
+┌──────────────────────────────┐
+│ ‹  CALENDAR                  │
+│  ‹  NOVEMBER 2026  ›         │
+│  Mo Tu We Th Fr Sa Su        │
+│                       1      │
+│                      ●🔵     │
+│   2  3  4  5  6 [7]  8       │
+│                 ○🔵  ○🟢     │
+│   9 10 11 12 13 14 15        │
+│         ○🟠     ○🔵          │
+└──────────────────────────────┘
+  ● solid = actually watered   ○ hollow = projected
+```
 
 ### 3. A plant (an "agenda")
 
@@ -121,9 +163,9 @@ Watering early works the same way. Every tap moves all future dots for that plan
 
 ### 7. Settled after review *(all my calls)*
 
-- **Watering early:** every row (due or upcoming) has a watering-can icon on the
-  right; due rows additionally show the big **I watered it** button. Tapping the
-  plant's *name* opens edit.
+- **Watering early:** the big button only appears on the due day (owner's rule),
+  but every not-due row and the NEXT WATERING card carry a small 💧 icon for
+  "watered early". Tapping the plant's *name* opens edit.
 - **Existing entry points keep going to Today:** the 06:30 notification and the
   home-screen widget open the Daily habit page directly; Back from there goes to
   the dashboard. The 6pm notice opens the plant schedule; Back goes to the dashboard.
