@@ -43,9 +43,9 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.core.plants.PlantColour
 import dev.zakyymuh.timebox.core.plants.PlantForm
-import dev.zakyymuh.timebox.ui.common.PaperTopBar
-import dev.zakyymuh.timebox.ui.common.SectionLabel
-import dev.zakyymuh.timebox.ui.theme.MonoSmall
+import dev.zakyymuh.timebox.ui.common.TopBar
+import dev.zakyymuh.timebox.ui.common.SectionTitle
+import dev.zakyymuh.timebox.ui.theme.Small
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -73,7 +73,7 @@ fun EditPlantScreen(viewModel: EditPlantViewModel, onDone: () -> Unit) {
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
         ) {
-            PaperTopBar(title = if (viewModel.isNew) "New plant" else "Edit plant", onBack = onDone)
+            TopBar(title = if (viewModel.isNew) "New plant" else "Edit plant", onBack = onDone)
             if (!loaded) return@Column
 
             OutlinedTextField(
@@ -84,10 +84,10 @@ fun EditPlantScreen(viewModel: EditPlantViewModel, onDone: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            SectionLabel("Colour")
+            SectionTitle("Colour")
             ColourRow(selected = form.colour, onPick = { viewModel.update(form.copy(colour = it)) })
 
-            SectionLabel("Watering")
+            SectionTitle("Watering")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Choice("Repeats", selected = form.repeats) { viewModel.update(form.copy(repeats = true)) }
                 Choice("One time", selected = !form.repeats) { viewModel.update(form.copy(repeats = false)) }
@@ -193,7 +193,7 @@ private fun IntervalField(days: Int, onChange: (Int) -> Unit) {
         Spacer(Modifier.width(10.dp))
         Text("days", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
     }
-    Text("1 to 90", style = MonoSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
+    Text("1 to 90", style = Small, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -205,7 +205,7 @@ private fun DateField(label: String, date: LocalDate, onChange: (LocalDate) -> U
         modifier = Modifier.fillMaxWidth().clickable { open = true }.padding(vertical = 8.dp),
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-        Text(date.format(dateLabel), style = MonoSmall, color = MaterialTheme.colorScheme.onSurface)
+        Text(date.format(dateLabel), style = Small, color = MaterialTheme.colorScheme.onSurface)
     }
 
     if (open) {

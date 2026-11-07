@@ -41,8 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.core.DayList
 import dev.zakyymuh.timebox.core.TodoItem
-import dev.zakyymuh.timebox.ui.theme.MonoLabel
-import dev.zakyymuh.timebox.ui.theme.MonoSmall
+import dev.zakyymuh.timebox.ui.theme.Label
+import dev.zakyymuh.timebox.ui.theme.Small
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -96,7 +96,7 @@ fun TodayScreen(viewModel: TodayViewModel) {
             // Remove once the notification has been seen working on a device.
             Text(
                 text = "Send the morning reminder now (test)",
-                style = MonoSmall,
+                style = Small,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .padding(vertical = 10.dp)
@@ -150,7 +150,7 @@ private fun Header(state: DayUiState, viewModel: TodayViewModel) {
                     state.summary.isEmpty -> state.date.format(fullHeading)
                     else -> "${state.date.format(dayHeading)}  ·  ${state.summary.done} of ${state.summary.total} done"
                 },
-                style = MonoLabel,
+                style = Label,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -164,7 +164,7 @@ private fun Header(state: DayUiState, viewModel: TodayViewModel) {
     if (!state.isToday) {
         Text(
             text = "Jump to Today",
-            style = MonoSmall,
+            style = Small,
             color = MaterialTheme.colorScheme.tertiary,
             modifier = Modifier
                 .padding(top = 8.dp)
@@ -275,7 +275,7 @@ private fun TemplateChip(day: DayList, onUse: (LocalDate) -> Unit) {
     ) {
         Text(
             text = "${day.date.format(dayHeading)} · ${day.items.size}",
-            style = MonoSmall,
+            style = Small,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
@@ -337,7 +337,7 @@ private fun ItemRow(
             if (item.isDone) {
                 Text(
                     text = "✓",
-                    style = MonoSmall,
+                    style = Small,
                     color = MaterialTheme.colorScheme.tertiary,
                 )
             }
@@ -413,7 +413,7 @@ private fun AddItemField(draft: String, onDraftChanged: (String) -> Unit, onAdd:
         }
         Text(
             text = "Press enter to add & keep typing",
-            style = MonoSmall,
+            style = Small,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 6.dp, start = 2.dp),
         )
@@ -424,7 +424,7 @@ private fun AddItemField(draft: String, onDraftChanged: (String) -> Unit, onAdd:
 private fun ReadOnlyFooter() {
     Text(
         text = "Past record (read-only) · Yesterday is not a backlog",
-        style = MonoSmall,
+        style = Small,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(vertical = 14.dp),
     )

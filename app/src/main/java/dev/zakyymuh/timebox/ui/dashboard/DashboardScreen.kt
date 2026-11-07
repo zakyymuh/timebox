@@ -16,8 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.zakyymuh.timebox.ui.common.PaperCard
-import dev.zakyymuh.timebox.ui.theme.MonoLabel
+import dev.zakyymuh.timebox.ui.common.SoftCard
+import dev.zakyymuh.timebox.ui.theme.Label
 import java.time.format.DateTimeFormatter
 
 private val heading = DateTimeFormatter.ofPattern("EEEE d MMMM")
@@ -40,7 +40,7 @@ fun DashboardScreen(viewModel: DashboardViewModel, onOpenHabit: () -> Unit, onOp
                 .fillMaxSize(),
         ) {
             Spacer(Modifier.height(18.dp))
-            Text("DAILY", style = MonoLabel, color = MaterialTheme.colorScheme.tertiary)
+            Text("DAILY", style = Label, color = MaterialTheme.colorScheme.tertiary)
             Text(
                 text = state.date?.format(heading) ?: "",
                 style = MaterialTheme.typography.headlineMedium,
@@ -57,8 +57,8 @@ fun DashboardScreen(viewModel: DashboardViewModel, onOpenHabit: () -> Unit, onOp
 
 @Composable
 private fun DoorCard(title: String, status: String, onClick: () -> Unit) {
-    PaperCard(onClick = onClick) {
-        Text(title.uppercase(), style = MonoLabel, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    SoftCard(onClick = onClick) {
+        Text(title.uppercase(), style = Label, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(14.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(

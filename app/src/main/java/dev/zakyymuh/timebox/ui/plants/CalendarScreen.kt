@@ -29,11 +29,11 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.core.plants.Mark
 import dev.zakyymuh.timebox.core.plants.MarkKind
-import dev.zakyymuh.timebox.ui.common.GlyphButton
-import dev.zakyymuh.timebox.ui.common.PaperCard
-import dev.zakyymuh.timebox.ui.common.PaperTopBar
-import dev.zakyymuh.timebox.ui.theme.MonoLabel
-import dev.zakyymuh.timebox.ui.theme.MonoSmall
+import dev.zakyymuh.timebox.ui.common.RoundButton
+import dev.zakyymuh.timebox.ui.common.SoftCard
+import dev.zakyymuh.timebox.ui.common.TopBar
+import dev.zakyymuh.timebox.ui.theme.Label
+import dev.zakyymuh.timebox.ui.theme.Small
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -59,10 +59,10 @@ fun CalendarScreen(viewModel: CalendarViewModel, onBack: () -> Unit) {
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
         ) {
-            PaperTopBar(title = "Calendar", onBack = onBack)
+            TopBar(title = "Calendar", onBack = onBack)
 
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 14.dp)) {
-                GlyphButton("‹", onClick = viewModel::previousMonth, description = "Previous month")
+                RoundButton("‹", onClick = viewModel::previousMonth, description = "Previous month")
                 Text(
                     text = state.month.atDay(1).format(monthTitle),
                     style = MaterialTheme.typography.titleMedium,
@@ -70,12 +70,12 @@ fun CalendarScreen(viewModel: CalendarViewModel, onBack: () -> Unit) {
                     textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f),
                 )
-                GlyphButton("›", onClick = viewModel::nextMonth, description = "Next month")
+                RoundButton("›", onClick = viewModel::nextMonth, description = "Next month")
             }
 
             Row(Modifier.fillMaxWidth()) {
                 weekdays.forEach {
-                    Text(it, style = MonoSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+                    Text(it, style = Small, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
                 }
             }
             Spacer(Modifier.height(6.dp))
@@ -101,16 +101,16 @@ fun CalendarScreen(viewModel: CalendarViewModel, onBack: () -> Unit) {
             }
 
             Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("● watered", style = MonoSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("● watered", style = Small, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.width(16.dp))
-                Text("○ planned", style = MonoSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("○ planned", style = Small, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             val selected = state.selected
             if (selected != null) {
                 Spacer(Modifier.height(18.dp))
-                PaperCard {
-                    Text(selected.format(dayTitle).uppercase(), style = MonoLabel, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                SoftCard {
+                    Text(selected.format(dayTitle).uppercase(), style = Label, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (state.selectedWaterings.isEmpty()) {
                         Text(
                             "Nothing watered this day.",
@@ -158,7 +158,7 @@ private fun DayCell(
         if (date == null) return@Column
         Text(
             text = date.dayOfMonth.toString(),
-            style = MonoSmall,
+            style = Small,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Spacer(Modifier.height(5.dp))
@@ -167,7 +167,7 @@ private fun DayCell(
                 PlantDot(mark.colour, size = 7.dp, hollow = mark.kind == MarkKind.PROJECTED)
             }
             if (marks.size > MAX_DOTS) {
-                Text("+${marks.size - MAX_DOTS}", style = MonoSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("+${marks.size - MAX_DOTS}", style = Small, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
