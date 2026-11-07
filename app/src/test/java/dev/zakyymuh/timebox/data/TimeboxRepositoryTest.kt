@@ -192,4 +192,15 @@ class TimeboxRepositoryTest {
         assertEquals(1, s.done)
         assertEquals(2, s.total)
     }
+
+    @Test
+    fun `setDone ticks once and a second tick changes nothing`() = runTest {
+        repo.addItem("cuci piring")
+        val id = repo.todayNow().items.single().id
+        assertTrue(repo.setDone(id, true))
+        assertFalse(repo.setDone(id, true))
+        assertTrue(repo.todayNow().items.single().isDone)
+        assertTrue(repo.setDone(id, false))
+        assertFalse(repo.todayNow().items.single().isDone)
+    }
 }

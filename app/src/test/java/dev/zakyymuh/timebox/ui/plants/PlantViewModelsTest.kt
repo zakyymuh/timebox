@@ -103,7 +103,7 @@ class PlantViewModelsTest {
         val event = async { withTimeout(5_000) { vm.undo.first() } }
         yield()
         vm.water(id)
-        assertEquals("Basil", event.await().second)
+        assertEquals("Basil", (event.await() as PlantUndo.Watered).name)
     }
 
     @Test
@@ -120,5 +120,22 @@ class PlantViewModelsTest {
         val state = withTimeout(5_000) { vm.state.first { it.selected == d(11) && it.selectedPlanned.isNotEmpty() } }
         assertEquals(listOf("Greenovia"), state.selectedPlanned.map { it.name })
         assertEquals(emptyList<Any>(), state.selectedWaterings)
+    }
+
+    @Test
+    fun `still moist emits a Checked undo and moves the plant to tomorrow`() = runBlocking {
+        val id = repo.save(0, PlantForm(
+            name = "Basil", colour = PlantColour.DUSK, repeats = true,
+            everyDays = 3, onceDate = d(7), lastWatered = d(4),
+        ))
+        val vm = PlantsViewModel(repo)
+        val event = async { withTimeout(5_000) { vm.undo.first() } }
+        yield()
+
+        vm.snooze(id)
+
+        val checked = event.await() as PlantUndo.Checked
+        assertEquals("Basil", checked.name)
+        assertEquals(d(8), repo.overviewNow().upcoming.single().nextDue)
     }
 }

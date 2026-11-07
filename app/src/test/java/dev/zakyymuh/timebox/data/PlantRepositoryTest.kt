@@ -133,4 +133,38 @@ class PlantRepositoryTest {
         repo.save(id, monstera.copy(name = "Fern", repeats = true, everyDays = 7))
         assertEquals(d(14), nextDue())
     }
+
+    private val dueToday = monstera.copy(lastWatered = LocalDate.of(2026, 10, 31))
+
+    @Test
+    fun `still moist moves a due plant to tomorrow`() = runTest {
+        val id = repo.save(0, dueToday)
+        assertEquals(d(7), nextDue())
+        assertEquals(null, repo.snooze(id))
+        assertEquals(d(8), nextDue())
+    }
+
+    @Test
+    fun `watering clears the snooze`() = runTest {
+        val id = repo.save(0, dueToday)
+        repo.snooze(id)
+        repo.water(id)
+        assertEquals(d(14), nextDue())
+        assertEquals(null, db.plantDao().plant(id)!!.snoozedUntil)
+    }
+
+    @Test
+    fun `undoing a snooze restores the previous date`() = runTest {
+        val id = repo.save(0, dueToday)
+        val previous = repo.snooze(id)
+        repo.restoreSnooze(id, previous)
+        assertEquals(d(7), nextDue())
+    }
+
+    @Test
+    fun `use suggested interval re-plans`() = runTest {
+        val id = repo.save(0, dueToday)
+        repo.setInterval(id, 9)
+        assertEquals(d(9), nextDue())
+    }
 }

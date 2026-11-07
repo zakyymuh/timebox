@@ -57,7 +57,7 @@ class MigrationTest {
 
     private fun openCurrent(): TimeboxDatabase =
         Room.databaseBuilder(context, TimeboxDatabase::class.java, name)
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .allowMainThreadQueries()
             .build()
             .also { db = it }
@@ -84,5 +84,30 @@ class MigrationTest {
         plants.deletePlant(id)
 
         assertTrue(plants.waterings().isEmpty())
+    }
+
+    @Test
+    fun `a version 2 database with a plant upgrades intact`() = runTest {
+        createVersion1()
+        val file = context.getDatabasePath(name)
+        SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE).use { v2 ->
+            v2.execSQL("CREATE TABLE IF NOT EXISTS `plant` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `colour` TEXT NOT NULL, `everyDays` INTEGER, `onceDate` TEXT, `anchor` TEXT NOT NULL)")
+            v2.execSQL("CREATE TABLE IF NOT EXISTS `watering` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `plantId` INTEGER NOT NULL, `date` TEXT NOT NULL, `wateredAt` INTEGER NOT NULL, FOREIGN KEY(`plantId`) REFERENCES `plant`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )")
+            v2.execSQL("CREATE INDEX IF NOT EXISTS `index_watering_plantId` ON `watering` (`plantId`)")
+            v2.execSQL("INSERT INTO plant (id, name, colour, everyDays, onceDate, anchor) VALUES (1, 'Greenovia', 'MOSS', 4, NULL, '$day')")
+            v2.execSQL("INSERT INTO watering (plantId, date, wateredAt) VALUES (1, '$day', 0)")
+            v2.version = 2
+        }
+        val current = Room.databaseBuilder(context, TimeboxDatabase::class.java, name)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .allowMainThreadQueries()
+            .build()
+            .also { db = it }
+
+        val plant = current.plantDao().plants().single()
+        assertEquals("Greenovia", plant.name)
+        assertEquals(null, plant.snoozedUntil)
+        assertEquals(1, current.plantDao().waterings().size)
+        assertEquals(3, current.dao().items(day).size)
     }
 }
