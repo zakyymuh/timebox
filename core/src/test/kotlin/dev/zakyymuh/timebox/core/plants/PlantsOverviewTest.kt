@@ -38,7 +38,7 @@ class PlantsOverviewTest {
 
     @Test
     fun `a watered one-time plant appears in neither list`() {
-        val once = Plant(9, "Cactus", PlantColour.OCHRE, Recurrence.Once(today), today)
+        val once = Plant(9, "Cactus", PlantColour.OCHRE, Recurrence.Once(today), anchor = today.minusDays(1))
         val o = overview(once, waterings = listOf(Watering(1, 9, today)))
         assertTrue(o.due.isEmpty() && o.upcoming.isEmpty())
         assertTrue(o.isEmpty)

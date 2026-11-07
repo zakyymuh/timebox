@@ -14,9 +14,9 @@ object PlantSchedule {
     fun nextDue(plant: Plant, waterings: List<Watering>): LocalDate? {
         val latest = waterings.filter { it.plantId == plant.id }.maxOfOrNull { it.date }
         return when (val r = plant.recurrence) {
-            // Only waterings since the plant became one-time count, so switching a
+            // Only waterings after the day it became one-time count, so switching a
             // plant with history to "once" does not finish it on the spot.
-            is Recurrence.Once -> if (latest == null || latest.isBefore(plant.anchor)) r.on else null
+            is Recurrence.Once -> if (latest == null || !latest.isAfter(plant.anchor)) r.on else null
             is Recurrence.EveryDays -> {
                 val base = if (latest != null && latest.isAfter(plant.anchor)) latest else plant.anchor
                 base.plusDays(r.days.toLong())

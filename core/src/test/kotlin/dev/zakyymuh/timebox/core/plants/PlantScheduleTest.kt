@@ -88,6 +88,9 @@ class PlantScheduleTest {
         // the 20th" today (the 7th): that old watering must not finish the new one-time job.
         val once = monstera.copy(recurrence = Recurrence.Once(d(20)), anchor = d(7))
         assertEquals(PlantStatus.Upcoming(13), PlantSchedule.status(once, watered(d(5)), today))
-        assertEquals(PlantStatus.Done, PlantSchedule.status(once, watered(d(7)), today))
+        // Watered earlier the same day it was switched: dates can't order those, and
+        // keeping the plant listed is the safe side.
+        assertEquals(PlantStatus.Upcoming(13), PlantSchedule.status(once, watered(d(7)), today))
+        assertEquals(PlantStatus.Done, PlantSchedule.status(once, watered(d(8)), d(8)))
     }
 }

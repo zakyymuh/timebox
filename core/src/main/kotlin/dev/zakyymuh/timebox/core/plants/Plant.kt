@@ -19,8 +19,9 @@ data class Plant(
     val colour: PlantColour,
     val recurrence: Recurrence,
     /**
-     * Repeating: "last watered" given at creation. One-time: the day it became one-time;
-     * only waterings from then on finish it. Not history: never drawn as a solid dot.
+     * Repeating: "last watered" given at creation. One-time: only waterings dated after
+     * this finish it (the day before creation, or the day it was switched to one-time).
+     * Not history: never drawn as a solid dot.
      */
     val anchor: LocalDate,
 )

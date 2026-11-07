@@ -48,7 +48,7 @@ class PlantRepository(
     }
 
     /**
-     * New plants: "last watered" for repeating ones, today for one-time ones. Edits keep
+     * New plants: "last watered" for repeating ones, yesterday for one-time ones. Edits keep
      * the anchor, so renaming or recolouring never moves the schedule, except when the
      * plant switches between repeating and one-time or its one-time date changes: then
      * it starts fresh from today. Otherwise a watered plant switched to one-time would
@@ -56,7 +56,8 @@ class PlantRepository(
      * weeks overdue.
      */
     private fun anchorFor(existing: PlantEntity?, form: PlantForm, today: LocalDate): LocalDate {
-        if (existing == null) return if (form.repeats) form.lastWatered else today
+        // A new one-time plant anchors on yesterday, so watering it early today finishes it.
+        if (existing == null) return if (form.repeats) form.lastWatered else today.minusDays(1)
         val wasRepeating = existing.everyDays != null
         val kindChanged = wasRepeating != form.repeats
         val onceMoved = !form.repeats && existing.onceDate != form.onceDate
