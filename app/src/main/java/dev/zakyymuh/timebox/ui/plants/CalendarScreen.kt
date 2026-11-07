@@ -117,13 +117,21 @@ fun CalendarScreen(viewModel: CalendarViewModel, onBack: () -> Unit) {
                 Spacer(Modifier.height(18.dp))
                 SoftCard(corner = 20.dp) {
                     Text(selected.format(dayTitle), style = MaterialTheme.typography.titleMedium, color = Fresh.Ink)
-                    if (state.selectedWaterings.isEmpty()) {
+                    if (state.selectedWaterings.isEmpty() && state.selectedPlanned.isEmpty()) {
                         Text(
-                            "Nothing watered this day.",
+                            "Nothing on this day.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = Fresh.InkSoft,
                             modifier = Modifier.padding(top = 10.dp),
                         )
+                    }
+                    state.selectedPlanned.forEach { plant ->
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 10.dp)) {
+                            PlantDot(plant.colour, hollow = true)
+                            Spacer(Modifier.width(10.dp))
+                            Text(plant.name, style = MaterialTheme.typography.bodyLarge, color = Fresh.Ink, modifier = Modifier.weight(1f))
+                            Text("planned", style = Small, color = Fresh.InkSoft)
+                        }
                     }
                     state.selectedWaterings.forEach { (plant, watering) ->
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {

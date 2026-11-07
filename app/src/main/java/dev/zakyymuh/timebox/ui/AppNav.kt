@@ -1,5 +1,7 @@
 package dev.zakyymuh.timebox.ui
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,7 +42,25 @@ fun AppNav(start: String?) {
     val context = LocalContext.current.applicationContext
     val nav = rememberNavController()
 
-    NavHost(navController = nav, startDestination = Destinations.DASHBOARD) {
+    // A short horizontal slide, not the library's default 700ms crossfade. A back swipe
+    // scrubs this animation with the finger: a crossfade shows two white screens through
+    // each other, a slide moves the page away and reveals the one underneath.
+    NavHost(
+        navController = nav,
+        startDestination = Destinations.DASHBOARD,
+        enterTransition = {
+            slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(SLIDE_MS))
+        },
+        exitTransition = {
+            slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(SLIDE_MS)) { it / 4 }
+        },
+        popEnterTransition = {
+            slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(SLIDE_MS)) { it / 4 }
+        },
+        popExitTransition = {
+            slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(SLIDE_MS))
+        },
+    ) {
         composable(Destinations.DASHBOARD) { entry ->
             val vm: DashboardViewModel = viewModel(
                 factory = viewModelFactory {
@@ -123,3 +143,5 @@ private inline fun NavBackStackEntry.ifResumed(block: () -> Unit) {
 }
 
 private fun NavHostController.go(route: String) = navigate(route) { launchSingleTop = true }
+
+private const val SLIDE_MS = 280

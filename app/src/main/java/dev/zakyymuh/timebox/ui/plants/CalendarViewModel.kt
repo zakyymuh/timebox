@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.zakyymuh.timebox.core.plants.CalendarMarks
 import dev.zakyymuh.timebox.core.plants.Mark
+import dev.zakyymuh.timebox.core.plants.MarkKind
 import dev.zakyymuh.timebox.core.plants.Plant
 import dev.zakyymuh.timebox.core.plants.Watering
 import dev.zakyymuh.timebox.data.PlantRepository
@@ -23,6 +24,8 @@ data class CalendarState(
     val selected: LocalDate?,
     /** Waterings on [selected], each with its plant, so a mistake can be removed. */
     val selectedWaterings: List<Pair<Plant, Watering>>,
+    /** Plants the schedule expects to water on [selected] (today or later). */
+    val selectedPlanned: List<Plant> = emptyList(),
 )
 
 class CalendarViewModel(private val repo: PlantRepository) : ViewModel() {
@@ -39,14 +42,18 @@ class CalendarViewModel(private val repo: PlantRepository) : ViewModel() {
         today,
     ) { plants, waterings, m, sel, today ->
         val byId = plants.associateBy { it.id }
+        val marks = CalendarMarks.forMonth(m, plants, waterings, today)
         CalendarState(
             month = m,
             today = today,
-            marks = CalendarMarks.forMonth(m, plants, waterings, today),
+            marks = marks,
             selected = sel,
             selectedWaterings = waterings
                 .filter { it.date == sel }
                 .mapNotNull { w -> byId[w.plantId]?.let { it to w } },
+            selectedPlanned = marks[sel].orEmpty()
+                .filter { it.kind == MarkKind.PROJECTED }
+                .mapNotNull { byId[it.plantId] },
         )
     }.stateIn(
         viewModelScope,
@@ -64,9 +71,9 @@ class CalendarViewModel(private val repo: PlantRepository) : ViewModel() {
         selected.value = null
     }
 
-    /** Only past days and today hold waterings, so only those can be opened. */
+    /** Any day can be opened: past days show what was watered, later days what is planned. Tapping it again closes it. */
     fun select(date: LocalDate?) {
-        selected.value = date?.takeIf { !it.isAfter(today.value) && it != selected.value }
+        selected.value = date?.takeIf { it != selected.value }
     }
 
     /** Re-reads today, for when the calendar comes back after midnight. */
