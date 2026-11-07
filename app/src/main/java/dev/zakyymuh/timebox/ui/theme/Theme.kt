@@ -25,6 +25,12 @@ private val FreshScheme = lightColorScheme(
     tertiary = Fresh.Green,
     onTertiary = Fresh.Page,
     error = Fresh.Error,
+    // Snackbars use the inverse colours: ink bar, white text, pastel "Undo".
+    inverseSurface = Fresh.Ink,
+    inverseOnSurface = Fresh.Page,
+    inversePrimary = Fresh.Pastel,
+    primaryContainer = Fresh.Pastel,
+    onPrimaryContainer = Fresh.GreenDeep,
 )
 
 /**

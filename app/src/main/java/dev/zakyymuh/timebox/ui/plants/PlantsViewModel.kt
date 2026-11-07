@@ -35,7 +35,8 @@ class PlantsViewModel(private val repo: PlantRepository) : ViewModel() {
     fun water(plantId: Long) {
         viewModelScope.launch {
             val name = repo.plant(plantId)?.name ?: return@launch
-            _undo.emit(repo.water(plantId) to name)
+            val wateringId = repo.water(plantId) ?: return@launch
+            _undo.emit(wateringId to name)
         }
     }
 

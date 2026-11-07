@@ -67,16 +67,16 @@ class DashboardViewModel(
     fun water(plantId: Long) {
         viewModelScope.launch {
             val name = plants.plant(plantId)?.name ?: return@launch
-            _undo.emit(DashboardUndo.Watered(plants.water(plantId), name))
+            val wateringId = plants.water(plantId) ?: return@launch
+            _undo.emit(DashboardUndo.Watered(wateringId, name))
         }
     }
 
     fun tick(itemId: Long) {
         viewModelScope.launch {
             val item = timebox.todayNow().items.firstOrNull { it.id == itemId } ?: return@launch
-            if (item.isDone) return@launch
-            timebox.toggle(itemId)
-            _undo.emit(DashboardUndo.Ticked(itemId, item.text))
+            // Only the tap that actually ticks it gets a snackbar; a repeated tap is a no-op.
+            if (timebox.setDone(itemId, true)) _undo.emit(DashboardUndo.Ticked(itemId, item.text))
         }
     }
 
@@ -84,11 +84,7 @@ class DashboardViewModel(
         viewModelScope.launch {
             when (event) {
                 is DashboardUndo.Watered -> plants.removeWatering(event.wateringId)
-                // Toggle flips it back; only if it is still ticked, so a double Undo is harmless.
-                is DashboardUndo.Ticked ->
-                    if (timebox.todayNow().items.firstOrNull { it.id == event.itemId }?.isDone == true) {
-                        timebox.toggle(event.itemId)
-                    }
+                is DashboardUndo.Ticked -> timebox.setDone(event.itemId, false)
             }
         }
     }

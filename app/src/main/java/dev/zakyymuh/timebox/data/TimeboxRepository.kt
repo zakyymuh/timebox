@@ -75,6 +75,16 @@ class TimeboxRepository(
         onChanged()
     }
 
+    /**
+     * Sets an item done or not, doing nothing if it already is. Returns whether it changed,
+     * so a one-tap action from the dashboard can tell a real tick from a repeated tap.
+     */
+    suspend fun setDone(itemId: Long, done: Boolean): Boolean {
+        val changed = if (done) dao.markDone(itemId, clock.instant()) else dao.markUndone(itemId)
+        if (changed > 0) onChanged()
+        return changed > 0
+    }
+
     suspend fun rename(itemId: Long, text: String) {
         if (text.isBlank()) return
         val date = today()

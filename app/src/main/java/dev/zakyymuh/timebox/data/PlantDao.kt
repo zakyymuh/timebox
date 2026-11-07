@@ -34,6 +34,9 @@ interface PlantDao {
     @Insert
     suspend fun insertWatering(watering: WateringEntity): Long
 
+    @Query("SELECT id FROM watering WHERE plantId = :plantId AND date = :date LIMIT 1")
+    suspend fun wateringOn(plantId: Long, date: java.time.LocalDate): Long?
+
     @Query("DELETE FROM watering WHERE id = :id")
     suspend fun deleteWatering(id: Long)
 }

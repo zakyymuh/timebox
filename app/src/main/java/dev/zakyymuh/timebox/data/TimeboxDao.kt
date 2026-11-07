@@ -27,6 +27,13 @@ interface TimeboxDao {
     @Upsert
     suspend fun upsertItems(items: List<TodoItemEntity>)
 
+    /** Atomic, so two quick taps can't tick and then untick. Returns rows changed. */
+    @Query("UPDATE todo_item SET doneAt = :at WHERE id = :id AND doneAt IS NULL")
+    suspend fun markDone(id: Long, at: java.time.Instant): Int
+
+    @Query("UPDATE todo_item SET doneAt = NULL WHERE id = :id AND doneAt IS NOT NULL")
+    suspend fun markUndone(id: Long): Int
+
     @Query("DELETE FROM todo_item WHERE id = :id")
     suspend fun deleteItem(id: Long)
 

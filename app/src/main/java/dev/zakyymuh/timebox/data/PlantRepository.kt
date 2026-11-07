@@ -6,6 +6,8 @@ import dev.zakyymuh.timebox.core.plants.PlantsOverview
 import dev.zakyymuh.timebox.core.plants.Watering
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.Clock
 import java.time.LocalDate
 
@@ -66,9 +68,18 @@ class PlantRepository(
 
     suspend fun delete(id: Long) = dao.deletePlant(id)
 
-    /** Records a watering today. Returns its id, so the screen can offer Undo. */
-    suspend fun water(plantId: Long): Long =
-        dao.insertWatering(WateringEntity(plantId = plantId, date = todayDate(), wateredAt = clock.instant()))
+    private val watering = Mutex()
+
+    /**
+     * Records a watering today and returns its id, so the screen can offer Undo. A plant
+     * is watered at most once a day: a second call the same day (a double tap, or the
+     * notification button after the app) records nothing and returns null.
+     */
+    suspend fun water(plantId: Long): Long? = watering.withLock {
+        val today = todayDate()
+        if (dao.wateringOn(plantId, today) != null) return@withLock null
+        dao.insertWatering(WateringEntity(plantId = plantId, date = today, wateredAt = clock.instant()))
+    }
 
     suspend fun removeWatering(wateringId: Long) = dao.deleteWatering(wateringId)
 }
