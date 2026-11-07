@@ -63,7 +63,7 @@ class CalendarMarksTest {
 
     @Test
     fun `a done one-time plant shows only its watering`() {
-        val once = Plant(1, "Cactus", PlantColour.OCHRE, Recurrence.Once(d(10)), today)
+        val once = Plant(1, "Cactus", PlantColour.OCHRE, Recurrence.Once(d(10)), anchor = d(1))
         val marks = CalendarMarks.forMonth(november, listOf(once), listOf(Watering(1, 1, d(5))), today)
         assertEquals(mapOf(d(5) to listOf(WATERED)), kinds(marks))
     }

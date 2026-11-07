@@ -81,4 +81,13 @@ class PlantScheduleTest {
         val once = monstera.copy(recurrence = Recurrence.Once(d(10)))
         assertEquals(PlantStatus.Upcoming(3), PlantSchedule.status(once, emptyList(), today))
     }
+
+    @Test
+    fun `a one-time plant only counts waterings on or after its anchor`() {
+        // Basil was watered on the 5th as a repeating plant, then switched to "once on
+        // the 20th" today (the 7th): that old watering must not finish the new one-time job.
+        val once = monstera.copy(recurrence = Recurrence.Once(d(20)), anchor = d(7))
+        assertEquals(PlantStatus.Upcoming(13), PlantSchedule.status(once, watered(d(5)), today))
+        assertEquals(PlantStatus.Done, PlantSchedule.status(once, watered(d(7)), today))
+    }
 }

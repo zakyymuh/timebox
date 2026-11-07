@@ -112,4 +112,22 @@ class PlantRepositoryTest {
         repo.delete(id)
         assertEquals(true, repo.overviewNow().isEmpty)
     }
+
+    @Test
+    fun `switching a watered plant to one time keeps it listed`() = runTest {
+        val id = repo.save(0, monstera)
+        repo.water(id)
+        repo.save(id, monstera.copy(repeats = false, onceDate = d(20)))
+        assertEquals(d(20), nextDue())
+    }
+
+    @Test
+    fun `switching an old one-time plant to repeating counts from today`() = runTest {
+        // Created a month ago as "once on 10 Oct" and never watered.
+        val id = db.plantDao().upsertPlant(
+            PlantEntity(name = "Fern", colour = "MOSS", everyDays = null, onceDate = LocalDate.of(2026, 10, 10), anchor = LocalDate.of(2026, 10, 8)),
+        )
+        repo.save(id, monstera.copy(name = "Fern", repeats = true, everyDays = 7))
+        assertEquals(d(14), nextDue())
+    }
 }

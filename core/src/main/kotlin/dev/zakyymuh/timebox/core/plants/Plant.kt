@@ -18,7 +18,10 @@ data class Plant(
     val name: String,
     val colour: PlantColour,
     val recurrence: Recurrence,
-    /** "Last watered" given at creation. Not history: never drawn as a solid dot. */
+    /**
+     * Repeating: "last watered" given at creation. One-time: the day it became one-time;
+     * only waterings from then on finish it. Not history: never drawn as a solid dot.
+     */
     val anchor: LocalDate,
 )
 
