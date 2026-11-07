@@ -1,0 +1,62 @@
+package dev.zakyymuh.timebox.core.plants
+
+import dev.zakyymuh.timebox.core.DaySummary
+import java.time.LocalDate
+
+data class PlantRow(val plant: Plant, val status: PlantStatus, val nextDue: LocalDate?)
+
+/** What the plant page shows: what needs you now, then what is coming. */
+data class PlantsOverview(val due: List<PlantRow>, val upcoming: List<PlantRow>) {
+
+    /** Shown as the NEXT WATERING card, only when nothing is due. */
+    val next: PlantRow? get() = if (due.isEmpty()) upcoming.firstOrNull() else null
+
+    val isEmpty: Boolean get() = due.isEmpty() && upcoming.isEmpty()
+
+    companion object {
+        fun of(plants: List<Plant>, waterings: List<Watering>, today: LocalDate): PlantsOverview {
+            val rows = plants.map { p ->
+                PlantRow(p, PlantSchedule.status(p, waterings, today), PlantSchedule.nextDue(p, waterings))
+            }
+            val due = rows.filter { it.status is PlantStatus.Due }
+                .sortedWith(compareByDescending<PlantRow> { (it.status as PlantStatus.Due).daysLate }.thenBy { it.plant.name })
+            val upcoming = rows.filter { it.status is PlantStatus.Upcoming }
+                .sortedWith(compareBy<PlantRow> { (it.status as PlantStatus.Upcoming).inDays }.thenBy { it.plant.name })
+            return PlantsOverview(due, upcoming)
+        }
+    }
+}
+
+/** Every user-facing sentence about plants, in one place so it can be tested. */
+object PlantCopy {
+
+    fun whenLabel(status: PlantStatus): String = when (status) {
+        is PlantStatus.Due -> when (status.daysLate) {
+            0 -> "today"
+            1 -> "1 day late"
+            else -> "${status.daysLate} days late"
+        }
+        is PlantStatus.Upcoming -> if (status.inDays == 1) "tomorrow" else "in ${status.inDays} days"
+        PlantStatus.Done -> "done"
+    }
+
+    fun interval(recurrence: Recurrence): String = when (recurrence) {
+        is Recurrence.EveryDays -> if (recurrence.days == 1) "every day" else "every ${recurrence.days} days"
+        is Recurrence.Once -> "once"
+    }
+
+    fun dashboard(overview: PlantsOverview): String {
+        if (overview.due.isNotEmpty()) return "${overview.due.size} due today"
+        val next = overview.next ?: return "No plants yet"
+        return "Next: ${next.plant.name} ${whenLabel(next.status)}"
+    }
+
+    fun notification(overview: PlantsOverview): String? = when (overview.due.size) {
+        0 -> null
+        1 -> "${overview.due.single().plant.name} needs water"
+        else -> "${overview.due.size} plants need water"
+    }
+
+    fun habit(summary: DaySummary): String =
+        if (summary.isEmpty) "Nothing written yet" else "${summary.done} / ${summary.total} done"
+}
