@@ -23,3 +23,10 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_watering_plantId` ON `watering` (`plantId`)")
     }
 }
+
+/** Version 2 → 3: "soil still moist" snoozes. One nullable column; every row is kept. */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `plant` ADD COLUMN `snoozedUntil` TEXT")
+    }
+}

@@ -37,6 +37,12 @@ interface PlantDao {
     @Query("SELECT id FROM watering WHERE plantId = :plantId AND date = :date LIMIT 1")
     suspend fun wateringOn(plantId: Long, date: java.time.LocalDate): Long?
 
+    @Query("UPDATE plant SET snoozedUntil = :until WHERE id = :id")
+    suspend fun setSnooze(id: Long, until: java.time.LocalDate?)
+
+    @Query("UPDATE plant SET everyDays = :days WHERE id = :id AND everyDays IS NOT NULL")
+    suspend fun setEveryDays(id: Long, days: Int)
+
     @Query("DELETE FROM watering WHERE id = :id")
     suspend fun deleteWatering(id: Long)
 }

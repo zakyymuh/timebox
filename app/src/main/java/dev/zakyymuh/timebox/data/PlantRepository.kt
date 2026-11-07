@@ -44,6 +44,8 @@ class PlantRepository(
             everyDays = if (form.repeats) form.everyDays else null,
             onceDate = if (form.repeats) null else form.onceDate,
             anchor = anchorFor(existing, form, today),
+            // Editing never drops a "still moist" check.
+            snoozedUntil = existing?.snoozedUntil,
         )
         val rowId = dao.upsertPlant(entity)
         return if (id != 0L) id else rowId
@@ -78,7 +80,28 @@ class PlantRepository(
     suspend fun water(plantId: Long): Long? = watering.withLock {
         val today = todayDate()
         if (dao.wateringOn(plantId, today) != null) return@withLock null
-        dao.insertWatering(WateringEntity(plantId = plantId, date = today, wateredAt = clock.instant()))
+        val id = dao.insertWatering(WateringEntity(plantId = plantId, date = today, wateredAt = clock.instant()))
+        // A real watering ends any "still moist" check.
+        dao.setSnooze(plantId, null)
+        id
+    }
+
+    /**
+     * "Soil still moist": not due before tomorrow. Not a watering — the schedule still
+     * counts from the last real one. Returns the previous snooze, for Undo.
+     */
+    suspend fun snooze(plantId: Long): LocalDate? {
+        val previous = dao.plant(plantId)?.snoozedUntil
+        dao.setSnooze(plantId, todayDate().plusDays(1))
+        return previous
+    }
+
+    suspend fun restoreSnooze(plantId: Long, previous: LocalDate?) = dao.setSnooze(plantId, previous)
+
+    /** "Use N" from the interval tip. Repeating plants only; the anchor is unchanged. */
+    suspend fun setInterval(plantId: Long, days: Int) {
+        require(days in PlantForm.INTERVAL) { "interval out of range: $days" }
+        dao.setEveryDays(plantId, days)
     }
 
     suspend fun removeWatering(wateringId: Long) = dao.deleteWatering(wateringId)

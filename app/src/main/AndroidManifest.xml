@@ -40,6 +40,11 @@
             android:name=".nudge.PlantReceiver"
             android:exported="false" />
 
+        <!-- "Watered" / "Still moist" buttons on the 6pm notification. -->
+        <receiver
+            android:name=".nudge.PlantActionReceiver"
+            android:exported="false" />
+
         <!--
           updatePeriodMillis is 0: the widget is refreshed when the list changes, not on
           a timer, because a timer would wake the phone all day to redraw a list that

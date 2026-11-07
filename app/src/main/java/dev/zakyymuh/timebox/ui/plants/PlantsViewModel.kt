@@ -27,25 +27,53 @@ class PlantsViewModel(private val repo: PlantRepository) : ViewModel() {
 
     val todayDate: StateFlow<LocalDate> = today
 
-    private val _undo = MutableSharedFlow<Pair<Long, String>>(extraBufferCapacity = 1)
+    private val _undo = MutableSharedFlow<PlantUndo>(extraBufferCapacity = 1)
 
-    /** Each watering just recorded (its id, the plant's name), so the screen can offer Undo. */
-    val undo: SharedFlow<Pair<Long, String>> = _undo.asSharedFlow()
+    /** Each one-tap action, so the screen can offer Undo. */
+    val undo: SharedFlow<PlantUndo> = _undo.asSharedFlow()
 
     fun water(plantId: Long) {
         viewModelScope.launch {
             val name = repo.plant(plantId)?.name ?: return@launch
             val wateringId = repo.water(plantId) ?: return@launch
-            _undo.emit(wateringId to name)
+            _undo.emit(PlantUndo.Watered(wateringId, name))
         }
     }
 
-    fun undo(wateringId: Long) {
-        viewModelScope.launch { repo.removeWatering(wateringId) }
+    /** "Soil still moist": not due before tomorrow. */
+    fun snooze(plantId: Long) {
+        viewModelScope.launch {
+            val name = repo.plant(plantId)?.name ?: return@launch
+            val previous = repo.snooze(plantId)
+            _undo.emit(PlantUndo.Checked(plantId, name, previous))
+        }
+    }
+
+    /** "Use N" from the interval tip. */
+    fun useInterval(plantId: Long, days: Int) {
+        viewModelScope.launch { repo.setInterval(plantId, days) }
+    }
+
+    fun undo(event: PlantUndo) {
+        viewModelScope.launch {
+            when (event) {
+                is PlantUndo.Watered -> repo.removeWatering(event.wateringId)
+                is PlantUndo.Checked -> repo.restoreSnooze(event.plantId, event.previous)
+            }
+        }
     }
 
     /** Re-reads today, for when the app comes back after midnight. */
     fun refresh() {
         today.value = repo.todayDate()
     }
+}
+
+/** What the plant page's Undo snackbar can put back. */
+sealed interface PlantUndo {
+    val name: String
+
+    data class Watered(val wateringId: Long, override val name: String) : PlantUndo
+
+    data class Checked(val plantId: Long, override val name: String, val previous: LocalDate?) : PlantUndo
 }

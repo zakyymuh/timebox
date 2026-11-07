@@ -65,9 +65,13 @@ fun PlantsScreen(
     }
 
     LaunchedEffect(viewModel) {
-        viewModel.undo.collect { (wateringId, name) ->
-            val result = snackbar.showSnackbar(PlantCopy.watered(name), actionLabel = "Undo", duration = SnackbarDuration.Short)
-            if (result == SnackbarResult.ActionPerformed) viewModel.undo(wateringId)
+        viewModel.undo.collect { event ->
+            val message = when (event) {
+                is PlantUndo.Watered -> PlantCopy.watered(event.name)
+                is PlantUndo.Checked -> PlantCopy.checked(event.name)
+            }
+            val result = snackbar.showSnackbar(message, actionLabel = "Undo", duration = SnackbarDuration.Short)
+            if (result == SnackbarResult.ActionPerformed) viewModel.undo(event)
         }
     }
 
@@ -86,10 +90,18 @@ fun PlantsScreen(
             }
 
             val o = overview ?: return@Column
+            val today by viewModel.todayDate.collectAsStateWithLifecycle()
+            val act = Actions(
+                water = viewModel::water,
+                snooze = viewModel::snooze,
+                edit = onEdit,
+                useInterval = viewModel::useInterval,
+                today = today,
+            )
             when {
                 o.isEmpty -> Empty()
-                o.due.isNotEmpty() -> DueToday(o, viewModel::water, onEdit)
-                else -> NothingDue(o, viewModel::water, onEdit)
+                o.due.isNotEmpty() -> DueToday(o, act)
+                else -> NothingDue(o, act)
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -109,64 +121,120 @@ private fun Empty() {
     }
 }
 
+/** Everything a plant card can do, passed around as one. */
+private class Actions(
+    val water: (Long) -> Unit,
+    val snooze: (Long) -> Unit,
+    val edit: (Long) -> Unit,
+    val useInterval: (Long, Int) -> Unit,
+    val today: java.time.LocalDate,
+)
+
 @Composable
-private fun DueToday(o: PlantsOverview, onWater: (Long) -> Unit, onEdit: (Long) -> Unit) {
+private fun DueToday(o: PlantsOverview, act: Actions) {
     o.due.forEach { row ->
         SoftCard(color = Fresh.Pastel, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)) {
-            PlantName(row, onEdit, color = Fresh.GreenDeep)
+            PlantName(row, act.edit, color = Fresh.GreenDeep)
+            Text(
+                PlantCopy.lastWatered(row.lastWatered, act.today),
+                style = Label,
+                color = Fresh.GreenDeep.copy(alpha = 0.75f),
+                modifier = Modifier.padding(top = 4.dp),
+            )
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Pill(PlantCopy.interval(row.plant.recurrence))
                 Pill(PlantCopy.whenLabel(row.status))
             }
             Spacer(Modifier.height(20.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().clickable { onWater(row.plant.id) },
-            ) {
-                RoundButton(
-                    glyph = "💧",
-                    onClick = { onWater(row.plant.id) },
-                    container = Fresh.Green,
-                    content = Color.White,
-                    size = 56.dp,
-                    description = "I watered ${row.plant.name}",
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f).clickable { act.water(row.plant.id) },
+                ) {
+                    RoundButton(
+                        glyph = "💧",
+                        onClick = { act.water(row.plant.id) },
+                        container = Fresh.Green,
+                        content = Color.White,
+                        size = 56.dp,
+                        description = "I watered ${row.plant.name}",
+                    )
+                    Spacer(Modifier.width(14.dp))
+                    Text("I watered it", style = MaterialTheme.typography.titleMedium, color = Fresh.GreenDeep)
+                }
+                // Checked the soil and it is still moist: not today, ask again tomorrow.
+                Pill(
+                    text = "Still moist",
+                    color = Fresh.Page,
+                    textColor = Fresh.GreenDeep,
+                    modifier = Modifier.clickable { act.snooze(row.plant.id) },
                 )
-                Spacer(Modifier.width(14.dp))
-                Text("I watered it", style = MaterialTheme.typography.titleMedium, color = Fresh.GreenDeep)
             }
+            IntervalTip(row, act)
         }
     }
     if (o.upcoming.isNotEmpty()) {
         SectionTitle("Next")
-        o.upcoming.forEach { PlantLine(it, onWater, onEdit) }
+        o.upcoming.forEach { PlantLine(it, act) }
     }
 }
 
 @Composable
-private fun NothingDue(o: PlantsOverview, onWater: (Long) -> Unit, onEdit: (Long) -> Unit) {
+private fun NothingDue(o: PlantsOverview, act: Actions) {
     val next = o.next ?: return
     SoftCard(modifier = Modifier.padding(top = 8.dp)) {
         Text("Next watering", style = Label, color = Fresh.InkSoft)
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                PlantName(next, onEdit)
+                PlantName(next, act.edit)
                 Text(
                     next.nextDue?.format(nextDate) ?: "",
                     style = Label,
                     color = Fresh.InkSoft,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 10.dp),
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+                Text(
+                    PlantCopy.lastWatered(next.lastWatered, act.today),
+                    style = Label,
+                    color = Fresh.InkSoft,
+                    modifier = Modifier.padding(top = 2.dp, bottom = 10.dp),
                 )
                 Pill(PlantCopy.whenLabel(next.status), color = Fresh.Page)
             }
-            WaterEarly(next, onWater)
+            WaterEarly(next, act.water)
         }
+        IntervalTip(next, act)
     }
     val later = o.upcoming.drop(1)
     if (later.isNotEmpty()) {
         SectionTitle("Later")
-        later.forEach { PlantLine(it, onWater, onEdit) }
+        later.forEach { PlantLine(it, act) }
+    }
+}
+
+/** "You usually water every 8 days — Use 8": learned from history, applied only on tap. */
+@Composable
+private fun IntervalTip(row: PlantRow, act: Actions) {
+    val days = row.suggestedInterval ?: return
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(top = 14.dp).fillMaxWidth(),
+    ) {
+        Text(
+            PlantCopy.usually(days),
+            style = Label,
+            color = Fresh.GreenDeep,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(Modifier.width(8.dp))
+        Pill(
+            text = PlantCopy.use(days),
+            color = Fresh.Green,
+            textColor = Color.White,
+            modifier = Modifier.clickable { act.useInterval(row.plant.id, days) },
+        )
     }
 }
 
@@ -188,10 +256,10 @@ private fun PlantName(row: PlantRow, onEdit: (Long) -> Unit, color: Color = Fres
     }
 }
 
-/** One plant that is not due: name, when, and a small button for watering early. */
+/** One plant that is not due: name, when, last watered, and a small button for watering early. */
 @Composable
-private fun PlantLine(row: PlantRow, onWater: (Long) -> Unit, onEdit: (Long) -> Unit) {
-    SoftCard(corner = 20.dp, modifier = Modifier.padding(bottom = 10.dp), onClick = { onEdit(row.plant.id) }) {
+private fun PlantLine(row: PlantRow, act: Actions) {
+    SoftCard(corner = 20.dp, modifier = Modifier.padding(bottom = 10.dp), onClick = { act.edit(row.plant.id) }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             PlantDot(row.plant.colour)
             Spacer(Modifier.width(12.dp))
@@ -208,10 +276,12 @@ private fun PlantLine(row: PlantRow, onWater: (Long) -> Unit, onEdit: (Long) -> 
                     style = Label,
                     color = Fresh.InkSoft,
                 )
+                Text(PlantCopy.lastWatered(row.lastWatered, act.today), style = Label, color = Fresh.InkSoft)
             }
             Spacer(Modifier.width(12.dp))
-            WaterEarly(row, onWater)
+            WaterEarly(row, act.water)
         }
+        IntervalTip(row, act)
     }
 }
 

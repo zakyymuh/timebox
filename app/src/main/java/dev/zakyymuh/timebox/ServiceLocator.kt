@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.glance.appwidget.updateAll
 import androidx.room.Room
 import dev.zakyymuh.timebox.data.MIGRATION_1_2
+import dev.zakyymuh.timebox.data.MIGRATION_2_3
 import dev.zakyymuh.timebox.data.PlantRepository
 import dev.zakyymuh.timebox.data.TimeboxDatabase
 import dev.zakyymuh.timebox.data.TimeboxRepository
@@ -56,7 +57,7 @@ object ServiceLocator {
                 "timebox.db",
             )
                 // Never fallbackToDestructiveMigration: that would delete the user's lists.
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
                 .also { database = it }
         }

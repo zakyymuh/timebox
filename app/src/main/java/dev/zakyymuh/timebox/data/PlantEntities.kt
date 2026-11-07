@@ -23,6 +23,8 @@ data class PlantEntity(
     val everyDays: Int?,
     val onceDate: LocalDate?,
     val anchor: LocalDate,
+    /** "Soil still moist" — not due before this day. Cleared by watering. */
+    val snoozedUntil: LocalDate? = null,
 ) {
     fun toModel() = Plant(
         id = id,
@@ -30,6 +32,7 @@ data class PlantEntity(
         colour = PlantColour.entries.firstOrNull { it.name == colour } ?: PlantColour.MOSS,
         recurrence = everyDays?.let { Recurrence.EveryDays(it) } ?: Recurrence.Once(onceDate ?: anchor),
         anchor = anchor,
+        snoozedUntil = snoozedUntil,
     )
 }
 

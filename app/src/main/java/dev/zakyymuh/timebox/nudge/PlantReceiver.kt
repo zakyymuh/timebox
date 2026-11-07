@@ -38,14 +38,17 @@ class PlantReceiver : BroadcastReceiver() {
                 val overview = ServiceLocator.plantRepository(appContext).overviewNow()
                 val text = PlantCopy.notification(overview)
                     ?: if (forced) "No plants need water today" else null
-                if (text != null) notify(appContext, reminder, text)
+                // One plant due: offer "Watered" / "Still moist" right on the notification.
+                // Several: just open the app — bulk actions make watering the wrong one easy.
+                val only = overview.due.singleOrNull()?.plant?.id
+                if (text != null) notify(appContext, reminder, text, only)
             } finally {
                 pending.finish()
             }
         }
     }
 
-    private fun notify(context: Context, reminder: EveningReminder, text: String) {
+    private fun notify(context: Context, reminder: EveningReminder, text: String, plantId: Long?) {
         if (!canPostNotifications(context)) return
         reminder.ensureChannel()
 
@@ -56,13 +59,17 @@ class PlantReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        val notification = NotificationCompat.Builder(context, EveningReminder.CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, EveningReminder.CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_agenda)
             .setContentTitle(text)
             .setContentText("Tap to open your plant schedule.")
             .setContentIntent(open)
             .setAutoCancel(true)
-            .build()
+        if (plantId != null) {
+            builder.addAction(0, "Watered", action(context, PlantActions.ACTION_WATER, plantId, REQUEST_WATER))
+            builder.addAction(0, "Still moist", action(context, PlantActions.ACTION_CHECK, plantId, REQUEST_CHECK))
+        }
+        val notification = builder.build()
 
         context.getSystemService(NotificationManager::class.java)
             ?.notify(EveningReminder.NOTIFICATION_ID, notification)
@@ -73,7 +80,19 @@ class PlantReceiver : BroadcastReceiver() {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
 
+    private fun action(context: Context, action: String, plantId: Long, requestCode: Int): PendingIntent =
+        PendingIntent.getBroadcast(
+            context,
+            requestCode,
+            Intent(context, PlantActionReceiver::class.java)
+                .setAction(action)
+                .putExtra(PlantActions.EXTRA_PLANT, plantId),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
     companion object {
         const val EXTRA_FORCE = "force"
+        private const val REQUEST_WATER = 201
+        private const val REQUEST_CHECK = 202
     }
 }
