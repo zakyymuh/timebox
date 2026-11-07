@@ -3,6 +3,8 @@ package dev.zakyymuh.timebox
 import android.content.Context
 import androidx.glance.appwidget.updateAll
 import androidx.room.Room
+import dev.zakyymuh.timebox.data.MIGRATION_1_2
+import dev.zakyymuh.timebox.data.PlantRepository
 import dev.zakyymuh.timebox.data.TimeboxDatabase
 import dev.zakyymuh.timebox.data.TimeboxRepository
 import dev.zakyymuh.timebox.widget.TodayWidget
@@ -23,6 +25,9 @@ object ServiceLocator {
     @Volatile
     private var repository: TimeboxRepository? = null
 
+    @Volatile
+    private var plantRepository: PlantRepository? = null
+
     var clock: Clock = Clock.systemDefaultZone()
         private set
 
@@ -35,12 +40,24 @@ object ServiceLocator {
             ).also { repository = it }
         }
 
+    fun plantRepository(context: Context): PlantRepository =
+        plantRepository ?: synchronized(this) {
+            plantRepository ?: PlantRepository(
+                dao = database(context).plantDao(),
+                clock = clock,
+            ).also { plantRepository = it }
+        }
+
     private fun database(context: Context): TimeboxDatabase =
         database ?: synchronized(this) {
             database ?: Room.databaseBuilder(
                 context.applicationContext,
                 TimeboxDatabase::class.java,
                 "timebox.db",
-            ).build().also { database = it }
+            )
+                // Never fallbackToDestructiveMigration: that would delete the user's lists.
+                .addMigrations(MIGRATION_1_2)
+                .build()
+                .also { database = it }
         }
 }
