@@ -62,18 +62,21 @@ class PlantRepositoryTest {
     }
 
     @Test
-    fun `watering twice then undoing once still counts as watered today`() = runTest {
+    fun `watering twice on the same day records one watering`() = runTest {
         val id = repo.save(0, monstera)
-        repo.water(id)
+        val first = repo.water(id)
         val second = repo.water(id)
-        repo.removeWatering(second)
-        assertEquals(d(14), nextDue())
+        assertEquals(null, second)
+        assertEquals(1, db.plantDao().waterings().size)
+        // Undo after a double tap removes the one watering: back to unwatered.
+        repo.removeWatering(first!!)
+        assertEquals(d(8), nextDue())
     }
 
     @Test
     fun `undoing the only watering restores the previous due date`() = runTest {
         val id = repo.save(0, monstera)
-        repo.removeWatering(repo.water(id))
+        repo.removeWatering(repo.water(id)!!)
         assertEquals(d(8), nextDue())
     }
 

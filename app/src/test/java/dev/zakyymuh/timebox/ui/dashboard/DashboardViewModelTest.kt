@@ -132,4 +132,34 @@ class DashboardViewModelTest {
         vm.awaitToday("water Monstera")
         Unit
     }
+
+    @Test
+    fun `a double tap on tick leaves the item ticked`() = runBlocking {
+        timebox.addItem("cuci piring")
+        val vm = DashboardViewModel(timebox, plants)
+        vm.awaitToday("tick cuci piring")
+        val id = timebox.todayNow().items.single().id
+
+        vm.tick(id)
+        vm.tick(id)
+        vm.awaitToday()
+        // Give any second coroutine time to land before checking.
+        kotlinx.coroutines.delay(300)
+
+        assertEquals(true, timebox.todayNow().items.single().isDone)
+    }
+
+    @Test
+    fun `a double tap on water records one watering`() = runBlocking {
+        val id = plants.save(0, form("Basil", 3, d(4)))
+        val vm = DashboardViewModel(timebox, plants)
+        vm.awaitToday("water Basil")
+
+        vm.water(id)
+        vm.water(id)
+        vm.awaitToday()
+        kotlinx.coroutines.delay(300)
+
+        assertEquals(1, db.plantDao().waterings().size)
+    }
 }
