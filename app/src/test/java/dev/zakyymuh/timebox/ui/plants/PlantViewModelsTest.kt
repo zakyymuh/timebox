@@ -1,6 +1,7 @@
 package dev.zakyymuh.timebox.ui.plants
 
 import androidx.room.Room
+import dev.zakyymuh.timebox.TestClock
 import dev.zakyymuh.timebox.data.PlantRepository
 import dev.zakyymuh.timebox.data.TimeboxDatabase
 import kotlinx.coroutines.CompletableDeferred
@@ -20,17 +21,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
-import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-
-/** A clock the test can move past midnight. */
-private class TestClock(var now: Instant, private val zone: ZoneId) : Clock() {
-    override fun getZone(): ZoneId = zone
-    override fun withZone(zone: ZoneId): Clock = TestClock(now, zone)
-    override fun instant(): Instant = now
-}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -94,5 +87,18 @@ class PlantViewModelsTest {
 
         assertEquals(d(8), vm.form.value.lastWatered)
         assertEquals(d(8), vm.form.value.onceDate)
+    }
+
+    @Test
+    fun `watering emits the plant's name for the snackbar`() = runBlocking {
+        val id = repo.save(0, dev.zakyymuh.timebox.core.plants.PlantForm(
+            name = "Basil", colour = dev.zakyymuh.timebox.core.plants.PlantColour.DUSK, repeats = true,
+            everyDays = 3, onceDate = d(7), lastWatered = d(4),
+        ))
+        val vm = PlantsViewModel(repo)
+        val event = kotlinx.coroutines.async { withTimeout(5_000) { vm.undo.first() } }
+        kotlinx.coroutines.yield()
+        vm.water(id)
+        assertEquals("Basil", event.await().second)
     }
 }
