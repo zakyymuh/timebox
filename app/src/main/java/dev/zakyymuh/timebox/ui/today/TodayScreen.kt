@@ -29,6 +29,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import dev.zakyymuh.timebox.ui.common.RoundButton
+import dev.zakyymuh.timebox.ui.theme.Fresh
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -55,15 +59,14 @@ fun TodayScreen(viewModel: TodayViewModel) {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = Fresh.Page,
     ) { insets ->
         Column(
             modifier = Modifier
                 .padding(insets)
-                .padding(horizontal = 22.dp)
+                .padding(horizontal = 20.dp)
                 .fillMaxSize(),
         ) {
-            Masthead()
             Header(state, viewModel)
 
             Spacer(Modifier.height(14.dp))
@@ -92,43 +95,7 @@ fun TodayScreen(viewModel: TodayViewModel) {
                 ReadOnlyFooter()
             }
 
-            // The real reminder fires at 06:30, which cannot verify anything today.
-            // Remove once the notification has been seen working on a device.
-            Text(
-                text = "Send the morning reminder now (test)",
-                style = Small,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .padding(vertical = 10.dp)
-                    .clickable { viewModel.testReminder() },
-            )
         }
-    }
-}
-
-@Composable
-private fun Masthead() {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "ONE DAY AT A TIME",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.width(8.dp))
-        Box(
-            Modifier
-                .size(3.dp)
-                .background(MaterialTheme.colorScheme.onSurfaceVariant, CircleShape),
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = "OFFLINE",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.tertiary,
-        )
     }
 }
 
@@ -141,8 +108,8 @@ private fun Header(state: DayUiState, viewModel: TodayViewModel) {
         Column(Modifier.weight(1f)) {
             Text(
                 text = if (state.isToday) "Today" else "Record",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.headlineLarge,
+                color = Fresh.Ink,
             )
             Text(
                 text = when {
@@ -151,7 +118,8 @@ private fun Header(state: DayUiState, viewModel: TodayViewModel) {
                     else -> "${state.date.format(dayHeading)}  ·  ${state.summary.done} of ${state.summary.total} done"
                 },
                 style = Label,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+                color = Fresh.InkSoft,
             )
         }
 
@@ -165,7 +133,7 @@ private fun Header(state: DayUiState, viewModel: TodayViewModel) {
         Text(
             text = "Jump to Today",
             style = Small,
-            color = MaterialTheme.colorScheme.tertiary,
+            color = Fresh.Green,
             modifier = Modifier
                 .padding(top = 8.dp)
                 .clickable { viewModel.jumpToToday() },
@@ -175,20 +143,12 @@ private fun Header(state: DayUiState, viewModel: TodayViewModel) {
 
 @Composable
 private fun StepButton(glyph: String, enabled: Boolean, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(30.dp)
-            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-            .alpha(if (enabled) 1f else 0.3f)
-            .clickable(enabled = enabled, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = glyph,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
+    RoundButton(
+        glyph = glyph,
+        onClick = { if (enabled) onClick() },
+        size = 40.dp,
+        modifier = Modifier.alpha(if (enabled) 1f else 0.3f),
+    )
 }
 
 @Composable
@@ -196,14 +156,15 @@ private fun NoteField(note: String, editable: Boolean, onNoteChanged: (String) -
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .clip(RoundedCornerShape(20.dp))
+            .background(Fresh.Card)
+            .padding(horizontal = 18.dp, vertical = 16.dp),
     ) {
         if (note.isEmpty()) {
             Text(
                 text = if (editable) "What is today for?" else "No note for this day",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Fresh.InkSoft,
             )
         }
         if (editable) {
@@ -212,11 +173,11 @@ private fun NoteField(note: String, editable: Boolean, onNoteChanged: (String) -
                 onValueChange = onNoteChanged,
                 textStyle = LocalTextStyle.current.merge(
                     MaterialTheme.typography.bodyMedium.copy(
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = Fresh.Ink,
                     ),
                 ),
                 cursorBrush = androidx.compose.ui.graphics.SolidColor(
-                    MaterialTheme.colorScheme.onSurface,
+                    Fresh.Ink,
                 ),
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -224,7 +185,7 @@ private fun NoteField(note: String, editable: Boolean, onNoteChanged: (String) -
             Text(
                 text = note,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = Fresh.Ink,
             )
         }
     }
@@ -240,21 +201,21 @@ private fun EmptyDay(
         Text(
             text = if (state.isToday) "Clean slate for today." else "Nothing was written this day.",
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = Fresh.Ink,
         )
         if (state.isToday) {
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "Write what you want to get done, or copy a recent day in one tap.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Fresh.InkSoft,
             )
             if (state.templates.isNotEmpty()) {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = "COPY A RECENT DAY",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = "Copy a recent day",
+                    style = Label,
+                    color = Fresh.InkSoft,
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -269,14 +230,15 @@ private fun EmptyDay(
 private fun TemplateChip(day: DayList, onUse: (LocalDate) -> Unit) {
     Row(
         modifier = Modifier
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(999.dp))
+            .clip(CircleShape)
+            .background(Fresh.Card)
             .clickable { onUse(day.date) }
-            .padding(horizontal = 12.dp, vertical = 7.dp),
+            .padding(horizontal = 14.dp, vertical = 9.dp),
     ) {
         Text(
             text = "${day.date.format(dayHeading)} · ${day.items.size}",
             style = Small,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = Fresh.InkSoft,
         )
     }
 }
@@ -287,7 +249,7 @@ private fun Items(
     viewModel: TodayViewModel,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(modifier = modifier.fillMaxWidth()) {
+    LazyColumn(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         items(state.items, key = { it.id }) { item ->
             ItemRow(
                 item = item,
@@ -309,23 +271,19 @@ private fun ItemRow(
     val haptics = LocalHapticFeedback.current
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(Fresh.Card)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // A hand-drawn circle rather than a Material checkbox: the design is paper, and
-        // a filled square is the loudest thing Material owns.
+        // A round tick rather than a Material checkbox: white when open, green when done.
         Box(
             modifier = Modifier
-                .size(19.dp)
-                .border(
-                    1.5.dp,
-                    if (item.isDone) {
-                        MaterialTheme.colorScheme.tertiary
-                    } else {
-                        MaterialTheme.colorScheme.outline
-                    },
-                    CircleShape,
-                )
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(if (item.isDone) Fresh.Green else Fresh.Page)
                 .clickable(enabled = editable) {
                     // Haptic rather than the prototype's sound: on Android a tick you
                     // can feel is the convention, and silent.
@@ -337,13 +295,13 @@ private fun ItemRow(
             if (item.isDone) {
                 Text(
                     text = "✓",
-                    style = Small,
-                    color = MaterialTheme.colorScheme.tertiary,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White,
                 )
             }
         }
 
-        Spacer(Modifier.width(13.dp))
+        Spacer(Modifier.width(14.dp))
 
         Text(
             text = buildAnnotatedString {
@@ -357,9 +315,9 @@ private fun ItemRow(
             },
             style = MaterialTheme.typography.bodyLarge,
             color = if (item.isDone) {
-                MaterialTheme.colorScheme.onSurfaceVariant
+                Fresh.InkSoft
             } else {
-                MaterialTheme.colorScheme.onSurface
+                Fresh.Ink
             },
             modifier = Modifier.weight(1f),
         )
@@ -368,7 +326,7 @@ private fun ItemRow(
             Text(
                 text = "×",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Fresh.InkSoft,
                 modifier = Modifier
                     .alpha(0.6f)
                     .clickable { onRemove() }
@@ -384,14 +342,15 @@ private fun AddItemField(draft: String, onDraftChanged: (String) -> Unit, onAdd:
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
-                .padding(horizontal = 14.dp, vertical = 13.dp),
+                .clip(RoundedCornerShape(20.dp))
+                .background(Fresh.Card)
+                .padding(horizontal = 18.dp, vertical = 16.dp),
         ) {
             if (draft.isEmpty()) {
                 Text(
                     text = "Add something to do",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = Fresh.InkSoft,
                 )
             }
             BasicTextField(
@@ -399,10 +358,10 @@ private fun AddItemField(draft: String, onDraftChanged: (String) -> Unit, onAdd:
                 onValueChange = onDraftChanged,
                 singleLine = true,
                 textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = Fresh.Ink,
                 ),
                 cursorBrush = androidx.compose.ui.graphics.SolidColor(
-                    MaterialTheme.colorScheme.onSurface,
+                    Fresh.Ink,
                 ),
                 // Enter adds and keeps the keyboard up, so a whole list can be typed
                 // without reaching for the screen between lines.
@@ -414,7 +373,7 @@ private fun AddItemField(draft: String, onDraftChanged: (String) -> Unit, onAdd:
         Text(
             text = "Press enter to add & keep typing",
             style = Small,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = Fresh.InkSoft,
             modifier = Modifier.padding(top = 6.dp, start = 2.dp),
         )
     }
@@ -425,7 +384,7 @@ private fun ReadOnlyFooter() {
     Text(
         text = "Past record (read-only) · Yesterday is not a backlog",
         style = Small,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = Fresh.InkSoft,
         modifier = Modifier.padding(vertical = 14.dp),
     )
 }

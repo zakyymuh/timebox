@@ -36,7 +36,7 @@ import dev.zakyymuh.timebox.ui.today.TodayViewModel
  * the dashboard rather than leaving the app.
  */
 @Composable
-fun AppNav(start: String?, sendTestReminder: () -> Unit) {
+fun AppNav(start: String?) {
     val context = LocalContext.current.applicationContext
     val nav = rememberNavController()
 
@@ -63,7 +63,7 @@ fun AppNav(start: String?, sendTestReminder: () -> Unit) {
             val vm: TodayViewModel = viewModel(
                 factory = viewModelFactory {
                     initializer {
-                        TodayViewModel(repo = ServiceLocator.repository(context), sendTestReminder = sendTestReminder)
+                        TodayViewModel(repo = ServiceLocator.repository(context))
                     }
                 },
             )

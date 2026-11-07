@@ -41,8 +41,6 @@ data class DayUiState(
 
 class TodayViewModel(
     private val repo: TimeboxRepository,
-    /** Fires the morning reminder now, so it can be tested without waiting for 06:30. */
-    private val sendTestReminder: () -> Unit = {},
 ) : ViewModel() {
 
     /** The day being looked at. Starts on today and returns there on demand. */
@@ -173,6 +171,4 @@ class TodayViewModel(
             refreshTemplates()
         }
     }
-
-    fun testReminder() = sendTestReminder()
 }
