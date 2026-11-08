@@ -28,8 +28,11 @@ data class DexEntity(
     val acquired: LocalDate?,
     val note: String,
     val createdAt: Instant,
+    /** Price seen for a wish, in rupiah (v5). */
+    val priceLow: Long? = null,
+    val priceHigh: Long? = null,
 ) {
-    fun toModel() = DexEntry(id, number, name, species, owned, photo, acquired, note)
+    fun toModel() = DexEntry(id, number, name, species, owned, photo, acquired, note, priceLow, priceHigh)
 }
 
 @Dao

@@ -31,7 +31,19 @@ import dev.zakyymuh.timebox.ui.theme.Small
 fun EncyclopediaScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
     Page {
         TopBar(title = "Encyclopedia", onBack = onBack)
-        Encyclopedia.entries.forEach { entry ->
+        // Plants have name keywords; guides (watering, grafting, soil…) don't.
+        val (plants, guides) = Encyclopedia.entries.partition { it.keywords.isNotEmpty() }
+        SectionTitle("Plants", Modifier.padding(top = 0.dp))
+        EntryCards(plants, onOpen)
+        SectionTitle("Guides")
+        EntryCards(guides, onOpen)
+    }
+}
+
+@Composable
+private fun EntryCards(entries: List<PlantInfo>, onOpen: (String) -> Unit) {
+    run {
+        entries.forEach { entry ->
             SoftCard(corner = 20.dp, onClick = { onOpen(entry.id) }, modifier = Modifier.padding(bottom = 10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {

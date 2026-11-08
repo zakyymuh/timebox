@@ -44,5 +44,13 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
     }
 }
 
+/** Version 4 → 5: a price (or price range) on wishlist plants. Two nullable columns; every row kept. */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `dex` ADD COLUMN `priceLow` INTEGER")
+        db.execSQL("ALTER TABLE `dex` ADD COLUMN `priceHigh` INTEGER")
+    }
+}
+
 /** Every migration, in order, for the app and its tests. */
-val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)

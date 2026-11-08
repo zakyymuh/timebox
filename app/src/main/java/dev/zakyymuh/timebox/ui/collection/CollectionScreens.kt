@@ -21,6 +21,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -148,6 +150,11 @@ private fun DexCard(entry: DexEntry, onClick: () -> Unit) {
             if (entry.species.isNotBlank()) {
                 Text(entry.species, style = Small, color = Fresh.InkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+            if (!entry.owned) {
+                Dex.price(entry.priceLow, entry.priceHigh)?.let {
+                    Text(it, style = Small, color = Fresh.GreenDeep, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
         }
     }
 }
@@ -214,6 +221,14 @@ fun DexDetailScreen(
                 color = if (e.owned) Fresh.Pastel else Fresh.Card,
                 textColor = if (e.owned) Fresh.GreenDeep else Fresh.InkSoft,
             )
+            if (!e.owned) {
+                Dex.price(e.priceLow, e.priceHigh)?.let { price ->
+                    SoftCard(color = Fresh.Pastel, corner = 20.dp, modifier = Modifier.padding(top = 12.dp)) {
+                        Text("Price seen", style = Label, color = Fresh.GreenDeep.copy(alpha = 0.75f))
+                        Text(price, style = MaterialTheme.typography.titleLarge, color = Fresh.GreenDeep)
+                    }
+                }
+            }
 
             if (e.note.isNotBlank()) {
                 SoftCard(corner = 20.dp, modifier = Modifier.padding(top = 16.dp)) {
@@ -316,6 +331,9 @@ fun DexEditScreen(viewModel: DexEditViewModel, onDone: () -> Unit) {
             if (owned) {
                 Spacer(Modifier.height(10.dp))
                 DateField("Got it on", acquired, viewModel::setAcquired)
+            } else {
+                Spacer(Modifier.height(10.dp))
+                PriceFields(form) { viewModel.update(it) }
             }
             Spacer(Modifier.height(10.dp))
             TextField(
@@ -368,4 +386,35 @@ fun DexEditScreen(viewModel: DexEditViewModel, onDone: () -> Unit) {
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
         )
     }
+}
+
+/**
+ * The price you last saw a wish for: one price, or a range (fill both). Digits only; shown
+ * back formatted underneath so a missing zero is easy to spot.
+ */
+@Composable
+private fun PriceFields(form: DexForm, onChange: (DexForm) -> Unit) {
+    Text("Price seen (optional)", style = Label, color = Fresh.InkSoft, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        PriceField(form.priceLow, "Rp, e.g. 150000", Modifier.weight(1f)) { onChange(form.copy(priceLow = it)) }
+        Text("–", style = MaterialTheme.typography.titleMedium, color = Fresh.InkSoft)
+        PriceField(form.priceHigh, "up to (optional)", Modifier.weight(1f)) { onChange(form.copy(priceHigh = it)) }
+    }
+    Dex.price(form.priceLow, form.priceHigh)?.let {
+        Text(it, style = Small, color = Fresh.GreenDeep, modifier = Modifier.padding(start = 4.dp, top = 6.dp))
+    }
+}
+
+@Composable
+private fun PriceField(value: Long?, hint: String, modifier: Modifier, onChange: (Long?) -> Unit) {
+    TextField(
+        value = value?.toString() ?: "",
+        onValueChange = { text -> onChange(text.filter(Char::isDigit).take(9).toLongOrNull()) },
+        placeholder = { Text(hint, color = Fresh.InkSoft, style = Small) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        shape = RoundedCornerShape(20.dp),
+        colors = softFieldColors(),
+        modifier = modifier,
+    )
 }

@@ -132,4 +132,26 @@ class MigrationTest {
         )
         assertEquals("Astrophytum", current.dexDao().entry(id)?.name)
     }
+
+    @Test
+    fun `a version 4 collection upgrades with its plants intact and no price`() = runTest {
+        createVersion1()
+        val file = context.getDatabasePath(name)
+        SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE).use { v4 ->
+            v4.execSQL("CREATE TABLE IF NOT EXISTS `plant` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `colour` TEXT NOT NULL, `everyDays` INTEGER, `onceDate` TEXT, `anchor` TEXT NOT NULL, `snoozedUntil` TEXT)")
+            v4.execSQL("CREATE TABLE IF NOT EXISTS `watering` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `plantId` INTEGER NOT NULL, `date` TEXT NOT NULL, `wateredAt` INTEGER NOT NULL, FOREIGN KEY(`plantId`) REFERENCES `plant`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )")
+            v4.execSQL("CREATE INDEX IF NOT EXISTS `index_watering_plantId` ON `watering` (`plantId`)")
+            v4.execSQL("CREATE TABLE IF NOT EXISTS `dex` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `number` INTEGER NOT NULL, `name` TEXT NOT NULL, `species` TEXT NOT NULL, `owned` INTEGER NOT NULL, `photo` TEXT, `acquired` TEXT, `note` TEXT NOT NULL, `createdAt` INTEGER NOT NULL)")
+            v4.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_dex_number` ON `dex` (`number`)")
+            v4.execSQL("INSERT INTO dex (number, name, species, owned, photo, acquired, note, createdAt) VALUES (1, 'Kikko', '', 0, NULL, NULL, 'Shopee', 0)")
+            v4.version = 4
+        }
+        val current = openCurrent()
+
+        val wish = current.dexDao().entries().single()
+        assertEquals("Kikko", wish.name)
+        assertEquals("Shopee", wish.note)
+        assertEquals(null, wish.priceLow)
+        assertEquals(3, current.dao().items(day).size)
+    }
 }

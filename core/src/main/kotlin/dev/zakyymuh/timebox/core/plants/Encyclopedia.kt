@@ -203,8 +203,18 @@ object Encyclopedia {
         keywords = listOf("myriostigma", "myrio", "bishop"),
     )
 
-    /** Most specific first: "Astrophytum myriostigma" must not match asterias. */
-    val entries: List<PlantInfo> = listOf(greenovia, asterias, myriostigma, watering)
+    /**
+     * Most specific first, because [matching] takes the first hit: "asterias kikko" must find
+     * Kikko, "Astrophytum myriostigma" must not match asterias. Guides go last.
+     */
+    val entries: List<PlantInfo> = with(EncyclopediaPlants) {
+        listOf(
+            kikko, greenovia, asterias, myriostigma, gymnoLbVos, gymnoMiha, sansevieria, echeveria,
+            pseudolithos, coryphantha, mammillaria, koboi,
+        )
+    } + with(EncyclopediaGuides) {
+        listOf(cactiAndSucculents, grafting, graftingDragonFruit, soilMix, seedSowing)
+    } + watering
 
     fun byId(id: String): PlantInfo? = entries.firstOrNull { it.id == id }
 

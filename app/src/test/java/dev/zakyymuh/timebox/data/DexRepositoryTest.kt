@@ -89,6 +89,16 @@ class DexRepositoryTest {
     }
 
     @Test
+    fun `a wish keeps the price range it was given, and an edit can change it`() = runTest {
+        val id = repo.add(DexForm("Kikko", priceLow = 150_000, priceHigh = 300_000), owned = false, photo = null)
+        assertEquals(150_000L, repo.entry(id)?.priceLow)
+        assertEquals(300_000L, repo.entry(id)?.priceHigh)
+        repo.update(id, DexForm("Kikko", priceLow = 120_000))
+        assertEquals(120_000L, repo.entry(id)?.priceLow)
+        assertEquals(null, repo.entry(id)?.priceHigh)
+    }
+
+    @Test
     fun `editing keeps the number and photo`() = runTest {
         val id = repo.add(DexForm("Greenovia"), owned = true, photo = "g.jpg")
         repo.update(id, DexForm("Greenovia dodrentalis", species = "Crassulaceae", note = "from the market"))

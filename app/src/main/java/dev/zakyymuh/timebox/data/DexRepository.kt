@@ -44,6 +44,8 @@ class DexRepository(
                     acquired = if (owned) acquired ?: todayDate() else null,
                     note = form.note.trim(),
                     createdAt = clock.instant(),
+                    priceLow = form.priceLow,
+                    priceHigh = form.priceHigh,
                 ),
             )
         }
@@ -59,6 +61,8 @@ class DexRepository(
                 species = form.species.trim(),
                 note = form.note.trim(),
                 acquired = if (existing.owned) acquired ?: existing.acquired else null,
+                priceLow = form.priceLow,
+                priceHigh = form.priceHigh,
             ),
         )
     }

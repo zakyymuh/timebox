@@ -57,7 +57,41 @@ class EncyclopediaTest {
 
     @Test
     fun `with no matching plants every entry takes a turn`() {
-        val seen = (0 until 60).map { FunFacts.forDay(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), listOf("Basil")).entry.id }.toSet()
+        val days = Encyclopedia.entries.sumOf { it.funFacts.size }
+        val seen = (0 until days).map { FunFacts.forDay(LocalDate.of(2026, 1, 1).plusDays(it.toLong()), listOf("Basil")).entry.id }.toSet()
         assertTrue(seen.containsAll(listOf("greenovia", "astrophytum-asterias", "astrophytum-myriostigma")))
+    }
+
+    @Test
+    fun `the new plants and guides are all there`() {
+        listOf(
+            "sansevieria", "cacti-succulents", "pseudolithos", "echeveria", "gymnocalycium-mihanovichii",
+            "gymnocalycium-lb-vos", "coryphantha", "astrophytum-kikko", "mammillaria", "kaktus-koboi",
+            "grafting", "grafting-dragon-fruit", "soil-mix", "seed-sowing",
+        ).forEach { assertTrue(it, Encyclopedia.byId(it) != null) }
+    }
+
+    @Test
+    fun `sansevieria has its Indonesian name and many varieties`() {
+        val sanse = Encyclopedia.byId("sansevieria")!!
+        assertTrue("lidah mertua" in sanse.otherNames.lowercase())
+        assertTrue(sanse.varieties.size >= 6)
+    }
+
+    @Test
+    fun `the owner's spellings find the right entry`() {
+        mapOf(
+            "Sansiveira laurentii" to "sansevieria",
+            "lidah mertua" to "sansevieria",
+            "Mamilaria elongata" to "mammillaria",
+            "Coryphanta elephantidens" to "coryphantha",
+            "Echievera lola" to "echeveria",
+            "Pseudolitos migiurtinus" to "pseudolithos",
+            "Gymno LB2178" to "gymnocalycium-lb-vos",
+            "Gymno VoS 01-014" to "gymnocalycium-lb-vos",
+            "Gymno miha hibotan" to "gymnocalycium-mihanovichii",
+            "Kaktus koboi" to "kaktus-koboi",
+            "Astrophytum asterias kikko" to "astrophytum-kikko",
+        ).forEach { (name, id) -> assertEquals(name, id, Encyclopedia.matching(name)?.id) }
     }
 }

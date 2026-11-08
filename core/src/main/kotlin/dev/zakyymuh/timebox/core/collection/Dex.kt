@@ -16,6 +16,9 @@ data class DexEntry(
     val photo: String?,
     val acquired: LocalDate?,
     val note: String,
+    /** The price seen for a wish, in rupiah: one price, or a range. */
+    val priceLow: Long? = null,
+    val priceHigh: Long? = null,
 )
 
 /** What the edit screen holds. */
@@ -23,13 +26,20 @@ data class DexForm(
     val name: String = "",
     val species: String = "",
     val note: String = "",
+    val priceLow: Long? = null,
+    val priceHigh: Long? = null,
 ) {
-    val isValid: Boolean get() = name.isNotBlank() && name.trim().length <= MAX_NAME
+    val isValid: Boolean
+        get() = name.isNotBlank() && name.trim().length <= MAX_NAME &&
+            listOfNotNull(priceLow, priceHigh).all { it in 0..MAX_PRICE }
 
     companion object {
         const val MAX_NAME = 40
         const val MAX_SPECIES = 60
         const val MAX_NOTE = 300
+
+        /** Rp 999.999.999 — anything above is a typo. */
+        const val MAX_PRICE = 999_999_999L
     }
 }
 
@@ -40,6 +50,16 @@ object Dex {
     fun nextNumber(existing: List<Int>): Int = (existing.maxOrNull() ?: 0) + 1
 
     fun gotIt(entry: DexEntry, today: LocalDate): DexEntry = entry.copy(owned = true, acquired = today)
+
+    /** "Rp 150.000", or "Rp 150.000 – 250.000" for a range; null when no price was noted. */
+    fun price(low: Long?, high: Long?): String? {
+        val values = listOfNotNull(low, high).distinct().sorted()
+        if (values.isEmpty()) return null
+        return "Rp " + values.joinToString(" – ") { rupiah(it) }
+    }
+
+    /** 1250000 → "1.250.000", the Indonesian way. */
+    private fun rupiah(value: Long): String = "%,d".format(java.util.Locale.ROOT, value).replace(',', '.')
 
     fun summary(entries: List<DexEntry>): String {
         val owned = entries.count { it.owned }

@@ -81,7 +81,7 @@ class DexEditViewModel(
         if (!isNew) {
             viewModelScope.launch {
                 repo.entry(id)?.let { e ->
-                    _form.value = DexForm(e.name, e.species, e.note)
+                    _form.value = DexForm(e.name, e.species, e.note, e.priceLow, e.priceHigh)
                     _owned.value = e.owned
                     _photo.value = e.photo
                     e.acquired?.let { _acquired.value = it }
