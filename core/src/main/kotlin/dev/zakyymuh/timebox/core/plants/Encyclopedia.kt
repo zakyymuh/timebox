@@ -220,6 +220,10 @@ data class FunFact(val text: String, val entry: PlantInfo)
 /** The dashboard's "Did you know?": one fact per day, the same all day. */
 object FunFacts {
 
+    /** Any fact from the whole encyclopedia; the dashboard draws a new one each time the app opens. */
+    fun random(random: kotlin.random.Random): FunFact =
+        Encyclopedia.entries.flatMap { entry -> entry.funFacts.map { FunFact(it, entry) } }.random(random)
+
     /** Facts about plants the owner actually has come first; otherwise every entry takes a turn. */
     fun forDay(date: LocalDate, ownedPlantNames: List<String>): FunFact {
         val owned = ownedPlantNames.mapNotNull(Encyclopedia::matching).distinct()
