@@ -2,10 +2,14 @@ package dev.zakyymuh.timebox.data
 
 import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
+import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.db.SupportSQLiteOpenHelper
+import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -178,5 +182,55 @@ class MigrationTest {
         assertEquals(1, current.airTestDao().testsFlow().first().size)
         assertEquals(Instant.EPOCH, current.airTestDao().lastTestAt())
         assertTrue(id > 0)
+    }
+
+    /**
+     * The database on the phone when the apps were split: version 7, with lists, a
+     * service record, a plant and its watering, a collection entry and a soil test.
+     * Built from the v1 file by running the real 1→7 migrations, so it is exactly what
+     * an upgrade from any older install would have produced.
+     */
+    private fun createVersion7() {
+        createVersion1()
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(name)
+                .callback(object : SupportSQLiteOpenHelper.Callback(7) {
+                    override fun onCreate(db: SupportSQLiteDatabase) = error("the v1 file must already exist")
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {
+                        listOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                            .forEach { it.migrate(db) }
+                    }
+                })
+                .build(),
+        )
+        helper.writableDatabase.apply {
+            execSQL("INSERT INTO service (date, place, price, work, odometer, createdAt) VALUES ('$day', 'AHASS', 150000, 'oil', 12000, 0)")
+            execSQL("INSERT INTO plant (id, name, colour, everyDays, onceDate, anchor, snoozedUntil) VALUES (1, 'Greenovia', 'MOSS', 4, NULL, '$day', NULL)")
+            execSQL("INSERT INTO watering (plantId, date, wateredAt) VALUES (1, '$day', 0)")
+            execSQL("INSERT INTO dex (number, name, species, owned, photo, acquired, note, createdAt, priceLow, priceHigh) VALUES (1, 'Astrophytum', '', 1, NULL, '$day', '', 0, NULL, NULL)")
+            execSQL("INSERT INTO air_test (date, mix, potMl, drainedMl, pouredMl, createdAt) VALUES ('$day', 'Mix A', 500, 110, NULL, 0)")
+        }
+        helper.close()
+    }
+
+    private fun TimeboxDatabase.tables(): List<String> =
+        openHelper.readableDatabase.query("SELECT name FROM sqlite_master WHERE type = 'table'").use { c ->
+            buildList { while (c.moveToNext()) add(c.getString(0)) }
+        }
+
+    @Test
+    fun `a version 7 database upgrades to 8 with plants intact and habit and service tables gone`() = runTest {
+        createVersion7()
+        val current = openCurrent()
+
+        assertEquals("Greenovia", current.plantDao().plants().single().name)
+        assertEquals(1, current.plantDao().waterings().size)
+        assertEquals("Astrophytum", current.dexDao().entries().single().name)
+        assertEquals(1, current.airTestDao().testsFlow().first().size)
+        val tables = current.tables()
+        assertFalse("day" in tables)
+        assertFalse("todo_item" in tables)
+        assertFalse("service" in tables)
     }
 }
