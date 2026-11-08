@@ -3,95 +3,75 @@ package dev.zakyymuh.timebox.ui.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.zakyymuh.timebox.core.DaySummaries
-import dev.zakyymuh.timebox.core.TodayAgenda
-import dev.zakyymuh.timebox.core.TodayEntry
+import dev.zakyymuh.timebox.core.DaySummary
+import dev.zakyymuh.timebox.core.HabitCheer
+import dev.zakyymuh.timebox.core.collection.Dex
 import dev.zakyymuh.timebox.core.plants.FunFact
 import dev.zakyymuh.timebox.core.plants.FunFacts
 import dev.zakyymuh.timebox.core.plants.PlantCopy
 import dev.zakyymuh.timebox.core.plants.PlantsOverview
+import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PlantRepository
 import dev.zakyymuh.timebox.data.TimeboxRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import java.time.LocalDate
+import kotlin.random.Random
 
-/** [date] and [today] are null until the database has answered, so nothing flashes. */
+/** [date] and [habit] are null until the database has answered, so nothing flashes. */
 data class DashboardState(
-    val date: LocalDate?,
-    val habit: String,
-    val plants: String,
-    val today: List<TodayEntry>?,
-    /** Today's "Did you know?", preferring plants the owner has. */
+    val date: LocalDate? = null,
+    val habit: DaySummary? = null,
+    val cheer: String = "",
+    val plants: String = "",
+    val collection: String = "",
+    /** Up to three photos from the collection, newest number first, for the card. */
+    val thumbnails: List<String> = emptyList(),
+    /** "Did you know?" — null once closed. */
     val fact: FunFact? = null,
 )
-
-/** What the Undo snackbar can put back. */
-sealed interface DashboardUndo {
-    data class Watered(val wateringId: Long, val name: String) : DashboardUndo
-    data class Ticked(val itemId: Long, val text: String) : DashboardUndo
-}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModel(
     private val timebox: TimeboxRepository,
     private val plants: PlantRepository,
+    private val dex: DexRepository,
+    random: Random = Random.Default,
 ) : ViewModel() {
 
     private val todayDate = MutableStateFlow(timebox.todayDate())
+
+    /** Drawn once per ViewModel, i.e. once each time the app is opened. */
+    private val fact = MutableStateFlow<FunFact?>(FunFacts.random(random))
 
     val state: StateFlow<DashboardState> = combine(
         todayDate.flatMapLatest { timebox.dayFlow(it) },
         plants.plantsFlow(),
         plants.wateringsFlow(),
-        todayDate,
-    ) { day, plantList, waterings, date ->
-        val overview = PlantsOverview.of(plantList, waterings, date)
+        dex.entriesFlow(),
+        combine(todayDate, fact, ::Pair),
+    ) { day, plantList, waterings, entries, (date, shownFact) ->
+        val summary = DaySummaries.summarise(day)
         DashboardState(
             date = date,
-            habit = PlantCopy.habit(DaySummaries.summarise(day)),
-            plants = PlantCopy.dashboard(overview),
-            today = TodayAgenda.of(day, overview),
-            fact = FunFacts.forDay(date, plantList.map { it.name }),
+            habit = summary,
+            cheer = HabitCheer.of(summary),
+            plants = PlantCopy.dashboard(PlantsOverview.of(plantList, waterings, date)),
+            collection = Dex.summary(entries),
+            thumbnails = entries.filter { it.owned && it.photo != null }.sortedByDescending { it.number }
+                .take(3).mapNotNull { it.photo },
+            fact = shownFact,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardState(null, "", "", null))
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardState())
 
-    private val _undo = MutableSharedFlow<DashboardUndo>(extraBufferCapacity = 1)
-
-    /** Each one-tap action from Today, so the screen can offer Undo. */
-    val undo: SharedFlow<DashboardUndo> = _undo.asSharedFlow()
-
-    fun water(plantId: Long) {
-        viewModelScope.launch {
-            val name = plants.plant(plantId)?.name ?: return@launch
-            val wateringId = plants.water(plantId) ?: return@launch
-            _undo.emit(DashboardUndo.Watered(wateringId, name))
-        }
-    }
-
-    fun tick(itemId: Long) {
-        viewModelScope.launch {
-            val item = timebox.todayNow().items.firstOrNull { it.id == itemId } ?: return@launch
-            // Only the tap that actually ticks it gets a snackbar; a repeated tap is a no-op.
-            if (timebox.setDone(itemId, true)) _undo.emit(DashboardUndo.Ticked(itemId, item.text))
-        }
-    }
-
-    fun undo(event: DashboardUndo) {
-        viewModelScope.launch {
-            when (event) {
-                is DashboardUndo.Watered -> plants.removeWatering(event.wateringId)
-                is DashboardUndo.Ticked -> timebox.setDone(event.itemId, false)
-            }
-        }
+    /** Hides the fun fact until the app is next opened. */
+    fun closeFact() {
+        fact.value = null
     }
 
     /** Re-reads today, for when the app comes back after midnight. */

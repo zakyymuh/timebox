@@ -12,6 +12,15 @@ object Destinations {
     const val EDIT = "plants/edit/{id}"
     const val ENCYCLOPEDIA = "encyclopedia"
     const val ENTRY = "encyclopedia/{id}"
+    const val COLLECTION = "collection"
+    const val DEX = "collection/{id}"
+    const val DEX_EDIT = "collection/edit/{id}/{owned}"
+
+    /** Route to one plant in the collection or wishlist. */
+    fun dex(id: Long): String = "collection/$id"
+
+    /** Route to add ([id] 0; [owned] picks collection or wishlist) or edit an entry. */
+    fun dexEdit(id: Long, owned: Boolean): String = "collection/edit/$id/$owned"
 
     /** Route to one encyclopedia entry. */
     fun entry(id: String): String = "encyclopedia/$id"

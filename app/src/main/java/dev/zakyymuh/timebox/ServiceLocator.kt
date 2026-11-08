@@ -3,8 +3,9 @@ package dev.zakyymuh.timebox
 import android.content.Context
 import androidx.glance.appwidget.updateAll
 import androidx.room.Room
-import dev.zakyymuh.timebox.data.MIGRATION_1_2
-import dev.zakyymuh.timebox.data.MIGRATION_2_3
+import dev.zakyymuh.timebox.data.ALL_MIGRATIONS
+import dev.zakyymuh.timebox.data.DexRepository
+import dev.zakyymuh.timebox.data.PhotoStore
 import dev.zakyymuh.timebox.data.PlantRepository
 import dev.zakyymuh.timebox.data.TimeboxDatabase
 import dev.zakyymuh.timebox.data.TimeboxRepository
@@ -49,6 +50,26 @@ object ServiceLocator {
             ).also { plantRepository = it }
         }
 
+    @Volatile
+    private var dexRepository: DexRepository? = null
+
+    @Volatile
+    private var photoStore: PhotoStore? = null
+
+    fun photoStore(context: Context): PhotoStore =
+        photoStore ?: synchronized(this) {
+            photoStore ?: PhotoStore(context.applicationContext).also { photoStore = it }
+        }
+
+    fun dexRepository(context: Context): DexRepository =
+        dexRepository ?: synchronized(this) {
+            dexRepository ?: DexRepository(
+                dao = database(context).dexDao(),
+                clock = clock,
+                photos = photoStore(context),
+            ).also { dexRepository = it }
+        }
+
     private fun database(context: Context): TimeboxDatabase =
         database ?: synchronized(this) {
             database ?: Room.databaseBuilder(
@@ -57,7 +78,7 @@ object ServiceLocator {
                 "timebox.db",
             )
                 // Never fallbackToDestructiveMigration: that would delete the user's lists.
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(*ALL_MIGRATIONS)
                 .build()
                 .also { database = it }
         }

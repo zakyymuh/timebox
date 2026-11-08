@@ -2,22 +2,21 @@ package dev.zakyymuh.timebox.ui.dashboard
 
 import androidx.room.Room
 import dev.zakyymuh.timebox.TestClock
-import dev.zakyymuh.timebox.core.TodayEntry
-import dev.zakyymuh.timebox.core.plants.PlantColour
-import dev.zakyymuh.timebox.core.plants.PlantForm
+import dev.zakyymuh.timebox.core.DaySummary
+import dev.zakyymuh.timebox.core.collection.DexForm
+import dev.zakyymuh.timebox.core.plants.FunFacts
+import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PlantRepository
 import dev.zakyymuh.timebox.data.TimeboxDatabase
 import dev.zakyymuh.timebox.data.TimeboxRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.yield
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -27,8 +26,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.random.Random
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -38,11 +37,11 @@ class DashboardViewModelTest {
     // 18:00 Saturday 7 Nov in Jakarta; +7h is 01:00 Sunday 8 Nov.
     private val clock = TestClock(Instant.parse("2026-11-07T11:00:00Z"), ZoneId.of("Asia/Jakarta"))
     private val afterMidnight = Instant.parse("2026-11-07T18:00:00Z")
-    private fun d(day: Int) = LocalDate.of(2026, 11, day)
 
     private lateinit var db: TimeboxDatabase
     private lateinit var timebox: TimeboxRepository
     private lateinit var plants: PlantRepository
+    private lateinit var dex: DexRepository
 
     @Before
     fun setUp() {
@@ -51,6 +50,7 @@ class DashboardViewModelTest {
             .allowMainThreadQueries().build()
         timebox = TimeboxRepository(db.dao(), clock)
         plants = PlantRepository(db.plantDao(), clock)
+        dex = DexRepository(db.dexDao(), clock) {}
     }
 
     @After
@@ -59,115 +59,53 @@ class DashboardViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun form(name: String, every: Int, lastWatered: LocalDate) = PlantForm(
-        name = name, colour = PlantColour.MOSS, repeats = true, everyDays = every, onceDate = d(7), lastWatered = lastWatered,
-    )
+    private fun vm(random: Random = Random(1)) = DashboardViewModel(timebox, plants, dex, random)
 
-    private fun describe(entries: List<TodayEntry>) = entries.map {
-        when (it) {
-            is TodayEntry.Water -> "water ${it.row.plant.name}"
-            is TodayEntry.Tick -> "tick ${it.item.text}"
-        }
-    }
-
-    /** Waits until the dashboard shows exactly [expected] on its Today list. */
-    private suspend fun DashboardViewModel.awaitToday(vararg expected: String) =
-        withTimeout(5_000) { state.first { s -> s.today?.let(::describe) == expected.toList() } }
+    private suspend fun DashboardViewModel.await(check: (DashboardState) -> Boolean) =
+        withTimeout(5_000) { state.first(check) }
 
     @Test
-    fun `Today lists due plants then unticked items`() = runBlocking {
-        plants.save(0, form("Basil", 3, d(4)))      // due today
-        plants.save(0, form("Monstera", 7, d(6)))   // not yet
+    fun `the habit card counts what is done out of the total, with a cheer`() = runBlocking {
         timebox.addItem("cuci piring")
-        DashboardViewModel(timebox, plants).awaitToday("water Basil", "tick cuci piring")
-        Unit
+        timebox.addItem("nyuci baju")
+        timebox.setDone(timebox.todayNow().items.first().id, true)
+        val state = vm().await { it.habit == DaySummary(1, 2) }
+        assertEquals("Over halfway!", state.cheer)
     }
 
     @Test
-    fun `ticking from Today then Undo brings the item back unticked`() = runBlocking {
-        timebox.addItem("cuci piring")
-        val vm = DashboardViewModel(timebox, plants)
-        vm.awaitToday("tick cuci piring")
-        val event = async { withTimeout(5_000) { vm.undo.first() } }
-        yield()
-
-        vm.tick(timebox.todayNow().items.single().id)
-        vm.awaitToday()
-        val ticked = event.await() as DashboardUndo.Ticked
-        assertEquals("cuci piring", ticked.text)
-
-        vm.undo(ticked)
-        vm.awaitToday("tick cuci piring")
-        assertEquals(false, timebox.todayNow().items.single().isDone)
+    fun `the collection card sums up both lists`() = runBlocking {
+        dex.add(DexForm("Greenovia"), owned = true, photo = "g.jpg")
+        dex.add(DexForm("Variegata"), owned = false, photo = null)
+        val state = vm().await { it.collection == "1 plant · 1 on wishlist" }
+        assertEquals(listOf("g.jpg"), state.thumbnails)
     }
 
     @Test
-    fun `watering from Today removes it and Undo restores it`() = runBlocking {
-        val id = plants.save(0, form("Basil", 3, d(4)))
-        val vm = DashboardViewModel(timebox, plants)
-        vm.awaitToday("water Basil")
-        val event = async { withTimeout(5_000) { vm.undo.first() } }
-        yield()
+    fun `the fun fact is drawn at random when the app opens`() = runBlocking {
+        val state = vm(Random(3)).await { it.date != null }
+        assertEquals(FunFacts.random(Random(3)), state.fact)
+    }
 
-        vm.water(id)
-        vm.awaitToday()
-        val watered = event.await() as DashboardUndo.Watered
-        assertEquals("Basil", watered.name)
-
-        vm.undo(watered)
-        vm.awaitToday("water Basil")
+    @Test
+    fun `closing the fun fact hides it`() = runBlocking {
+        val model = vm()
+        model.await { it.fact != null }
+        model.closeFact()
+        model.await { it.date != null && it.fact == null }
         Unit
     }
 
     @Test
     fun `after midnight refresh shows the new day`() = runBlocking {
-        timebox.addItem("cuci piring")                 // written on the 7th
-        plants.save(0, form("Monstera", 7, d(1)))      // due on the 8th
-        val vm = DashboardViewModel(timebox, plants)
-        vm.awaitToday("tick cuci piring")
+        timebox.addItem("cuci piring") // written on the 7th
+        val model = vm()
+        model.await { it.habit == DaySummary(0, 1) }
 
         clock.now = afterMidnight
-        vm.refresh()
+        model.refresh()
 
-        vm.awaitToday("water Monstera")
+        model.await { it.habit == DaySummary(0, 0) && it.cheer == "Plan your day" }
         Unit
-    }
-
-    @Test
-    fun `a double tap on tick leaves the item ticked`() = runBlocking {
-        timebox.addItem("cuci piring")
-        val vm = DashboardViewModel(timebox, plants)
-        vm.awaitToday("tick cuci piring")
-        val id = timebox.todayNow().items.single().id
-
-        vm.tick(id)
-        vm.tick(id)
-        vm.awaitToday()
-        // Give any second coroutine time to land before checking.
-        kotlinx.coroutines.delay(300)
-
-        assertEquals(true, timebox.todayNow().items.single().isDone)
-    }
-
-    @Test
-    fun `a double tap on water records one watering`() = runBlocking {
-        val id = plants.save(0, form("Basil", 3, d(4)))
-        val vm = DashboardViewModel(timebox, plants)
-        vm.awaitToday("water Basil")
-
-        vm.water(id)
-        vm.water(id)
-        vm.awaitToday()
-        kotlinx.coroutines.delay(300)
-
-        assertEquals(1, db.plantDao().waterings().size)
-    }
-
-    @Test
-    fun `the fun fact is about a plant you have`() = runBlocking {
-        plants.save(0, form("Greenovia", 4, d(7)))
-        val vm = DashboardViewModel(timebox, plants)
-        val state = withTimeout(5_000) { vm.state.first { it.fact?.entry?.id == "greenovia" } }
-        assertEquals("greenovia", state.fact?.entry?.id)
     }
 }

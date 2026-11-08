@@ -179,7 +179,7 @@ private fun ColourRow(selected: PlantColour, onPick: (PlantColour) -> Unit) {
 }
 
 @Composable
-private fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {
+internal fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {
     Text(
         text = label,
         style = MaterialTheme.typography.labelLarge,
@@ -193,7 +193,7 @@ private fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun softFieldColors() = TextFieldDefaults.colors(
+internal fun softFieldColors() = TextFieldDefaults.colors(
     focusedContainerColor = Fresh.Card,
     unfocusedContainerColor = Fresh.Card,
     focusedIndicatorColor = Color.Transparent,
@@ -232,7 +232,7 @@ private fun IntervalField(days: Int, onChange: (Int) -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DateField(label: String, date: LocalDate, onChange: (LocalDate) -> Unit) {
+internal fun DateField(label: String, date: LocalDate, onChange: (LocalDate) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Row(
         verticalAlignment = Alignment.CenterVertically,

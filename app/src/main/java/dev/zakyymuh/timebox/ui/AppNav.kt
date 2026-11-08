@@ -21,6 +21,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.zakyymuh.timebox.ServiceLocator
+import dev.zakyymuh.timebox.ui.collection.CollectionScreen
+import dev.zakyymuh.timebox.ui.collection.CollectionViewModel
+import dev.zakyymuh.timebox.ui.collection.DexDetailScreen
+import dev.zakyymuh.timebox.ui.collection.DexDetailViewModel
+import dev.zakyymuh.timebox.ui.collection.DexEditScreen
+import dev.zakyymuh.timebox.ui.collection.DexEditViewModel
 import dev.zakyymuh.timebox.ui.dashboard.DashboardScreen
 import dev.zakyymuh.timebox.ui.dashboard.DashboardViewModel
 import dev.zakyymuh.timebox.ui.encyclopedia.EncyclopediaScreen
@@ -70,6 +76,7 @@ fun AppNav(start: String?) {
                         DashboardViewModel(
                             timebox = ServiceLocator.repository(context),
                             plants = ServiceLocator.plantRepository(context),
+                            dex = ServiceLocator.dexRepository(context),
                         )
                     }
                 },
@@ -78,6 +85,7 @@ fun AppNav(start: String?) {
                 viewModel = vm,
                 onOpenHabit = { entry.ifResumed { nav.go(Destinations.TODAY) } },
                 onOpenPlants = { entry.ifResumed { nav.go(Destinations.PLANTS) } },
+                onOpenCollection = { entry.ifResumed { nav.go(Destinations.COLLECTION) } },
                 onOpenEntry = { id -> entry.ifResumed { nav.go(Destinations.entry(id)) } },
                 onOpenEncyclopedia = { entry.ifResumed { nav.go(Destinations.ENCYCLOPEDIA) } },
             )
@@ -106,6 +114,57 @@ fun AppNav(start: String?) {
                 onEdit = { id -> entry.ifResumed { nav.go(Destinations.edit(id)) } },
                 onEncyclopedia = { entry.ifResumed { nav.go(Destinations.ENCYCLOPEDIA) } },
             )
+        }
+
+        composable(Destinations.COLLECTION) { entry ->
+            val vm: CollectionViewModel = viewModel(
+                factory = viewModelFactory { initializer { CollectionViewModel(ServiceLocator.dexRepository(context)) } },
+            )
+            CollectionScreen(
+                viewModel = vm,
+                onBack = { entry.ifResumed { nav.popBackStack() } },
+                onOpen = { id -> entry.ifResumed { nav.go(Destinations.dex(id)) } },
+                onAdd = { owned -> entry.ifResumed { nav.go(Destinations.dexEdit(0, owned)) } },
+            )
+        }
+
+        composable(
+            route = Destinations.DEX,
+            arguments = listOf(navArgument("id") { type = NavType.LongType }),
+        ) { entry ->
+            val id = entry.arguments?.getLong("id") ?: 0L
+            val vm: DexDetailViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer {
+                        DexDetailViewModel(ServiceLocator.dexRepository(context), ServiceLocator.photoStore(context), id)
+                    }
+                },
+            )
+            DexDetailScreen(
+                viewModel = vm,
+                onBack = { entry.ifResumed { nav.popBackStack() } },
+                onEdit = { entry.ifResumed { nav.go(Destinations.dexEdit(id, owned = true)) } },
+                onOpenEntry = { info -> entry.ifResumed { nav.go(Destinations.entry(info)) } },
+            )
+        }
+
+        composable(
+            route = Destinations.DEX_EDIT,
+            arguments = listOf(
+                navArgument("id") { type = NavType.LongType },
+                navArgument("owned") { type = NavType.BoolType },
+            ),
+        ) { entry ->
+            val id = entry.arguments?.getLong("id") ?: 0L
+            val owned = entry.arguments?.getBoolean("owned") ?: true
+            val vm: DexEditViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer {
+                        DexEditViewModel(ServiceLocator.dexRepository(context), ServiceLocator.photoStore(context), id, owned)
+                    }
+                },
+            )
+            DexEditScreen(viewModel = vm, onDone = { entry.ifResumed { nav.popBackStack() } })
         }
 
         composable(Destinations.ENCYCLOPEDIA) { entry ->

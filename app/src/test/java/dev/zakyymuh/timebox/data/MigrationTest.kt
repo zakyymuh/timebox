@@ -57,7 +57,7 @@ class MigrationTest {
 
     private fun openCurrent(): TimeboxDatabase =
         Room.databaseBuilder(context, TimeboxDatabase::class.java, name)
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(*ALL_MIGRATIONS)
             .allowMainThreadQueries()
             .build()
             .also { db = it }
@@ -99,7 +99,7 @@ class MigrationTest {
             v2.version = 2
         }
         val current = Room.databaseBuilder(context, TimeboxDatabase::class.java, name)
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(*ALL_MIGRATIONS)
             .allowMainThreadQueries()
             .build()
             .also { db = it }
@@ -109,5 +109,27 @@ class MigrationTest {
         assertEquals(null, plant.snoozedUntil)
         assertEquals(1, current.plantDao().waterings().size)
         assertEquals(3, current.dao().items(day).size)
+    }
+
+    @Test
+    fun `a version 3 database upgrades with lists and plants intact and an empty collection`() = runTest {
+        createVersion1()
+        val file = context.getDatabasePath(name)
+        SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE).use { v3 ->
+            v3.execSQL("CREATE TABLE IF NOT EXISTS `plant` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `colour` TEXT NOT NULL, `everyDays` INTEGER, `onceDate` TEXT, `anchor` TEXT NOT NULL, `snoozedUntil` TEXT)")
+            v3.execSQL("CREATE TABLE IF NOT EXISTS `watering` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `plantId` INTEGER NOT NULL, `date` TEXT NOT NULL, `wateredAt` INTEGER NOT NULL, FOREIGN KEY(`plantId`) REFERENCES `plant`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )")
+            v3.execSQL("CREATE INDEX IF NOT EXISTS `index_watering_plantId` ON `watering` (`plantId`)")
+            v3.execSQL("INSERT INTO plant (id, name, colour, everyDays, onceDate, anchor, snoozedUntil) VALUES (1, 'Greenovia', 'MOSS', 4, NULL, '$day', NULL)")
+            v3.version = 3
+        }
+        val current = openCurrent()
+
+        assertEquals("Greenovia", current.plantDao().plants().single().name)
+        assertEquals(3, current.dao().items(day).size)
+        assertTrue(current.dexDao().entries().isEmpty())
+        val id = current.dexDao().insert(
+            DexEntity(number = 1, name = "Astrophytum", species = "", owned = true, photo = null, acquired = day, note = "", createdAt = Instant.EPOCH),
+        )
+        assertEquals("Astrophytum", current.dexDao().entry(id)?.name)
     }
 }

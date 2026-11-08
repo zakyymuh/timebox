@@ -30,3 +30,19 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
         db.execSQL("ALTER TABLE `plant` ADD COLUMN `snoozedUntil` TEXT")
     }
 }
+
+/** Version 3 → 4: the plant collection and wishlist. Only creates a table; nothing else is touched. */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `dex` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`number` INTEGER NOT NULL, `name` TEXT NOT NULL, `species` TEXT NOT NULL, " +
+                "`owned` INTEGER NOT NULL, `photo` TEXT, `acquired` TEXT, `note` TEXT NOT NULL, " +
+                "`createdAt` INTEGER NOT NULL)",
+        )
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_dex_number` ON `dex` (`number`)")
+    }
+}
+
+/** Every migration, in order, for the app and its tests. */
+val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
