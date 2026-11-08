@@ -87,7 +87,7 @@ fun PlantsScreen(
             TopBar(title = "Plants", onBack = onBack) {
                 RoundButton("📖", onClick = onEncyclopedia, description = "Encyclopedia")
                 Spacer(Modifier.width(8.dp))
-                RoundButton("📅", onClick = onCalendar, description = "Calendar")
+                RoundButton("🗓", onClick = onCalendar, description = "Calendar")
                 Spacer(Modifier.width(8.dp))
                 RoundButton("+", onClick = onAdd, container = Fresh.Ink, content = Color.White, description = "Add a plant")
             }

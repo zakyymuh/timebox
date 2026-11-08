@@ -29,6 +29,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.FabPosition
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.layout.PaddingValues
 import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.theme.Fresh
 import androidx.compose.ui.graphics.Color
@@ -51,15 +62,30 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 private val dayHeading = DateTimeFormatter.ofPattern("EEE d MMM")
-private val fullHeading = DateTimeFormatter.ofPattern("EEEE, MMMM d")
+private val fullHeading = DateTimeFormatter.ofPattern("EEEE d MMMM")
 
 @Composable
 fun TodayScreen(viewModel: TodayViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var adding by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = Fresh.Page,
+        // One round + in the middle instead of a typing box: tap it to write.
+        floatingActionButton = {
+            if (state.editable) {
+                RoundButton(
+                    glyph = "+",
+                    onClick = { adding = true },
+                    container = Fresh.Ink,
+                    content = Color.White,
+                    size = 64.dp,
+                    description = "Add something to do",
+                )
+            }
+        },
+        floatingActionButtonPosition = FabPosition.Center,
     ) { insets ->
         Column(
             modifier = Modifier
@@ -85,17 +111,18 @@ fun TodayScreen(viewModel: TodayViewModel) {
                 Items(state, viewModel, Modifier.weight(1f))
             }
 
-            if (state.editable) {
-                AddItemField(
-                    draft = state.draft,
-                    onDraftChanged = viewModel::onDraftChanged,
-                    onAdd = viewModel::addDraft,
-                )
-            } else {
-                ReadOnlyFooter()
-            }
-
+            if (!state.editable) ReadOnlyFooter()
         }
+    }
+
+    if (adding && state.editable) {
+        AddSheet(
+            draft = state.draft,
+            added = state.items.size,
+            onDraftChanged = viewModel::onDraftChanged,
+            onAdd = viewModel::addDraft,
+            onDismiss = { adding = false },
+        )
     }
 }
 
@@ -206,7 +233,7 @@ private fun EmptyDay(
         if (state.isToday) {
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "Write what you want to get done, or copy a recent day in one tap.",
+                text = "Tap + to write what you want to get done, or copy a recent day in one tap.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Fresh.InkSoft,
             )
@@ -249,7 +276,12 @@ private fun Items(
     viewModel: TodayViewModel,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        // Room under the last item for the round + button.
+        contentPadding = PaddingValues(bottom = 96.dp),
+    ) {
         items(state.items, key = { it.id }) { item ->
             ItemRow(
                 item = item,
@@ -336,47 +368,87 @@ private fun ItemRow(
     }
 }
 
+/**
+ * The popup for writing. The keyboard comes up straight away; Enter adds the item and keeps
+ * the popup open for the next one, so a whole morning list is typed in one go. Swipe it down
+ * or tap Done when finished.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddItemField(draft: String, onDraftChanged: (String) -> Unit, onAdd: () -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(Fresh.Card)
-                .padding(horizontal = 18.dp, vertical = 16.dp),
-        ) {
-            if (draft.isEmpty()) {
+private fun AddSheet(
+    draft: String,
+    added: Int,
+    onDraftChanged: (String) -> Unit,
+    onAdd: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val focus = remember { FocusRequester() }
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = Fresh.Page,
+    ) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Add something to do",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Fresh.InkSoft,
+                    "Add to today",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Fresh.Ink,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    "Done",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Fresh.GreenDeep,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(Fresh.Pastel)
+                        .clickable(onClick = onDismiss)
+                        .padding(horizontal = 18.dp, vertical = 10.dp),
                 )
             }
-            BasicTextField(
-                value = draft,
-                onValueChange = onDraftChanged,
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    color = Fresh.Ink,
-                ),
-                cursorBrush = androidx.compose.ui.graphics.SolidColor(
-                    Fresh.Ink,
-                ),
-                // Enter adds and keeps the keyboard up, so a whole list can be typed
-                // without reaching for the screen between lines.
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { onAdd() }),
-                modifier = Modifier.fillMaxWidth(),
+            Spacer(Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Fresh.Card)
+                        .padding(horizontal = 18.dp, vertical = 16.dp),
+                ) {
+                    if (draft.isEmpty()) {
+                        Text("What do you want to do?", style = MaterialTheme.typography.bodyLarge, color = Fresh.InkSoft)
+                    }
+                    BasicTextField(
+                        value = draft,
+                        onValueChange = onDraftChanged,
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = Fresh.Ink),
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(Fresh.Green),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { onAdd() }),
+                        modifier = Modifier.fillMaxWidth().focusRequester(focus),
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                RoundButton(
+                    glyph = "↑",
+                    onClick = onAdd,
+                    container = if (draft.isBlank()) Fresh.Card else Fresh.Green,
+                    content = if (draft.isBlank()) Fresh.InkSoft else Color.White,
+                    size = 52.dp,
+                    description = "Add",
+                )
+            }
+            Text(
+                text = if (added == 0) "Press enter to add & keep typing" else "$added on today's list · enter to add another",
+                style = Small,
+                color = Fresh.InkSoft,
+                modifier = Modifier.padding(top = 8.dp, start = 4.dp),
             )
         }
-        Text(
-            text = "Press enter to add & keep typing",
-            style = Small,
-            color = Fresh.InkSoft,
-            modifier = Modifier.padding(top = 6.dp, start = 2.dp),
-        )
     }
+    LaunchedEffect(Unit) { focus.requestFocus() }
 }
 
 @Composable

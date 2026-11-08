@@ -154,7 +154,7 @@ private fun DoorCard(title: String, status: String, dark: Boolean, onClick: () -
                 text = status,
                 style = Label,
                 color = soft,
-                maxLines = 2,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
