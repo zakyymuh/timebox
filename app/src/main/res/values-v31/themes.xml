@@ -6,7 +6,6 @@
     -->
     <style name="Theme.Timebox" parent="@android:style/Theme.Material.Light.NoActionBar">
         <item name="android:windowSplashScreenBackground">#FFFFFF</item>
-        <item name="android:windowSplashScreenIconBackgroundColor">#CDEBD5</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_myriostigma</item>
         <item name="android:windowSplashScreenAnimationDuration">900</item>
     </style>
