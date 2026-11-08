@@ -12,6 +12,12 @@ object Destinations {
     const val EDIT = "plants/edit/{id}"
     const val ENCYCLOPEDIA = "encyclopedia"
     const val ENTRY = "encyclopedia/{id}"
+    const val SERVICE = "service"
+    const val SERVICE_EDIT = "service/edit/{id}"
+
+    /** Route to log ([id] 0) or edit a motorcycle service. */
+    fun serviceEdit(id: Long): String = "service/edit/$id"
+
     const val COLLECTION = "collection"
     const val DEX = "collection/{id}"
     const val DEX_EDIT = "collection/edit/{id}/{owned}"

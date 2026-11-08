@@ -1,5 +1,6 @@
 package dev.zakyymuh.timebox.ui.dashboard
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -51,6 +52,7 @@ fun DashboardScreen(
     onOpenHabit: () -> Unit,
     onOpenPlants: () -> Unit,
     onOpenCollection: () -> Unit,
+    onOpenService: () -> Unit,
     onOpenEntry: (String) -> Unit,
     onOpenEncyclopedia: () -> Unit,
 ) {
@@ -95,6 +97,7 @@ fun DashboardScreen(
                 }
             }
 
+            MotorCard(state, onOpenService)
             CollectionCard(state, onOpenCollection)
 
             state.fact?.let { FactCard(it, onOpenEntry, onOpenEncyclopedia, viewModel::closeFact) }
@@ -161,6 +164,26 @@ private fun DoorCard(
                 size = 40.dp,
                 description = "Open $title",
             )
+        }
+    }
+}
+
+/** Motorcycle service: when it was last done, where, and how long ago. */
+@Composable
+private fun MotorCard(state: DashboardState, onOpen: () -> Unit) {
+    SoftCard(corner = 24.dp, onClick = onOpen, modifier = Modifier.padding(top = 14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(44.dp).clip(CircleShape).background(Fresh.Page),
+                contentAlignment = Alignment.Center,
+            ) { Text("🏍️", fontSize = 22.sp) }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Motorcycle service", style = MaterialTheme.typography.titleMedium, color = Fresh.Ink)
+                Text(state.motor, style = Label, color = Fresh.InkSoft, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            Spacer(Modifier.width(8.dp))
+            RoundButton("→", onClick = onOpen, container = Fresh.Page, size = 40.dp, description = "Open motorcycle service")
         }
     }
 }

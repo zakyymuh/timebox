@@ -154,4 +154,16 @@ class MigrationTest {
         assertEquals(null, wish.priceLow)
         assertEquals(3, current.dao().items(day).size)
     }
+
+    @Test
+    fun `the upgrade to version 6 adds an empty service log that works`() = runTest {
+        createVersion1()
+        val current = openCurrent()
+        val service = current.serviceDao()
+        val id = service.upsert(
+            ServiceEntity(date = day, place = "AHASS", price = 150_000, work = "oil", odometer = 12_000, createdAt = Instant.EPOCH),
+        )
+        assertEquals("AHASS", service.record(id)?.place)
+        assertEquals(3, current.dao().items(day).size)
+    }
 }

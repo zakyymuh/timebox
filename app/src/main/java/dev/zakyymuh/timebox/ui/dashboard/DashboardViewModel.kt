@@ -11,7 +11,9 @@ import dev.zakyymuh.timebox.core.plants.FunFacts
 import dev.zakyymuh.timebox.core.plants.PlantCopy
 import dev.zakyymuh.timebox.core.plants.PlantsOverview
 import dev.zakyymuh.timebox.data.DexRepository
+import dev.zakyymuh.timebox.core.motor.ServiceLog
 import dev.zakyymuh.timebox.data.PlantRepository
+import dev.zakyymuh.timebox.data.ServiceRepository
 import dev.zakyymuh.timebox.data.TimeboxRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,6 +32,8 @@ data class DashboardState(
     val cheer: String = "",
     val plants: String = "",
     val collection: String = "",
+    /** "Last: 12 Oct at AHASS · 27 days ago". */
+    val motor: String = "",
     /** Up to three photos from the collection, newest number first, for the card. */
     val thumbnails: List<String> = emptyList(),
     /** "Did you know?" — null once closed. */
@@ -41,6 +45,7 @@ class DashboardViewModel(
     private val timebox: TimeboxRepository,
     private val plants: PlantRepository,
     private val dex: DexRepository,
+    private val service: ServiceRepository,
     random: Random = Random.Default,
 ) : ViewModel() {
 
@@ -53,9 +58,9 @@ class DashboardViewModel(
         todayDate.flatMapLatest { timebox.dayFlow(it) },
         plants.plantsFlow(),
         plants.wateringsFlow(),
-        dex.entriesFlow(),
+        combine(dex.entriesFlow(), service.recordsFlow(), ::Pair),
         combine(todayDate, fact, ::Pair),
-    ) { day, plantList, waterings, entries, (date, shownFact) ->
+    ) { day, plantList, waterings, (entries, services), (date, shownFact) ->
         val summary = DaySummaries.summarise(day)
         DashboardState(
             date = date,
@@ -63,6 +68,7 @@ class DashboardViewModel(
             cheer = HabitCheer.of(summary),
             plants = PlantCopy.dashboard(PlantsOverview.of(plantList, waterings, date)),
             collection = Dex.summary(entries),
+            motor = ServiceLog.summary(services, date),
             thumbnails = entries.filter { it.owned && it.photo != null }.sortedByDescending { it.number }
                 .take(3).mapNotNull { it.photo },
             fact = shownFact,

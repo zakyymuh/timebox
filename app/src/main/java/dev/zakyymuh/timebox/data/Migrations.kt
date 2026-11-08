@@ -52,5 +52,16 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
     }
 }
 
+/** Version 5 → 6: the motorcycle service log. Only creates a table. */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `service` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`date` TEXT NOT NULL, `place` TEXT NOT NULL, `price` INTEGER, `work` TEXT NOT NULL, " +
+                "`odometer` INTEGER, `createdAt` INTEGER NOT NULL)",
+        )
+    }
+}
+
 /** Every migration, in order, for the app and its tests. */
-val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)

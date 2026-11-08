@@ -28,6 +28,10 @@ import dev.zakyymuh.timebox.ui.collection.DexDetailViewModel
 import dev.zakyymuh.timebox.ui.collection.DexEditScreen
 import dev.zakyymuh.timebox.ui.collection.DexEditViewModel
 import dev.zakyymuh.timebox.ui.dashboard.DashboardScreen
+import dev.zakyymuh.timebox.ui.motor.ServiceEditScreen
+import dev.zakyymuh.timebox.ui.motor.ServiceEditViewModel
+import dev.zakyymuh.timebox.ui.motor.ServiceListScreen
+import dev.zakyymuh.timebox.ui.motor.ServiceListViewModel
 import dev.zakyymuh.timebox.ui.dashboard.DashboardViewModel
 import dev.zakyymuh.timebox.ui.encyclopedia.EncyclopediaScreen
 import dev.zakyymuh.timebox.ui.encyclopedia.EntryScreen
@@ -77,6 +81,7 @@ fun AppNav(start: String?) {
                             timebox = ServiceLocator.repository(context),
                             plants = ServiceLocator.plantRepository(context),
                             dex = ServiceLocator.dexRepository(context),
+                            service = ServiceLocator.serviceRepository(context),
                         )
                     }
                 },
@@ -86,6 +91,7 @@ fun AppNav(start: String?) {
                 onOpenHabit = { entry.ifResumed { nav.go(Destinations.TODAY) } },
                 onOpenPlants = { entry.ifResumed { nav.go(Destinations.PLANTS) } },
                 onOpenCollection = { entry.ifResumed { nav.go(Destinations.COLLECTION) } },
+                onOpenService = { entry.ifResumed { nav.go(Destinations.SERVICE) } },
                 onOpenEntry = { id -> entry.ifResumed { nav.go(Destinations.entry(id)) } },
                 onOpenEncyclopedia = { entry.ifResumed { nav.go(Destinations.ENCYCLOPEDIA) } },
             )
@@ -114,6 +120,31 @@ fun AppNav(start: String?) {
                 onEdit = { id -> entry.ifResumed { nav.go(Destinations.edit(id)) } },
                 onEncyclopedia = { entry.ifResumed { nav.go(Destinations.ENCYCLOPEDIA) } },
             )
+        }
+
+        composable(Destinations.SERVICE) { entry ->
+            val vm: ServiceListViewModel = viewModel(
+                factory = viewModelFactory { initializer { ServiceListViewModel(ServiceLocator.serviceRepository(context)) } },
+            )
+            ServiceListScreen(
+                viewModel = vm,
+                onBack = { entry.ifResumed { nav.popBackStack() } },
+                onAdd = { entry.ifResumed { nav.go(Destinations.serviceEdit(0)) } },
+                onEdit = { id -> entry.ifResumed { nav.go(Destinations.serviceEdit(id)) } },
+            )
+        }
+
+        composable(
+            route = Destinations.SERVICE_EDIT,
+            arguments = listOf(navArgument("id") { type = NavType.LongType }),
+        ) { entry ->
+            val id = entry.arguments?.getLong("id") ?: 0L
+            val vm: ServiceEditViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer { ServiceEditViewModel(ServiceLocator.serviceRepository(context), id) }
+                },
+            )
+            ServiceEditScreen(viewModel = vm, onDone = { entry.ifResumed { nav.popBackStack() } })
         }
 
         composable(Destinations.COLLECTION) { entry ->

@@ -1,5 +1,6 @@
 package dev.zakyymuh.timebox.core.collection
 
+import dev.zakyymuh.timebox.core.motor.Money
 import java.time.LocalDate
 
 /**
@@ -55,11 +56,8 @@ object Dex {
     fun price(low: Long?, high: Long?): String? {
         val values = listOfNotNull(low, high).distinct().sorted()
         if (values.isEmpty()) return null
-        return "Rp " + values.joinToString(" – ") { rupiah(it) }
+        return "Rp " + values.joinToString(" – ") { Money.rupiah(it).removePrefix("Rp ") }
     }
-
-    /** 1250000 → "1.250.000", the Indonesian way. */
-    private fun rupiah(value: Long): String = "%,d".format(java.util.Locale.ROOT, value).replace(',', '.')
 
     fun summary(entries: List<DexEntry>): String {
         val owned = entries.count { it.owned }

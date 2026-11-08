@@ -6,7 +6,9 @@ import dev.zakyymuh.timebox.core.DaySummary
 import dev.zakyymuh.timebox.core.collection.DexForm
 import dev.zakyymuh.timebox.core.plants.FunFacts
 import dev.zakyymuh.timebox.data.DexRepository
+import dev.zakyymuh.timebox.core.motor.ServiceForm
 import dev.zakyymuh.timebox.data.PlantRepository
+import dev.zakyymuh.timebox.data.ServiceRepository
 import dev.zakyymuh.timebox.data.TimeboxDatabase
 import dev.zakyymuh.timebox.data.TimeboxRepository
 import kotlinx.coroutines.Dispatchers
@@ -42,6 +44,7 @@ class DashboardViewModelTest {
     private lateinit var timebox: TimeboxRepository
     private lateinit var plants: PlantRepository
     private lateinit var dex: DexRepository
+    private lateinit var service: ServiceRepository
 
     @Before
     fun setUp() {
@@ -51,6 +54,7 @@ class DashboardViewModelTest {
         timebox = TimeboxRepository(db.dao(), clock)
         plants = PlantRepository(db.plantDao(), clock)
         dex = DexRepository(db.dexDao(), clock) {}
+        service = ServiceRepository(db.serviceDao(), clock)
     }
 
     @After
@@ -59,7 +63,7 @@ class DashboardViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun vm(random: Random = Random(1)) = DashboardViewModel(timebox, plants, dex, random)
+    private fun vm(random: Random = Random(1)) = DashboardViewModel(timebox, plants, dex, service, random)
 
     private suspend fun DashboardViewModel.await(check: (DashboardState) -> Boolean) =
         withTimeout(5_000) { state.first(check) }
@@ -79,6 +83,14 @@ class DashboardViewModelTest {
         dex.add(DexForm("Variegata"), owned = false, photo = null)
         val state = vm().await { it.collection == "1 plant · 1 on wishlist" }
         assertEquals(listOf("g.jpg"), state.thumbnails)
+    }
+
+    @Test
+    fun `the motorcycle card shows the last service`() = runBlocking {
+        vm().await { it.motor == "No service logged yet" }
+        service.save(0, ServiceForm(date = java.time.LocalDate.of(2026, 10, 31), place = "AHASS", price = 150_000))
+        vm().await { it.motor == "Last: 31 Oct at AHASS · 7 days ago" }
+        Unit
     }
 
     @Test
