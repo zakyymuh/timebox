@@ -55,6 +55,15 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.core.DayList
+import dev.zakyymuh.timebox.core.Motivation
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.zIndex
 import dev.zakyymuh.timebox.core.TodoItem
 import dev.zakyymuh.timebox.ui.theme.Label
 import dev.zakyymuh.timebox.ui.theme.Small
@@ -95,15 +104,7 @@ fun TodayScreen(viewModel: TodayViewModel) {
         ) {
             Header(state, viewModel)
 
-            Spacer(Modifier.height(14.dp))
-
-            NoteField(
-                note = state.note,
-                editable = state.editable,
-                onNoteChanged = viewModel::onNoteChanged,
-            )
-
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
 
             if (state.isEmpty) {
                 EmptyDay(state, viewModel, Modifier.weight(1f))
@@ -179,63 +180,31 @@ private fun StepButton(glyph: String, enabled: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun NoteField(note: String, editable: Boolean, onNoteChanged: (String) -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Fresh.Card)
-            .padding(horizontal = 18.dp, vertical = 16.dp),
-    ) {
-        if (note.isEmpty()) {
-            Text(
-                text = if (editable) "What is today for?" else "No note for this day",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Fresh.InkSoft,
-            )
-        }
-        if (editable) {
-            BasicTextField(
-                value = note,
-                onValueChange = onNoteChanged,
-                textStyle = LocalTextStyle.current.merge(
-                    MaterialTheme.typography.bodyMedium.copy(
-                        color = Fresh.Ink,
-                    ),
-                ),
-                cursorBrush = androidx.compose.ui.graphics.SolidColor(
-                    Fresh.Ink,
-                ),
-                modifier = Modifier.fillMaxWidth(),
-            )
-        } else if (note.isNotEmpty()) {
-            Text(
-                text = note,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Fresh.Ink,
-            )
-        }
-    }
-}
-
-@Composable
 private fun EmptyDay(
     state: DayUiState,
     viewModel: TodayViewModel,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier) {
-        Text(
-            text = if (state.isToday) "Clean slate for today." else "Nothing was written this day.",
-            style = MaterialTheme.typography.titleMedium,
-            color = Fresh.Ink,
-        )
-        if (state.isToday) {
-            Spacer(Modifier.height(4.dp))
+        if (!state.isToday || state.date == null) {
             Text(
-                text = "Tap + to write what you want to get done, or copy a recent day in one tap.",
-                style = MaterialTheme.typography.bodyMedium,
+                text = "Nothing was written this day.",
+                style = MaterialTheme.typography.titleMedium,
                 color = Fresh.InkSoft,
+            )
+        }
+        if (state.isToday && state.date != null) {
+            // A quiet line instead of a blank page; a different one each day.
+            Text(
+                text = Motivation.forDay(state.date),
+                style = MaterialTheme.typography.headlineSmall,
+                color = Fresh.InkSoft.copy(alpha = 0.75f),
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Tap + to begin.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Fresh.InkSoft.copy(alpha = 0.6f),
             )
             if (state.templates.isNotEmpty()) {
                 Spacer(Modifier.height(16.dp))
@@ -270,24 +239,93 @@ private fun TemplateChip(day: DayList, onUse: (LocalDate) -> Unit) {
     }
 }
 
+/**
+ * Today's list. On today, hold the ≡ handle and drag a row up or down to put first what
+ * you want to do first. Rows swap as you pass them; the new order is saved when you let go.
+ */
 @Composable
 private fun Items(
     state: DayUiState,
     viewModel: TodayViewModel,
     modifier: Modifier = Modifier,
 ) {
+    val haptics = LocalHapticFeedback.current
+    val listState = rememberLazyListState()
+    // The order on screen while dragging; reset whenever the saved list changes.
+    var order by remember(state.items) { mutableStateOf(state.items) }
+    var draggingId by remember { mutableStateOf<Long?>(null) }
+    var fromIndex by remember { mutableIntStateOf(-1) }
+    var offset by remember { mutableFloatStateOf(0f) }
+    val canDrag = state.editable && order.size > 1
+
+    fun dragBy(dy: Float) {
+        val id = draggingId ?: return
+        offset += dy
+        val visible = listState.layoutInfo.visibleItemsInfo
+        val current = visible.firstOrNull { it.key == id } ?: return
+        val centre = current.offset + offset + current.size / 2f
+        val target = visible.firstOrNull {
+            it.key != id && it.key is Long && centre > it.offset && centre < it.offset + it.size
+        } ?: return
+        val from = order.indexOfFirst { it.id == id }
+        val to = order.indexOfFirst { it.id == target.key }
+        if (from < 0 || to < 0) return
+        order = order.toMutableList().apply { add(to, removeAt(from)) }
+        // The row now sits where the target was; keep it under the finger.
+        offset += current.offset - target.offset
+    }
+
+    fun endDrag() {
+        val id = draggingId ?: return
+        val to = order.indexOfFirst { it.id == id }
+        if (fromIndex >= 0 && to >= 0 && fromIndex != to) viewModel.move(fromIndex, to)
+        draggingId = null
+        fromIndex = -1
+        offset = 0f
+    }
+
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(10.dp),
         // Room under the last item for the round + button.
         contentPadding = PaddingValues(bottom = 96.dp),
     ) {
-        items(state.items, key = { it.id }) { item ->
+        items(order, key = { it.id }) { item ->
+            val dragging = item.id == draggingId
             ItemRow(
                 item = item,
                 editable = state.editable,
                 onToggle = { viewModel.toggle(item.id) },
                 onRemove = { viewModel.remove(item.id) },
+                handle = if (!canDrag) null else Modifier.pointerInput(item.id, state.items) {
+                    detectDragGestures(
+                        onDragStart = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            draggingId = item.id
+                            fromIndex = order.indexOfFirst { it.id == item.id }
+                            offset = 0f
+                        },
+                        onDrag = { change, amount ->
+                            change.consume()
+                            dragBy(amount.y)
+                        },
+                        onDragEnd = { endDrag() },
+                        onDragCancel = { endDrag() },
+                    )
+                },
+                modifier = if (dragging) {
+                    Modifier
+                        .zIndex(1f)
+                        .graphicsLayer {
+                            translationY = offset
+                            scaleX = 1.02f
+                            scaleY = 1.02f
+                        }
+                        .shadow(8.dp, RoundedCornerShape(20.dp))
+                } else {
+                    Modifier.animateItem()
+                },
             )
         }
     }
@@ -299,11 +337,13 @@ private fun ItemRow(
     editable: Boolean,
     onToggle: () -> Unit,
     onRemove: () -> Unit,
+    handle: Modifier? = null,
+    modifier: Modifier = Modifier,
 ) {
     val haptics = LocalHapticFeedback.current
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .background(Fresh.Card)
@@ -353,6 +393,16 @@ private fun ItemRow(
             },
             modifier = Modifier.weight(1f),
         )
+
+        if (handle != null) {
+            Text(
+                text = "≡",
+                style = MaterialTheme.typography.titleLarge,
+                color = Fresh.InkSoft,
+                modifier = handle
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+            )
+        }
 
         if (editable) {
             Text(
