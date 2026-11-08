@@ -31,11 +31,11 @@ jobs:
       # settings.gradle.kts keys the :app module off.
       - name: Test :app
         if: hashFiles('app/build.gradle.kts') != ''
-        run: ./gradlew :app:testDebugUnitTest
+        run: ./gradlew :app:testDebugUnitTest :motor:testDebugUnitTest
 
       - name: Build debug APK
         if: hashFiles('app/build.gradle.kts') != ''
-        run: ./gradlew :app:assembleDebug
+        run: ./gradlew :app:assembleDebug :motor:assembleDebug
 
       - name: Upload APK
         if: hashFiles('app/build.gradle.kts') != ''
