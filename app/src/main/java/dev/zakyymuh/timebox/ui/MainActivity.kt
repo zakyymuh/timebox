@@ -12,7 +12,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import android.content.Intent
 import dev.zakyymuh.timebox.nudge.EveningReminder
-import dev.zakyymuh.timebox.nudge.MorningReminder
 import dev.zakyymuh.timebox.ui.theme.DailyTheme
 
 class MainActivity : ComponentActivity() {
@@ -29,11 +28,8 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.light(Fresh.Page.toArgb(), Fresh.Page.toArgb()),
         )
 
-        val reminder = MorningReminder(applicationContext)
-        reminder.ensureChannel()
         // Re-arming an already-armed alarm is harmless, and this covers a first launch
         // and any firing that was missed while the app was not running.
-        reminder.schedule()
         EveningReminder(applicationContext).apply {
             ensureChannel()
             schedule()

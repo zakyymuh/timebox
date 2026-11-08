@@ -1,14 +1,12 @@
 package dev.zakyymuh.timebox.ui.dashboard
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -45,14 +43,12 @@ import java.time.format.DateTimeFormatter
 private val heading = DateTimeFormatter.ofPattern("EEEE d MMMM")
 private const val GREETING = "Hello, Zaky 👋"
 
-/** The front door: a greeting, the two big cards, the collection, and a fun fact. */
+/** The front door: a greeting, the plant schedule, the collection, and a fun fact. */
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel,
-    onOpenHabit: () -> Unit,
     onOpenPlants: () -> Unit,
     onOpenCollection: () -> Unit,
-    onOpenService: () -> Unit,
     onOpenEntry: (String) -> Unit,
     onOpenEncyclopedia: () -> Unit,
 ) {
@@ -80,24 +76,16 @@ fun DashboardScreen(
                 modifier = Modifier.padding(top = 4.dp, bottom = 24.dp),
             )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.height(180.dp)) {
-                DoorCard(
-                    title = "Daily habit",
-                    dark = true,
-                    onClick = onOpenHabit,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                ) { soft -> HabitProgress(state, soft) }
-                DoorCard(
-                    title = "Plant schedule",
-                    dark = false,
-                    onClick = onOpenPlants,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                ) { soft ->
-                    Text(state.plants, style = Label, color = soft, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                }
+            // The one big door. Full width now that the daily list lives in its own app.
+            DoorCard(
+                title = "Plant schedule",
+                dark = false,
+                onClick = onOpenPlants,
+                modifier = Modifier.fillMaxWidth().height(160.dp),
+            ) { soft ->
+                Text(state.plants, style = Label, color = soft, maxLines = 3, overflow = TextOverflow.Ellipsis)
             }
 
-            MotorCard(state, onOpenService)
             CollectionCard(state, onOpenCollection)
 
             state.fact?.let { FactCard(it, onOpenEntry, onOpenEncyclopedia, viewModel::closeFact) }
@@ -106,31 +94,7 @@ fun DashboardScreen(
     }
 }
 
-/** "2 /5 done": what you did, big; what was planned, small; and a word of cheer. */
-@Composable
-private fun HabitProgress(state: DashboardState, soft: Color) {
-    val habit = state.habit ?: return
-    Column {
-        if (!habit.isEmpty) {
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    "${habit.done}",
-                    style = MaterialTheme.typography.displaySmall,
-                    color = Color.White,
-                )
-                Text(
-                    " /${habit.total} done",
-                    style = Label,
-                    color = soft,
-                    modifier = Modifier.padding(bottom = 6.dp),
-                )
-            }
-        }
-        Text(state.cheer, style = Label, color = soft, maxLines = 2, overflow = TextOverflow.Ellipsis)
-    }
-}
-
-/** One of the two big doors: dark for the daily list, light for plants, like the reference. */
+/** The big door to the plant schedule; [dark] keeps the reference's dark variant available. */
 @Composable
 private fun DoorCard(
     title: String,
@@ -164,26 +128,6 @@ private fun DoorCard(
                 size = 40.dp,
                 description = "Open $title",
             )
-        }
-    }
-}
-
-/** Motorcycle service: when it was last done, where, and how long ago. */
-@Composable
-private fun MotorCard(state: DashboardState, onOpen: () -> Unit) {
-    SoftCard(corner = 24.dp, onClick = onOpen, modifier = Modifier.padding(top = 14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(44.dp).clip(CircleShape).background(Fresh.Page),
-                contentAlignment = Alignment.Center,
-            ) { Text("🏍️", fontSize = 22.sp) }
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Motorcycle service", style = MaterialTheme.typography.titleMedium, color = Fresh.Ink)
-                Text(state.motor, style = Label, color = Fresh.InkSoft, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            }
-            Spacer(Modifier.width(8.dp))
-            RoundButton("→", onClick = onOpen, container = Fresh.Page, size = 40.dp, description = "Open motorcycle service")
         }
     }
 }

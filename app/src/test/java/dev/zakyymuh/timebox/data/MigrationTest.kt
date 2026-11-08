@@ -68,13 +68,12 @@ class MigrationTest {
             .also { db = it }
 
     @Test
-    fun `a version 1 database with lists upgrades with every item intact`() = runTest {
+    fun `a version 1 database upgrades to 8 with its lists dropped and no plants`() = runTest {
         createVersion1()
         val current = openCurrent()
 
-        assertEquals(listOf("cuci piring", "repotting", "beberes"), current.dao().items(day).map { it.text })
-        assertEquals("tidy up", current.dao().day(day)?.note)
         assertTrue(current.plantDao().plants().isEmpty())
+        assertFalse("todo_item" in current.tables())
     }
 
     @Test
@@ -113,11 +112,10 @@ class MigrationTest {
         assertEquals("Greenovia", plant.name)
         assertEquals(null, plant.snoozedUntil)
         assertEquals(1, current.plantDao().waterings().size)
-        assertEquals(3, current.dao().items(day).size)
     }
 
     @Test
-    fun `a version 3 database upgrades with lists and plants intact and an empty collection`() = runTest {
+    fun `a version 3 database upgrades with plants intact and an empty collection`() = runTest {
         createVersion1()
         val file = context.getDatabasePath(name)
         SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE).use { v3 ->
@@ -130,7 +128,6 @@ class MigrationTest {
         val current = openCurrent()
 
         assertEquals("Greenovia", current.plantDao().plants().single().name)
-        assertEquals(3, current.dao().items(day).size)
         assertTrue(current.dexDao().entries().isEmpty())
         val id = current.dexDao().insert(
             DexEntity(number = 1, name = "Astrophytum", species = "", owned = true, photo = null, acquired = day, note = "", createdAt = Instant.EPOCH),
@@ -157,19 +154,6 @@ class MigrationTest {
         assertEquals("Kikko", wish.name)
         assertEquals("Shopee", wish.note)
         assertEquals(null, wish.priceLow)
-        assertEquals(3, current.dao().items(day).size)
-    }
-
-    @Test
-    fun `the upgrade to version 6 adds an empty service log that works`() = runTest {
-        createVersion1()
-        val current = openCurrent()
-        val service = current.serviceDao()
-        val id = service.upsert(
-            ServiceEntity(date = day, place = "AHASS", price = 150_000, work = "oil", odometer = 12_000, createdAt = Instant.EPOCH),
-        )
-        assertEquals("AHASS", service.record(id)?.place)
-        assertEquals(3, current.dao().items(day).size)
     }
 
     @Test

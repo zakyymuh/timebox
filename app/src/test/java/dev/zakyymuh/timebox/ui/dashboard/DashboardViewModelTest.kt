@@ -2,15 +2,11 @@ package dev.zakyymuh.timebox.ui.dashboard
 
 import androidx.room.Room
 import dev.zakyymuh.timebox.TestClock
-import dev.zakyymuh.timebox.core.DaySummary
 import dev.zakyymuh.timebox.core.collection.DexForm
 import dev.zakyymuh.timebox.core.plants.FunFacts
 import dev.zakyymuh.timebox.data.DexRepository
-import dev.zakyymuh.timebox.core.motor.ServiceForm
 import dev.zakyymuh.timebox.data.PlantRepository
-import dev.zakyymuh.timebox.data.ServiceRepository
 import dev.zakyymuh.timebox.data.TimeboxDatabase
-import dev.zakyymuh.timebox.data.TimeboxRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -41,20 +37,16 @@ class DashboardViewModelTest {
     private val afterMidnight = Instant.parse("2026-11-07T18:00:00Z")
 
     private lateinit var db: TimeboxDatabase
-    private lateinit var timebox: TimeboxRepository
     private lateinit var plants: PlantRepository
     private lateinit var dex: DexRepository
-    private lateinit var service: ServiceRepository
 
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         db = Room.inMemoryDatabaseBuilder(RuntimeEnvironment.getApplication(), TimeboxDatabase::class.java)
             .allowMainThreadQueries().build()
-        timebox = TimeboxRepository(db.dao(), clock)
         plants = PlantRepository(db.plantDao(), clock)
         dex = DexRepository(db.dexDao(), clock) {}
-        service = ServiceRepository(db.serviceDao(), clock)
     }
 
     @After
@@ -63,19 +55,10 @@ class DashboardViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun vm(random: Random = Random(1)) = DashboardViewModel(timebox, plants, dex, service, random)
+    private fun vm(random: Random = Random(1)) = DashboardViewModel(plants, dex, clock, random)
 
     private suspend fun DashboardViewModel.await(check: (DashboardState) -> Boolean) =
         withTimeout(5_000) { state.first(check) }
-
-    @Test
-    fun `the habit card counts what is done out of the total, with a cheer`() = runBlocking {
-        timebox.addItem("cuci piring")
-        timebox.addItem("nyuci baju")
-        timebox.setDone(timebox.todayNow().items.first().id, true)
-        val state = vm().await { it.habit == DaySummary(1, 2) }
-        assertEquals("Over halfway!", state.cheer)
-    }
 
     @Test
     fun `the collection card sums up both lists`() = runBlocking {
@@ -83,14 +66,6 @@ class DashboardViewModelTest {
         dex.add(DexForm("Variegata"), owned = false, photo = null)
         val state = vm().await { it.collection == "1 plant · 1 on wishlist" }
         assertEquals(listOf("g.jpg"), state.thumbnails)
-    }
-
-    @Test
-    fun `the motorcycle card shows the last service`() = runBlocking {
-        vm().await { it.motor == "No service logged yet" }
-        service.save(0, ServiceForm(date = java.time.LocalDate.of(2026, 10, 31), place = "AHASS", price = 150_000))
-        vm().await { it.motor == "Last: 31 Oct at AHASS · 7 days ago" }
-        Unit
     }
 
     @Test
@@ -110,14 +85,13 @@ class DashboardViewModelTest {
 
     @Test
     fun `after midnight refresh shows the new day`() = runBlocking {
-        timebox.addItem("cuci piring") // written on the 7th
         val model = vm()
-        model.await { it.habit == DaySummary(0, 1) }
+        model.await { it.date == java.time.LocalDate.of(2026, 11, 7) }
 
         clock.now = afterMidnight
         model.refresh()
 
-        model.await { it.habit == DaySummary(0, 0) && it.cheer == "Plan your day" }
+        model.await { it.date == java.time.LocalDate.of(2026, 11, 8) }
         Unit
     }
 }

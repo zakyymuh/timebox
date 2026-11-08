@@ -9,8 +9,10 @@
       The last two are what made Play Protect warn about an earlier build; they belonged
       to the app-blocking feature, which is gone.
 
-      No exact-alarm permission either: a morning reminder a few minutes late is fine, so
+      No exact-alarm permission either: a reminder a few minutes late is fine, so
       it uses an inexact alarm and asks for nothing.
+
+      Today's list and its widget moved to the Habits app; the service log to Motor.
     -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -44,10 +46,6 @@
                 android:resource="@xml/photo_paths" />
         </provider>
 
-        <receiver
-            android:name=".nudge.MorningReceiver"
-            android:exported="false" />
-
         <!-- The 18:00 check for plants that need water. -->
         <receiver
             android:name=".nudge.PlantReceiver"
@@ -57,22 +55,6 @@
         <receiver
             android:name=".nudge.PlantActionReceiver"
             android:exported="false" />
-
-        <!--
-          updatePeriodMillis is 0: the widget is refreshed when the list changes, not on
-          a timer, because a timer would wake the phone all day to redraw a list that
-          usually has not moved.
-        -->
-        <receiver
-            android:name=".widget.TodayWidgetReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/today_widget_info" />
-        </receiver>
 
         <!-- Alarms do not survive a reboot, so the nudge is re-armed on boot. -->
         <receiver

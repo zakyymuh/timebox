@@ -1,24 +1,20 @@
 package dev.zakyymuh.timebox
 
 import android.content.Context
-import androidx.glance.appwidget.updateAll
 import androidx.room.Room
 import dev.zakyymuh.timebox.data.ALL_MIGRATIONS
 import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PhotoStore
-import dev.zakyymuh.timebox.data.ServiceRepository
 import dev.zakyymuh.timebox.data.SoilRepository
 import dev.zakyymuh.timebox.data.PlantRepository
 import dev.zakyymuh.timebox.data.TimeboxDatabase
-import dev.zakyymuh.timebox.data.TimeboxRepository
-import dev.zakyymuh.timebox.widget.TodayWidget
 import java.time.Clock
 
 /**
- * Hand-rolled rather than Hilt: one repository and one database in a single-user app
+ * Hand-rolled rather than Hilt: a few repositories and one database in a single-user app
  * does not earn an annotation processor and a graph.
  *
- * The widget and the notification receiver both reach the repository from a cold-started
+ * The notification receivers reach the repositories from a cold-started
  * process, so this has to work without an Activity alive.
  */
 object ServiceLocator {
@@ -27,22 +23,10 @@ object ServiceLocator {
     private var database: TimeboxDatabase? = null
 
     @Volatile
-    private var repository: TimeboxRepository? = null
-
-    @Volatile
     private var plantRepository: PlantRepository? = null
 
     var clock: Clock = Clock.systemDefaultZone()
         private set
-
-    fun repository(context: Context): TimeboxRepository =
-        repository ?: synchronized(this) {
-            repository ?: TimeboxRepository(
-                dao = database(context).dao(),
-                clock = clock,
-                onChanged = { TodayWidget().updateAll(context.applicationContext) },
-            ).also { repository = it }
-        }
 
     fun plantRepository(context: Context): PlantRepository =
         plantRepository ?: synchronized(this) {
@@ -59,21 +43,12 @@ object ServiceLocator {
     private var photoStore: PhotoStore? = null
 
     @Volatile
-    private var serviceRepository: ServiceRepository? = null
-
-    @Volatile
     private var soilRepository: SoilRepository? = null
 
     fun soilRepository(context: Context): SoilRepository =
         soilRepository ?: synchronized(this) {
             soilRepository ?: SoilRepository(database(context).airTestDao(), database(context).plantDao(), clock)
                 .also { soilRepository = it }
-        }
-
-    fun serviceRepository(context: Context): ServiceRepository =
-        serviceRepository ?: synchronized(this) {
-            serviceRepository ?: ServiceRepository(database(context).serviceDao(), clock)
-                .also { serviceRepository = it }
         }
 
     fun photoStore(context: Context): PhotoStore =

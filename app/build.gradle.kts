@@ -21,8 +21,8 @@ android {
         // nothing reachable is lost.
         minSdk = 26
         targetSdk = 37
-        versionCode = 2
-        versionName = "0.3"
+        versionCode = 3
+        versionName = "0.4"
     }
 
     // A committed debug key, so every CI build is signed the same way and installs as an
@@ -84,8 +84,6 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
 
-    implementation(libs.glance.appwidget)
-    implementation(libs.glance.material3)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

@@ -31,10 +31,6 @@ import dev.zakyymuh.timebox.ui.soil.AirSpaceScreen
 import dev.zakyymuh.timebox.ui.soil.AirSpaceViewModel
 import dev.zakyymuh.timebox.ui.soil.SoilStatusViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.zakyymuh.timebox.ui.motor.ServiceEditScreen
-import dev.zakyymuh.timebox.ui.motor.ServiceEditViewModel
-import dev.zakyymuh.timebox.ui.motor.ServiceListScreen
-import dev.zakyymuh.timebox.ui.motor.ServiceListViewModel
 import dev.zakyymuh.timebox.ui.dashboard.DashboardViewModel
 import dev.zakyymuh.timebox.ui.encyclopedia.EncyclopediaScreen
 import dev.zakyymuh.timebox.ui.encyclopedia.EntryScreen
@@ -44,8 +40,6 @@ import dev.zakyymuh.timebox.ui.plants.EditPlantScreen
 import dev.zakyymuh.timebox.ui.plants.EditPlantViewModel
 import dev.zakyymuh.timebox.ui.plants.PlantsScreen
 import dev.zakyymuh.timebox.ui.plants.PlantsViewModel
-import dev.zakyymuh.timebox.ui.today.TodayScreen
-import dev.zakyymuh.timebox.ui.today.TodayViewModel
 
 /**
  * The app's screens. Always starts on the dashboard; when a notification or the widget
@@ -81,34 +75,20 @@ fun AppNav(start: String?) {
                 factory = viewModelFactory {
                     initializer {
                         DashboardViewModel(
-                            timebox = ServiceLocator.repository(context),
                             plants = ServiceLocator.plantRepository(context),
                             dex = ServiceLocator.dexRepository(context),
-                            service = ServiceLocator.serviceRepository(context),
+                            clock = ServiceLocator.clock,
                         )
                     }
                 },
             )
             DashboardScreen(
                 viewModel = vm,
-                onOpenHabit = { entry.ifResumed { nav.go(Destinations.TODAY) } },
                 onOpenPlants = { entry.ifResumed { nav.go(Destinations.PLANTS) } },
                 onOpenCollection = { entry.ifResumed { nav.go(Destinations.COLLECTION) } },
-                onOpenService = { entry.ifResumed { nav.go(Destinations.SERVICE) } },
                 onOpenEntry = { id -> entry.ifResumed { nav.go(Destinations.entry(id)) } },
                 onOpenEncyclopedia = { entry.ifResumed { nav.go(Destinations.ENCYCLOPEDIA) } },
             )
-        }
-
-        composable(Destinations.TODAY) {
-            val vm: TodayViewModel = viewModel(
-                factory = viewModelFactory {
-                    initializer {
-                        TodayViewModel(repo = ServiceLocator.repository(context))
-                    }
-                },
-            )
-            TodayScreen(viewModel = vm)
         }
 
         composable(Destinations.PLANTS) { entry ->
@@ -136,31 +116,6 @@ fun AppNav(start: String?) {
                 factory = viewModelFactory { initializer { AirSpaceViewModel(ServiceLocator.soilRepository(context)) } },
             )
             AirSpaceScreen(viewModel = vm, onBack = { entry.ifResumed { nav.popBackStack() } })
-        }
-
-        composable(Destinations.SERVICE) { entry ->
-            val vm: ServiceListViewModel = viewModel(
-                factory = viewModelFactory { initializer { ServiceListViewModel(ServiceLocator.serviceRepository(context)) } },
-            )
-            ServiceListScreen(
-                viewModel = vm,
-                onBack = { entry.ifResumed { nav.popBackStack() } },
-                onAdd = { entry.ifResumed { nav.go(Destinations.serviceEdit(0)) } },
-                onEdit = { id -> entry.ifResumed { nav.go(Destinations.serviceEdit(id)) } },
-            )
-        }
-
-        composable(
-            route = Destinations.SERVICE_EDIT,
-            arguments = listOf(navArgument("id") { type = NavType.LongType }),
-        ) { entry ->
-            val id = entry.arguments?.getLong("id") ?: 0L
-            val vm: ServiceEditViewModel = viewModel(
-                factory = viewModelFactory {
-                    initializer { ServiceEditViewModel(ServiceLocator.serviceRepository(context), id) }
-                },
-            )
-            ServiceEditScreen(viewModel = vm, onDone = { entry.ifResumed { nav.popBackStack() } })
         }
 
         composable(Destinations.COLLECTION) { entry ->

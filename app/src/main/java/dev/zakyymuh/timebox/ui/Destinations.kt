@@ -3,22 +3,15 @@ package dev.zakyymuh.timebox.ui
 import android.content.Context
 import android.content.Intent
 
-/** Every screen's route, and how notifications and the widget ask for one. */
+/** Every screen's route, and how notifications ask for one. */
 object Destinations {
     const val DASHBOARD = "dashboard"
-    const val TODAY = "today"
     const val PLANTS = "plants"
     const val CALENDAR = "plants/calendar"
     const val EDIT = "plants/edit/{id}"
     const val ENCYCLOPEDIA = "encyclopedia"
     const val ENTRY = "encyclopedia/{id}"
     const val SOIL = "soil"
-    const val SERVICE = "service"
-    const val SERVICE_EDIT = "service/edit/{id}"
-
-    /** Route to log ([id] 0) or edit a motorcycle service. */
-    fun serviceEdit(id: Long): String = "service/edit/$id"
-
     const val COLLECTION = "collection"
     const val DEX = "collection/{id}"
     const val DEX_EDIT = "collection/edit/{id}/{owned}"
@@ -49,5 +42,5 @@ object Destinations {
 
     /** The screen an intent asks for, or null to stay on the dashboard. */
     fun from(intent: Intent?): String? =
-        intent?.getStringExtra(EXTRA)?.takeIf { it == TODAY || it == PLANTS || it == SOIL }
+        intent?.getStringExtra(EXTRA)?.takeIf { it == PLANTS || it == SOIL }
 }

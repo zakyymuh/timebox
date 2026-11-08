@@ -74,5 +74,18 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
     }
 }
 
+/**
+ * Version 7 → 8: today's lists and the motorcycle service log moved to their own apps.
+ * Their tables go; every plant, watering, collection entry and soil test stays. The
+ * owner chose to re-enter the lists and services in the new apps by hand.
+ */
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DROP TABLE IF EXISTS `todo_item`")
+        db.execSQL("DROP TABLE IF EXISTS `day`")
+        db.execSQL("DROP TABLE IF EXISTS `service`")
+    }
+}
+
 /** Every migration, in order, for the app and its tests. */
-val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
