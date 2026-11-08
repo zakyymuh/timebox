@@ -2,6 +2,7 @@ package dev.zakyymuh.timebox.data
 
 import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -165,5 +166,17 @@ class MigrationTest {
         )
         assertEquals("AHASS", service.record(id)?.place)
         assertEquals(3, current.dao().items(day).size)
+    }
+
+    @Test
+    fun `the upgrade to version 7 adds an empty soil test table that works`() = runTest {
+        createVersion1()
+        val current = openCurrent()
+        val id = current.airTestDao().insert(
+            AirTestEntity(date = day, mix = "Mix A", potMl = 500, drainedMl = 110, pouredMl = null, createdAt = Instant.EPOCH),
+        )
+        assertEquals(1, current.airTestDao().testsFlow().first().size)
+        assertEquals(Instant.EPOCH, current.airTestDao().lastTestAt())
+        assertTrue(id > 0)
     }
 }

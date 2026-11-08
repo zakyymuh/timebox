@@ -12,6 +12,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import dev.zakyymuh.timebox.ServiceLocator
 import dev.zakyymuh.timebox.core.plants.PlantCopy
+import dev.zakyymuh.timebox.core.soil.SampleStatus
 import dev.zakyymuh.timebox.ui.Destinations
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,6 +43,9 @@ class PlantReceiver : BroadcastReceiver() {
                 // Several: just open the app — bulk actions make watering the wrong one easy.
                 val only = overview.due.singleOrNull()?.plant?.id
                 if (text != null) notify(appContext, reminder, text, only)
+                // Every 2 waterings since the last soil test: remind to re-check the sample.
+                val soil = ServiceLocator.soilRepository(appContext).statusNow()
+                if (soil is SampleStatus.Due) notifySoil(appContext, reminder, soil)
             } finally {
                 pending.finish()
             }
@@ -75,6 +79,25 @@ class PlantReceiver : BroadcastReceiver() {
             ?.notify(EveningReminder.NOTIFICATION_ID, notification)
     }
 
+    private fun notifySoil(context: Context, reminder: EveningReminder, status: SampleStatus.Due) {
+        if (!canPostNotifications(context)) return
+        reminder.ensureChannel()
+        val open = PendingIntent.getActivity(
+            context,
+            REQUEST_SOIL,
+            Destinations.intent(context, Destinations.SOIL),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val notification = NotificationCompat.Builder(context, EveningReminder.CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_menu_agenda)
+            .setContentTitle("Time to check your soil sample")
+            .setContentText("${status.wateringsSince} waterings since the last air-space test. Tap to test.")
+            .setContentIntent(open)
+            .setAutoCancel(true)
+            .build()
+        context.getSystemService(NotificationManager::class.java)?.notify(SOIL_NOTIFICATION_ID, notification)
+    }
+
     private fun canPostNotifications(context: Context): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
@@ -94,5 +117,7 @@ class PlantReceiver : BroadcastReceiver() {
         const val EXTRA_FORCE = "force"
         private const val REQUEST_WATER = 201
         private const val REQUEST_CHECK = 202
+        private const val REQUEST_SOIL = 203
+        private const val SOIL_NOTIFICATION_ID = 3
     }
 }

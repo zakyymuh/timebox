@@ -63,5 +63,16 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
     }
 }
 
+/** Version 6 → 7: soil air-space tests. Only creates a table. */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `air_test` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`date` TEXT NOT NULL, `mix` TEXT NOT NULL, `potMl` INTEGER NOT NULL, `drainedMl` INTEGER NOT NULL, " +
+                "`pouredMl` INTEGER, `createdAt` INTEGER NOT NULL)",
+        )
+    }
+}
+
 /** Every migration, in order, for the app and its tests. */
-val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)

@@ -43,6 +43,13 @@ interface PlantDao {
     @Query("UPDATE plant SET everyDays = :days WHERE id = :id AND everyDays IS NOT NULL")
     suspend fun setEveryDays(id: Long, days: Int)
 
+    /** Waterings of any plant logged after [after]; drives the soil-sample reminder. */
+    @Query("SELECT COUNT(*) FROM watering WHERE wateredAt > :after")
+    fun wateringsAfterFlow(after: java.time.Instant): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM watering WHERE wateredAt > :after")
+    suspend fun wateringsAfter(after: java.time.Instant): Int
+
     @Query("DELETE FROM watering WHERE id = :id")
     suspend fun deleteWatering(id: Long)
 }

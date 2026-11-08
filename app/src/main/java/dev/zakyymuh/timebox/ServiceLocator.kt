@@ -7,6 +7,7 @@ import dev.zakyymuh.timebox.data.ALL_MIGRATIONS
 import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PhotoStore
 import dev.zakyymuh.timebox.data.ServiceRepository
+import dev.zakyymuh.timebox.data.SoilRepository
 import dev.zakyymuh.timebox.data.PlantRepository
 import dev.zakyymuh.timebox.data.TimeboxDatabase
 import dev.zakyymuh.timebox.data.TimeboxRepository
@@ -59,6 +60,15 @@ object ServiceLocator {
 
     @Volatile
     private var serviceRepository: ServiceRepository? = null
+
+    @Volatile
+    private var soilRepository: SoilRepository? = null
+
+    fun soilRepository(context: Context): SoilRepository =
+        soilRepository ?: synchronized(this) {
+            soilRepository ?: SoilRepository(database(context).airTestDao(), database(context).plantDao(), clock)
+                .also { soilRepository = it }
+        }
 
     fun serviceRepository(context: Context): ServiceRepository =
         serviceRepository ?: synchronized(this) {

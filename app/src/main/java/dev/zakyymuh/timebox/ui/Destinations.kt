@@ -12,6 +12,7 @@ object Destinations {
     const val EDIT = "plants/edit/{id}"
     const val ENCYCLOPEDIA = "encyclopedia"
     const val ENTRY = "encyclopedia/{id}"
+    const val SOIL = "soil"
     const val SERVICE = "service"
     const val SERVICE_EDIT = "service/edit/{id}"
 
@@ -48,5 +49,5 @@ object Destinations {
 
     /** The screen an intent asks for, or null to stay on the dashboard. */
     fun from(intent: Intent?): String? =
-        intent?.getStringExtra(EXTRA)?.takeIf { it == TODAY || it == PLANTS }
+        intent?.getStringExtra(EXTRA)?.takeIf { it == TODAY || it == PLANTS || it == SOIL }
 }

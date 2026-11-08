@@ -28,6 +28,10 @@ import dev.zakyymuh.timebox.ui.collection.DexDetailViewModel
 import dev.zakyymuh.timebox.ui.collection.DexEditScreen
 import dev.zakyymuh.timebox.ui.collection.DexEditViewModel
 import dev.zakyymuh.timebox.ui.dashboard.DashboardScreen
+import dev.zakyymuh.timebox.ui.soil.AirSpaceScreen
+import dev.zakyymuh.timebox.ui.soil.AirSpaceViewModel
+import dev.zakyymuh.timebox.ui.soil.SoilStatusViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.ui.motor.ServiceEditScreen
 import dev.zakyymuh.timebox.ui.motor.ServiceEditViewModel
 import dev.zakyymuh.timebox.ui.motor.ServiceListScreen
@@ -112,6 +116,10 @@ fun AppNav(start: String?) {
             val vm: PlantsViewModel = viewModel(
                 factory = viewModelFactory { initializer { PlantsViewModel(ServiceLocator.plantRepository(context)) } },
             )
+            val soilVm: SoilStatusViewModel = viewModel(
+                factory = viewModelFactory { initializer { SoilStatusViewModel(ServiceLocator.soilRepository(context)) } },
+            )
+            val soil by soilVm.status.collectAsStateWithLifecycle()
             PlantsScreen(
                 viewModel = vm,
                 onBack = { entry.ifResumed { nav.popBackStack() } },
@@ -119,7 +127,16 @@ fun AppNav(start: String?) {
                 onAdd = { entry.ifResumed { nav.go(Destinations.edit(0)) } },
                 onEdit = { id -> entry.ifResumed { nav.go(Destinations.edit(id)) } },
                 onEncyclopedia = { entry.ifResumed { nav.go(Destinations.ENCYCLOPEDIA) } },
+                soil = soil,
+                onSoil = { entry.ifResumed { nav.go(Destinations.SOIL) } },
             )
+        }
+
+        composable(Destinations.SOIL) { entry ->
+            val vm: AirSpaceViewModel = viewModel(
+                factory = viewModelFactory { initializer { AirSpaceViewModel(ServiceLocator.soilRepository(context)) } },
+            )
+            AirSpaceScreen(viewModel = vm, onBack = { entry.ifResumed { nav.popBackStack() } })
         }
 
         composable(Destinations.SERVICE) { entry ->
