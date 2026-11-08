@@ -62,6 +62,11 @@ Before the split, one app held all three features. The order matters:
    and service records. That data is not carried across, and was meant to be retyped.
 2. **Install Daily and Motor.** Both start empty.
 3. **Open Daily once** and allow notifications, so the 06:30 reminder is armed.
+   On Xiaomi / HyperOS, also turn on **Settings → Apps → Daily → Autostart**.
+   Sideloaded apps start with it off, and without it Android never tells Daily the
+   phone rebooted, so the reminder stops until the app is next opened. papacti's old
+   grant doesn't carry over, because Daily is a new app. Check papacti still has it
+   too, for the 18:00 watering reminder.
 4. **Add the widget again.** It now belongs to Daily: long-press the home screen →
    Widgets → Daily. The old widget disappears when papacti is updated.
 
