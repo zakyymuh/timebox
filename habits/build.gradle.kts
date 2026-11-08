@@ -1,0 +1,100 @@
+plugins {
+    // No versions: all declared with versions in the root project's plugins block, which
+    // is what keeps them in a single classloader scope so KGP can see AGP's types.
+    id("com.android.application")
+    // No kotlin-android: AGP 9 compiles Kotlin itself and rejects that plugin.
+    id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.devtools.ksp")
+}
+
+android {
+    namespace = "dev.zakyymuh.habits"
+
+    // 37 is not optional: androidx requires libraries depending on it to compile
+    // against 37 or later, enforced by :app:checkDebugAarMetadata.
+    compileSdk = 37
+
+    defaultConfig {
+        applicationId = "dev.zakyymuh.habits"
+        // 26, not 24: Inter and JetBrains Mono are variable fonts, which Android
+        // supports from API 26. The target phone is a Redmi Note 14 on Android 16, so
+        // nothing reachable is lost.
+        minSdk = 26
+        targetSdk = 37
+        versionCode = 1
+        versionName = "1.0"
+    }
+
+    // A committed debug key, so every CI build is signed the same way and installs as an
+    // upgrade. CI used to generate a fresh key per run, which forced an uninstall — and an
+    // uninstall deletes the user's lists. Debug keys are not secret; never ship with this.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("../app/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
+        release {
+            isMinifyEnabled = false
+        }
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+}
+
+
+dependencies {
+    implementation(project(":core"))
+    implementation(project(":ui"))
+
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.kotlinx.coroutines.android)
+
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.ui.graphics)
+    implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.compose.material3)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.navigation.compose)
+
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+
+    implementation(libs.glance.appwidget)
+    implementation(libs.glance.material3)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.room.testing)
+}
+
+// CI is the only place :habits tests run, so print each test's outcome into the log.
+tasks.withType<Test>().configureEach {
+    testLogging {
+        events("passed", "failed", "skipped")
+    }
+}
