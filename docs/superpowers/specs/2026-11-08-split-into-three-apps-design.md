@@ -61,7 +61,7 @@ and CI paths keep working. *(My call.)*
 
 | App | applicationId | Placeholder label | Opens on |
 |---|---|---|---|
-| Plants | `dev.zakyymuh.timebox` (unchanged, mandatory) | "Plants" | the trimmed dashboard |
+| Plants | `dev.zakyymuh.timebox` (unchanged, mandatory) | "papacti" (set by the owner in f2c06d2; keep it) | the trimmed dashboard |
 | Habits | `dev.zakyymuh.habits` | "Daily" (takes over the old name) | Today screen directly |
 | Motor | `dev.zakyymuh.motor` | "Motor" | service list directly |
 
