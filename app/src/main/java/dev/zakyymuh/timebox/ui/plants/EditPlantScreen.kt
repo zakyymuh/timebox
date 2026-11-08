@@ -21,17 +21,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,16 +42,14 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.core.plants.PlantColour
 import dev.zakyymuh.timebox.core.plants.PlantForm
+import dev.zakyymuh.timebox.ui.common.DateField
 import dev.zakyymuh.timebox.ui.common.TopBar
+import dev.zakyymuh.timebox.ui.common.softFieldColors
 import dev.zakyymuh.timebox.ui.common.SectionTitle
 import dev.zakyymuh.timebox.ui.theme.Fresh
 import dev.zakyymuh.timebox.ui.theme.Small
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
-private val dateLabel = DateTimeFormatter.ofPattern("EEE d MMM yyyy")
 
 @Composable
 fun EditPlantScreen(viewModel: EditPlantViewModel, onDone: () -> Unit) {
@@ -193,17 +186,6 @@ internal fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-internal fun softFieldColors() = TextFieldDefaults.colors(
-    focusedContainerColor = Fresh.Card,
-    unfocusedContainerColor = Fresh.Card,
-    focusedIndicatorColor = Color.Transparent,
-    unfocusedIndicatorColor = Color.Transparent,
-    cursorColor = Fresh.Green,
-    focusedTextColor = Fresh.Ink,
-    unfocusedTextColor = Fresh.Ink,
-)
-
-@Composable
 private fun IntervalField(days: Int, onChange: (Int) -> Unit) {
     // Kept as text so the field can be empty while typing; an empty field counts as 0,
     // which the form rejects, so Save stays disabled until it is a real number.
@@ -228,43 +210,4 @@ private fun IntervalField(days: Int, onChange: (Int) -> Unit) {
         Text("days", style = MaterialTheme.typography.bodyMedium, color = Fresh.Ink)
     }
     Text("1 to 90", style = Small, color = Fresh.InkSoft, modifier = Modifier.padding(top = 4.dp))
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun DateField(label: String, date: LocalDate, onChange: (LocalDate) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Fresh.Card)
-            .clickable { open = true }
-            .padding(horizontal = 18.dp, vertical = 16.dp),
-    ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = Fresh.Ink, modifier = Modifier.weight(1f))
-        Text(date.format(dateLabel), style = Small, color = Fresh.Ink)
-    }
-
-    if (open) {
-        // The picker speaks UTC-midnight millis; converting at UTC keeps the date exact.
-        val state = rememberDatePickerState(
-            initialSelectedDateMillis = date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
-        )
-        DatePickerDialog(
-            onDismissRequest = { open = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    state.selectedDateMillis?.let {
-                        onChange(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate())
-                    }
-                    open = false
-                }) { Text("OK") }
-            },
-            dismissButton = { TextButton(onClick = { open = false }) { Text("Cancel") } },
-        ) {
-            DatePicker(state = state)
-        }
-    }
 }

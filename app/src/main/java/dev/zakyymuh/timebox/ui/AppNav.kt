@@ -12,15 +12,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import androidx.lifecycle.Lifecycle
-import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.zakyymuh.timebox.ServiceLocator
+import dev.zakyymuh.timebox.ui.common.go
+import dev.zakyymuh.timebox.ui.common.ifResumed
 import dev.zakyymuh.timebox.ui.collection.CollectionScreen
 import dev.zakyymuh.timebox.ui.collection.CollectionViewModel
 import dev.zakyymuh.timebox.ui.collection.DexDetailScreen
@@ -261,16 +260,5 @@ fun AppNav(start: String?) {
         }
     }
 }
-
-/**
- * Runs [block] only while this screen is the one in front. Navigating or popping moves the
- * screen out of RESUMED at once, so a double tap cannot pop twice (leaving a blank screen
- * with no destination) or push the same screen twice.
- */
-private inline fun NavBackStackEntry.ifResumed(block: () -> Unit) {
-    if (lifecycle.currentState == Lifecycle.State.RESUMED) block()
-}
-
-private fun NavHostController.go(route: String) = navigate(route) { launchSingleTop = true }
 
 private const val SLIDE_MS = 280

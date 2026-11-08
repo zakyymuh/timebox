@@ -7,7 +7,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import dev.zakyymuh.timebox.R
+import dev.zakyymuh.timebox.shared.R
 
 /**
  * Inter only, bundled rather than downloaded — the app has no internet permission. It is
@@ -19,7 +19,7 @@ private fun interAt(weight: FontWeight) = Font(
     variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight)),
 )
 
-internal val Inter = FontFamily(
+val Inter = FontFamily(
     interAt(FontWeight.Normal),
     interAt(FontWeight.Medium),
     interAt(FontWeight.SemiBold),
@@ -27,7 +27,7 @@ internal val Inter = FontFamily(
 )
 
 /** Big and bold at the top, calm everywhere else. */
-internal val DailyTypography = Typography(
+val DailyTypography = Typography(
     headlineLarge = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Bold, fontSize = 30.sp, lineHeight = 36.sp, letterSpacing = (-0.6).sp),
     headlineMedium = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 30.sp, letterSpacing = (-0.4).sp),
     titleLarge = TextStyle(fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, lineHeight = 26.sp, letterSpacing = (-0.2).sp),
@@ -40,7 +40,7 @@ internal val DailyTypography = Typography(
 )
 
 /** Secondary lines: dates, counts, status. */
-internal val Label = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+val Label = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 13.sp)
 
 /** The smallest text: hints, legends, pills. */
-internal val Small = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Normal, fontSize = 12.sp)
+val Small = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Normal, fontSize = 12.sp)

@@ -56,8 +56,8 @@ import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.common.SoftCard
 import dev.zakyymuh.timebox.ui.common.TopBar
 import dev.zakyymuh.timebox.ui.plants.Choice
-import dev.zakyymuh.timebox.ui.plants.DateField
-import dev.zakyymuh.timebox.ui.plants.softFieldColors
+import dev.zakyymuh.timebox.ui.common.DateField
+import dev.zakyymuh.timebox.ui.common.softFieldColors
 import dev.zakyymuh.timebox.ui.theme.Fresh
 import dev.zakyymuh.timebox.ui.theme.Label
 import dev.zakyymuh.timebox.ui.theme.Small

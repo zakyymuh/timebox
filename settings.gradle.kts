@@ -32,7 +32,8 @@ val hasAndroidSdk = System.getenv("ANDROID_HOME") != null ||
 val appModuleExists = file("app/build.gradle.kts").exists()
 
 when {
-    hasAndroidSdk && appModuleExists -> include(":app")
+    // :ui is the Android library every app shares, so it needs the SDK too.
+    hasAndroidSdk && appModuleExists -> include(":ui", ":app")
     !appModuleExists -> logger.lifecycle("No app/ module yet — building :core only.")
     else -> logger.lifecycle("No Android SDK found — building :core only. See docs/BUILDING.md.")
 }
