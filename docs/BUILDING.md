@@ -1,22 +1,33 @@
-# Building Timebox
+# Building the apps
+
+This repo builds three Android apps:
+
+| App | Module | Package | What it does |
+|---|---|---|---|
+| **papacti** | `:app` | `dev.zakyymuh.timebox` | Plant schedule, calendar, encyclopedia, collection and wishlist, soil air-space tests, and the 18:00 watering reminder |
+| **Daily** (Habits) | `:habits` | `dev.zakyymuh.habits` | Today's list, the home-screen widget, and the 06:30 morning reminder |
+| **Motor** | `:motor` | `dev.zakyymuh.motor` | The motorcycle service log |
 
 There is no Android SDK on the machine this was written on, and the connection there
-runs at roughly 150 KB/s. So the APK is built in CI and downloaded, rather than built
-locally. Nothing about the project requires that — if you have an SDK, see *Building
+runs at roughly 150 KB/s. So the APKs are built in CI and downloaded, rather than built
+locally. Nothing about the project requires that. If you have an SDK, see *Building
 locally* at the bottom.
 
-## The two modules
+## The modules
 
 | Module | What it is | Needs an Android SDK? |
 |---|---|---|
-| `:core` | Every decision Timebox makes: the gate's rules, reason validation, the foreground event filter, pass expiry, alarm timing, widget state. Pure Kotlin. | **no** |
-| `:app` | The Android shell: accessibility service, Room database, Compose screens, Glance widget. | yes |
+| `:core` | Every decision the apps make: plant schedules, list rules, service-log sums, alarm timing, widget state. Pure Kotlin. | **no** |
+| `:ui` | The Android library all three apps share: the Fresh theme, the Inter font, cards, fields, navigation guards and the daily alarm. | yes |
+| `:app` | papacti, the plant app. | yes |
+| `:habits` | The daily-list app. | yes |
+| `:motor` | The service-log app. | yes |
 
-`settings.gradle.kts` only includes `:app` when it finds an SDK (`ANDROID_HOME`,
-`ANDROID_SDK_ROOT`, or a `local.properties`). Without one it builds `:core` alone and
-says so. This is deliberate: applying the Android Gradle plugin with no SDK fails
-configuration for *every* project in the build, so a single missing SDK would otherwise
-make even the pure rules untestable.
+`settings.gradle.kts` includes the Android modules only when it finds an SDK
+(`ANDROID_HOME`, `ANDROID_SDK_ROOT`, or a `local.properties`). Without one it builds
+`:core` alone and says so. This is deliberate: applying the Android Gradle plugin with no
+SDK fails configuration for *every* project in the build, so a single missing SDK would
+otherwise make even the pure rules untestable.
 
 So on a machine with no SDK you can still run the part that matters most:
 
@@ -24,44 +35,50 @@ So on a machine with no SDK you can still run the part that matters most:
 ./gradlew :core:test
 ```
 
-## Getting an APK onto your phone
+## Getting the APKs onto your phone
 
 1. Push to GitHub. The `build` workflow runs on every push.
 2. Open the run under the repo's **Actions** tab.
-3. Download the **timebox-debug-apk** artifact (a zip, ~10-15 MB).
-4. Unzip it and move the `.apk` to your phone — USB, Drive, or whatever you use.
-5. On the phone, tap the APK and allow installing from that source when asked.
+3. Download the artifacts you want. Each one is a zip with one `.apk` in it:
+   - **plants-debug-apk**: papacti
+   - **habits-debug-apk**: Daily
+   - **motor-debug-apk**: Motor
+4. Unzip them and move the `.apk` files to your phone however you like (USB, Drive, or anything else).
+5. On the phone, tap each APK and allow installing from that source when asked.
+
+All three are signed with the same committed debug key (`app/debug.keystore`), and CI
+fails if they ever differ. That's what lets each new build install over the last one.
+A different key would force an uninstall, and an uninstall deletes that app's data.
 
 If the build fails, the run also uploads a **test-reports** artifact with the HTML
 test reports, which is the only way to read a failure from here.
 
-### After installing, two permissions
+### First install after the split (November 2026)
 
-Neither is optional, and the app will tell you so on its home screen if either is missing.
+Before the split, one app held all three features. The order matters:
 
-- **Accessibility** — Settings → Accessibility → Timebox. This is how Timebox sees which
-  app came to the foreground. It is configured with `canRetrieveWindowContent="false"`,
-  so it reads package names and never screen content.
-- **Display over other apps** — this is not about drawing. Android 10 and later block
-  apps from starting an activity from the background, and holding this permission is the
-  documented exemption that lets the gate appear over the app you just opened.
-
-On a phone where the APK was sideloaded, Android 13+ may hide the accessibility toggle
-behind **Restricted settings**. If the toggle is greyed out: Settings → Apps → Timebox →
-⋮ → *Allow restricted settings*, then go back and enable it.
+1. **Install papacti over the old app first.** It keeps every plant, watering,
+   photo, collection and wishlist entry, and soil test. It drops the old daily lists
+   and service records. That data is not carried across, and was meant to be retyped.
+2. **Install Daily and Motor.** Both start empty.
+3. **Open Daily once** and allow notifications, so the 06:30 reminder is armed.
+4. **Add the widget again.** It now belongs to Daily: long-press the home screen →
+   Widgets → Daily. The old widget disappears when papacti is updated.
 
 ## Building locally
 
 With an SDK installed, nothing special is needed:
 
 ```bash
-./gradlew :core:test :app:testDebugUnitTest :app:assembleDebug
+./gradlew :core:test :app:testDebugUnitTest :habits:testDebugUnitTest :motor:testDebugUnitTest
+./gradlew :app:assembleDebug :habits:assembleDebug :motor:assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb install -r habits/build/outputs/apk/debug/habits-debug.apk
+adb install -r motor/build/outputs/apk/debug/motor-debug.apk
 ```
 
-A build-only SDK is about 1.5 GB — you do not need Android Studio or the emulator,
-since this app has to be tested against your own apps on your own phone anyway:
+A build-only SDK is about 1.5 GB. You don't need Android Studio or the emulator:
 
 ```bash
-sdkmanager "platform-tools" "build-tools;36.0.0" "platforms;android-36"
+sdkmanager "platform-tools" "build-tools;37.0.0" "platforms;android-37"
 ```

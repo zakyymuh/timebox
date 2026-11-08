@@ -28,21 +28,50 @@ jobs:
         run: ./gradlew :core:test
 
       # The runner has the Android SDK at $ANDROID_HOME, which is also what
-      # settings.gradle.kts keys the :app module off.
-      - name: Test :app
+      # settings.gradle.kts keys the Android modules off.
+      - name: Test the three apps
         if: hashFiles('app/build.gradle.kts') != ''
         run: ./gradlew :app:testDebugUnitTest :habits:testDebugUnitTest :motor:testDebugUnitTest
 
-      - name: Build debug APK
+      - name: Build the three debug APKs
         if: hashFiles('app/build.gradle.kts') != ''
         run: ./gradlew :app:assembleDebug :habits:assembleDebug :motor:assembleDebug
 
-      - name: Upload APK
+      # Every app is signed with the committed app/debug.keystore, so each later build
+      # installs over the last one. A different key would force an uninstall, which
+      # deletes that app's data. Fail here rather than on the phone.
+      - name: Check all three APKs share one signing key
+        if: hashFiles('app/build.gradle.kts') != ''
+        run: |
+          signer="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
+          for module in app habits motor; do
+            "$signer" verify --print-certs "$module"/build/outputs/apk/debug/*.apk | grep 'SHA-256 digest'
+          done | sort -u > digests.txt
+          cat digests.txt
+          test "$(wc -l < digests.txt)" -eq 1
+
+      - name: Upload papacti (plants) APK
         if: hashFiles('app/build.gradle.kts') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: timebox-debug-apk
+          name: plants-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload Habits APK
+        if: hashFiles('habits/build.gradle.kts') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: habits-debug-apk
+          path: habits/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload Motor APK
+        if: hashFiles('motor/build.gradle.kts') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: motor-debug-apk
+          path: motor/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
       # Test reports are the only way to read a failure from here.
@@ -54,4 +83,6 @@ jobs:
           path: |
             core/build/reports/tests/
             app/build/reports/tests/
+            habits/build/reports/tests/
+            motor/build/reports/tests/
           if-no-files-found: ignore
