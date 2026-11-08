@@ -6,6 +6,7 @@ import dev.zakyymuh.timebox.core.collection.Dex
 import dev.zakyymuh.timebox.core.plants.FunFact
 import dev.zakyymuh.timebox.core.plants.FunFacts
 import dev.zakyymuh.timebox.core.plants.PlantCopy
+import dev.zakyymuh.timebox.core.plants.PlantRow
 import dev.zakyymuh.timebox.core.plants.PlantsOverview
 import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PlantRepository
@@ -22,6 +23,8 @@ import kotlin.random.Random
 data class DashboardState(
     val date: LocalDate? = null,
     val plants: String = "",
+    /** The plant to water soonest — the most overdue one, else the next coming up. */
+    val nextWatering: PlantRow? = null,
     val collection: String = "",
     /** Up to three photos from the collection, newest number first, for the card. */
     val thumbnails: List<String> = emptyList(),
@@ -48,9 +51,11 @@ class DashboardViewModel(
         todayDate,
         fact,
     ) { plantList, waterings, entries, date, shownFact ->
+        val overview = PlantsOverview.of(plantList, waterings, date)
         DashboardState(
             date = date,
-            plants = PlantCopy.dashboard(PlantsOverview.of(plantList, waterings, date)),
+            plants = PlantCopy.dashboard(overview),
+            nextWatering = overview.due.firstOrNull() ?: overview.upcoming.firstOrNull(),
             collection = Dex.summary(entries),
             thumbnails = entries.filter { it.owned && it.photo != null }.sortedByDescending { it.number }
                 .take(3).mapNotNull { it.photo },

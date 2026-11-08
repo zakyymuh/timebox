@@ -3,6 +3,8 @@ package dev.zakyymuh.timebox.ui.dashboard
 import androidx.room.Room
 import dev.zakyymuh.timebox.TestClock
 import dev.zakyymuh.timebox.core.collection.DexForm
+import dev.zakyymuh.timebox.core.plants.PlantColour
+import dev.zakyymuh.timebox.core.plants.PlantForm
 import dev.zakyymuh.timebox.core.plants.FunFacts
 import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PlantRepository
@@ -17,6 +19,7 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -93,5 +96,36 @@ class DashboardViewModelTest {
 
         model.await { it.date == java.time.LocalDate.of(2026, 11, 8) }
         Unit
+    }
+
+    private fun d(day: Int) = java.time.LocalDate.of(2026, 11, day)
+
+    private suspend fun plant(name: String, everyDays: Int, lastWatered: java.time.LocalDate) =
+        plants.save(0, PlantForm(
+            name = name, colour = PlantColour.MOSS, repeats = true,
+            everyDays = everyDays, onceDate = d(7), lastWatered = lastWatered,
+        ))
+
+    @Test
+    fun `the next watering card shows the soonest plant`() = runBlocking {
+        plant("Greenovia", everyDays = 4, lastWatered = d(7)) // due the 11th
+        plant("Basil", everyDays = 2, lastWatered = d(7)) // due the 9th
+        val state = vm().await { it.nextWatering != null && it.date != null }
+        assertEquals("Basil", state.nextWatering?.plant?.name)
+        assertEquals(d(9), state.nextWatering?.nextDue)
+    }
+
+    @Test
+    fun `a plant due today comes before one coming up`() = runBlocking {
+        plant("Greenovia", everyDays = 4, lastWatered = d(7))
+        plant("Aloe", everyDays = 3, lastWatered = d(4)) // due today, the 7th
+        val state = vm().await { it.nextWatering != null && it.date != null }
+        assertEquals("Aloe", state.nextWatering?.plant?.name)
+    }
+
+    @Test
+    fun `no plants means no next watering card`() = runBlocking {
+        val state = vm().await { it.date != null }
+        assertNull(state.nextWatering)
     }
 }

@@ -88,6 +88,7 @@ fun AppNav(start: String?) {
                 onOpenCollection = { entry.ifResumed { nav.go(Destinations.COLLECTION) } },
                 onOpenEntry = { id -> entry.ifResumed { nav.go(Destinations.entry(id)) } },
                 onOpenEncyclopedia = { entry.ifResumed { nav.go(Destinations.ENCYCLOPEDIA) } },
+                onAddPlant = { entry.ifResumed { nav.go(Destinations.edit(0)) } },
             )
         }
 

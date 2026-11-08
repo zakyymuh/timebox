@@ -1,5 +1,6 @@
 package dev.zakyymuh.timebox.ui.dashboard
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -16,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -26,16 +28,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.core.plants.FunFact
+import dev.zakyymuh.timebox.core.plants.PlantCopy
+import dev.zakyymuh.timebox.core.plants.PlantRow
+import dev.zakyymuh.timebox.core.plants.PlantStatus
 import dev.zakyymuh.timebox.ui.collection.DexPhoto
 import dev.zakyymuh.timebox.ui.common.Pill
 import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.common.SoftCard
+import dev.zakyymuh.timebox.ui.plants.PlantDot
 import dev.zakyymuh.timebox.ui.theme.Fresh
 import dev.zakyymuh.timebox.ui.theme.Label
 import java.time.format.DateTimeFormatter
@@ -43,7 +50,10 @@ import java.time.format.DateTimeFormatter
 private val heading = DateTimeFormatter.ofPattern("EEEE d MMMM")
 private const val GREETING = "Hello, Zaky 👋"
 
-/** The front door: a greeting, the plant schedule, the collection, and a fun fact. */
+/**
+ * The front door: a greeting, the plant schedule, the next watering, the collection and a
+ * fun fact, with "Add plant" floating at the bottom centre.
+ */
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel,
@@ -51,6 +61,7 @@ fun DashboardScreen(
     onOpenCollection: () -> Unit,
     onOpenEntry: (String) -> Unit,
     onOpenEncyclopedia: () -> Unit,
+    onAddPlant: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -59,7 +70,11 @@ fun DashboardScreen(
         onPauseOrDispose { }
     }
 
-    Scaffold(containerColor = Fresh.Page) { insets ->
+    Scaffold(
+        containerColor = Fresh.Page,
+        floatingActionButton = { AddPlantButton(onAddPlant) },
+        floatingActionButtonPosition = FabPosition.Center,
+    ) { insets ->
         Column(
             modifier = Modifier
                 .padding(insets)
@@ -86,10 +101,13 @@ fun DashboardScreen(
                 Text(state.plants, style = Label, color = soft, maxLines = 3, overflow = TextOverflow.Ellipsis)
             }
 
+            state.nextWatering?.let { NextWateringCard(it, onOpenPlants) }
+
             CollectionCard(state, onOpenCollection)
 
             state.fact?.let { FactCard(it, onOpenEntry, onOpenEncyclopedia, viewModel::closeFact) }
-            Spacer(Modifier.height(24.dp))
+            // Room for the floating button, so the last card can scroll clear of it.
+            Spacer(Modifier.height(96.dp))
         }
     }
 }
@@ -201,5 +219,65 @@ private fun FactCard(
         Text(fact.text, style = MaterialTheme.typography.bodyLarge, color = Fresh.GreenDeep)
         Spacer(Modifier.height(8.dp))
         Text("${fact.entry.name} →", style = Label, color = Fresh.GreenDeep.copy(alpha = 0.75f))
+    }
+}
+
+/** The floating "+ Add plant" pill at the bottom centre. */
+@Composable
+private fun AddPlantButton(onClick: () -> Unit) {
+    val shape = RoundedCornerShape(28.dp)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .shadow(12.dp, shape, ambientColor = Fresh.Ink.copy(alpha = 0.2f), spotColor = Fresh.Ink.copy(alpha = 0.2f))
+            .clip(shape)
+            .background(Fresh.Ink)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+    ) {
+        Text("+", style = MaterialTheme.typography.titleMedium, color = Color.White)
+        Spacer(Modifier.width(10.dp))
+        Text("Add plant", style = MaterialTheme.typography.titleMedium, color = Color.White)
+    }
+}
+
+/** When the next watering is: the plant, how soon, and the date. Green when it is due now. */
+@Composable
+private fun NextWateringCard(row: PlantRow, onOpen: () -> Unit) {
+    val due = row.status is PlantStatus.Due
+    val ink = if (due) Fresh.GreenDeep else Fresh.Ink
+    val soft = if (due) Fresh.GreenDeep.copy(alpha = 0.75f) else Fresh.InkSoft
+    SoftCard(
+        color = if (due) Fresh.Pastel else Fresh.Card,
+        corner = 24.dp,
+        onClick = onOpen,
+        modifier = Modifier.padding(top = 14.dp),
+    ) {
+        Text("💧  Next watering", style = Label, color = soft)
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    PlantDot(row.plant.colour, size = 12.dp)
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        row.plant.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                row.nextDue?.let {
+                    Text(it.format(heading), style = Label, color = soft, modifier = Modifier.padding(top = 4.dp))
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            Pill(
+                text = PlantCopy.whenLabel(row.status),
+                color = if (due) Fresh.Green else Fresh.Page,
+                textColor = if (due) Color.White else Fresh.Ink,
+            )
+        }
     }
 }
