@@ -21,13 +21,24 @@ data class PlantsOverview(val due: List<PlantRow>, val upcoming: List<PlantRow>)
     val isEmpty: Boolean get() = due.isEmpty() && upcoming.isEmpty()
 
     companion object {
+        /**
+         * The latest logged watering — or, for a repeating plant never tapped yet, the
+         * "last watered" date given when it was added. (A one-time plant's anchor is not a
+         * watering, so it stays null.)
+         */
+        private fun lastWatered(p: Plant, waterings: List<Watering>): LocalDate? {
+            val logged = waterings.filter { it.plantId == p.id }.maxOfOrNull { it.date }
+            val given = p.anchor.takeIf { p.recurrence is Recurrence.EveryDays }
+            return listOfNotNull(logged, given).maxOrNull()
+        }
+
         fun of(plants: List<Plant>, waterings: List<Watering>, today: LocalDate): PlantsOverview {
             val rows = plants.map { p ->
                 PlantRow(
                     plant = p,
                     status = PlantSchedule.status(p, waterings, today),
                     nextDue = PlantSchedule.nextDue(p, waterings),
-                    lastWatered = waterings.filter { it.plantId == p.id }.maxOfOrNull { it.date },
+                    lastWatered = lastWatered(p, waterings),
                     suggestedInterval = IntervalAdvice.suggest(p, waterings),
                 )
             }

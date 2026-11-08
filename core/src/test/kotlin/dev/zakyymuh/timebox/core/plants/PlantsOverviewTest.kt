@@ -105,4 +105,18 @@ class PlantsOverviewTest {
         assertEquals(today, row.lastWatered)
         assertEquals(8, row.suggestedInterval)
     }
+
+    @Test
+    fun `last watered falls back to the date given when the plant was added`() {
+        // Basil was added saying "last watered 3 days ago" and hasn't been tapped since.
+        val row = PlantsOverview.of(listOf(basil), emptyList(), today).let { it.due + it.upcoming }.single()
+        assertEquals(today.minusDays(3), row.lastWatered)
+    }
+
+    @Test
+    fun `a one-time plant with no waterings has not been watered`() {
+        val once = Plant(9, "Cactus", PlantColour.OCHRE, Recurrence.Once(today.plusDays(2)), anchor = today.minusDays(1))
+        val row = PlantsOverview.of(listOf(once), emptyList(), today).upcoming.single()
+        assertEquals(null, row.lastWatered)
+    }
 }
