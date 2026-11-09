@@ -48,7 +48,15 @@ class PlantRepository(
             snoozedUntil = existing?.snoozedUntil,
         )
         val rowId = dao.upsertPlant(entity)
-        return if (id != 0L) id else rowId
+        if (existing != null) return id
+        // "Last watered" is a real watering the owner told us about, so it shows in the
+        // week strip and the history. The schedule is unchanged: it counts from that day
+        // either way.
+        if (form.repeats) {
+            val noon = form.lastWatered.atTime(12, 0).atZone(clock.zone).toInstant()
+            dao.insertWatering(WateringEntity(plantId = rowId, date = form.lastWatered, wateredAt = noon))
+        }
+        return rowId
     }
 
     /**

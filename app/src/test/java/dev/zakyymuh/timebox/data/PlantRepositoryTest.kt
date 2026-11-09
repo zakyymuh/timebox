@@ -55,6 +55,21 @@ class PlantRepositoryTest {
     }
 
     @Test
+    fun `the last watered date of a new plant is logged as a watering`() = runTest {
+        val id = repo.save(0, monstera)
+        assertEquals(listOf(id to d(1)), db.plantDao().waterings().map { it.plantId to it.date })
+        assertEquals(d(8), nextDue())
+    }
+
+    @Test
+    fun `editing a plant or adding a one-time one logs no watering`() = runTest {
+        val id = repo.save(0, monstera)
+        repo.save(id, monstera.copy(name = "Big Monstera", lastWatered = d(3)))
+        repo.save(0, monstera.copy(name = "Cactus", repeats = false, onceDate = d(10)))
+        assertEquals(1, db.plantDao().waterings().size)
+    }
+
+    @Test
     fun `watering makes it due interval days from today`() = runTest {
         val id = repo.save(0, monstera)
         repo.water(id)
