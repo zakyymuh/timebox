@@ -21,10 +21,10 @@ import java.time.ZoneId
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class MarkRepositoryTest {
-    private val zone = ZoneId.of("Asia/Jakarta")
+    private val jakarta = ZoneId.of("Asia/Jakarta")
     private var now = Instant.parse("2026-11-09T03:00:00Z")
     private val clock = object : Clock() {
-        override fun getZone(): ZoneId = zone
+        override fun getZone(): ZoneId = jakarta
         override fun withZone(zone: ZoneId?): Clock = this
         override fun instant(): Instant = now
     }
