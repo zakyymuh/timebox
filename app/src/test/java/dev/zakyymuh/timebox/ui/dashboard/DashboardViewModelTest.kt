@@ -142,7 +142,9 @@ class DashboardViewModelTest {
         plants.water(aloe)
         val state = vm().await { s -> s.week.any { it.plants.isNotEmpty() } }
         fun on(day: Int) = state.week.single { it.date == d(day) }.plants.map { it.plant.name to it.mark }
-        assertEquals(listOf("Aloe" to DayMark.Watered), on(7))
+        // Basil's last watered date is today, so it counts as watered too.
+        assertEquals(listOf("Aloe" to DayMark.Watered, "Basil" to DayMark.Watered), on(7))
+        assertEquals(listOf("Aloe" to DayMark.Watered), on(4))
         assertEquals(emptyList<Pair<String, DayMark>>(), on(8))
         assertEquals(listOf("Basil" to DayMark.Coming), on(9))
         assertEquals(listOf("Aloe" to DayMark.Coming), on(10))

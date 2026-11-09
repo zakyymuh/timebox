@@ -69,8 +69,9 @@ class HistoryViewModelTest {
     fun `the history groups waterings and arrivals by date`() = runBlocking {
         plants.water(plant("Basil"))
         dex.add(DexForm("Monstera"), owned = true, photo = null, acquired = d(20, 10))
-        val state = HistoryViewModel(plants, dex, NoteRepository(db.noteDao(), clock), clock).await { s -> s.groups.sumOf { it.events.size } == 2 }
-        assertEquals(listOf("Today", "October 2026"), state.groups.map { it.title })
+        // Basil: last watered on the 4th, and today.
+        val state = HistoryViewModel(plants, dex, NoteRepository(db.noteDao(), clock), clock).await { s -> s.groups.sumOf { it.events.size } == 3 }
+        assertEquals(listOf("Today", "Wed 4 Nov", "October 2026"), state.groups.map { it.title })
     }
 
     @Test
@@ -78,10 +79,10 @@ class HistoryViewModelTest {
         plants.water(plant("Basil"))
         plants.water(plant("Aloe"))
         val model = HistoryViewModel(plants, dex, NoteRepository(db.noteDao(), clock), clock)
-        model.await { s -> s.groups.sumOf { it.events.size } == 2 }
+        model.await { s -> s.groups.sumOf { it.events.size } == 4 }
         model.search("bas")
-        val state = model.await { it.query == "bas" && it.groups.sumOf { g -> g.events.size } == 1 }
-        assertEquals("Watered Basil", state.groups.single().events.single().text)
+        val state = model.await { it.query == "bas" && it.groups.sumOf { g -> g.events.size } == 2 }
+        assertEquals(listOf("Watered Basil", "Watered Basil"), state.groups.flatMap { g -> g.events.map { it.text } })
         model.search("cactus")
         assertEquals("Nothing matches ‘cactus’", model.await { it.query == "cactus" && it.empty != null }.empty)
     }

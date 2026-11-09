@@ -82,7 +82,7 @@ class PlantRepositoryTest {
         val first = repo.water(id)
         val second = repo.water(id)
         assertEquals(null, second)
-        assertEquals(1, db.plantDao().waterings().size)
+        assertEquals(1, db.plantDao().waterings().count { it.date == d(7) })
         // Undo after a double tap removes the one watering: back to unwatered.
         repo.removeWatering(first!!)
         assertEquals(d(8), nextDue())
@@ -101,7 +101,8 @@ class PlantRepositoryTest {
         repo.water(id)
         assertEquals(id, repo.save(id, monstera.copy(everyDays = 3)))
         assertEquals(d(10), nextDue())
-        assertEquals(1, db.plantDao().waterings().size)
+        // Last watered (the 1st) and today's: both kept.
+        assertEquals(listOf(d(1), d(7)), db.plantDao().waterings().map { it.date }.sorted())
         assertEquals(1, db.plantDao().plants().size)
     }
 

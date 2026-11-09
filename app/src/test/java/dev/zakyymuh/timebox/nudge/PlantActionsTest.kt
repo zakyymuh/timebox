@@ -49,7 +49,7 @@ class PlantActionsTest {
     fun `water action records a watering`() = runBlocking {
         val id = basil()
         assertEquals(true, PlantActions.handle(repo, PlantActions.ACTION_WATER, id))
-        assertEquals(1, db.plantDao().waterings().size)
+        assertEquals(1, db.plantDao().waterings().count { it.date == d(7) })
     }
 
     @Test
@@ -69,6 +69,6 @@ class PlantActionsTest {
     fun `unknown action does nothing`() = runBlocking {
         val id = basil()
         assertEquals(false, PlantActions.handle(repo, "something.else", id))
-        assertEquals(0, db.plantDao().waterings().size)
+        assertEquals(0, db.plantDao().waterings().count { it.date == d(7) })
     }
 }
