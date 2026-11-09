@@ -23,9 +23,11 @@ data class DashboardState(
     val date: LocalDate? = null,
     /** Three days back, today, three days ahead: what was watered and what is due. */
     val week: List<StripDay> = emptyList(),
+    /** "3 plants" on the collection tile. */
+    val owned: String = "",
     /** The newest owned photo, for the collection tile; null shows 🪴. */
     val cover: String? = null,
-    /** A random line about a watering or the collection; null until anything has happened. */
+    /** A random line about a watering or the collection, new each time the app opens; null until anything has happened. */
     val event: String? = null,
     /** A plant fact from the encyclopedia; tapping it draws another. */
     val fact: FunFact? = null,
@@ -43,21 +45,22 @@ class DashboardViewModel(
     /** Drawn when the app opens; a tap draws again. */
     private val fact = MutableStateFlow(FunFacts.random(random))
 
-    /** Which event line is showing. A new seed is a new random line. */
-    private val eventSeed = MutableStateFlow(random.nextInt())
+    /** Which event line shows: drawn once, so it is new each time the app opens. */
+    private val eventSeed = random.nextInt()
 
     val state: StateFlow<DashboardState> = combine(
         plants.plantsFlow(),
         plants.wateringsFlow(),
         dex.entriesFlow(),
         todayDate,
-        combine(fact, eventSeed, ::Pair),
-    ) { plantList, waterings, entries, date, (shownFact, seed) ->
+        fact,
+    ) { plantList, waterings, entries, date, shownFact ->
         DashboardState(
             date = date,
             week = WeekStrip.of(plantList, waterings, date),
+            owned = entries.count { it.owned }.let { if (it == 1) "1 plant" else "$it plants" },
             cover = entries.filter { it.owned && it.photo != null }.maxByOrNull { it.number }?.photo,
-            event = PlantEvents.random(plantList, waterings, entries, date, Random(seed)),
+            event = PlantEvents.random(plantList, waterings, entries, date, Random(eventSeed)),
             fact = shownFact,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardState())
@@ -66,11 +69,6 @@ class DashboardViewModel(
     fun shuffleFact() {
         val shown = fact.value
         fact.value = generateSequence { FunFacts.random(random) }.first { it != shown }
-    }
-
-    /** Another event line. */
-    fun shuffleEvent() {
-        eventSeed.value = random.nextInt()
     }
 
     /** Re-reads today, for when the app comes back after midnight. */

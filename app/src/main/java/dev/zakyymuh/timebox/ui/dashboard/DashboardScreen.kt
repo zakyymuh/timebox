@@ -3,8 +3,12 @@ package dev.zakyymuh.timebox.ui.dashboard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -41,17 +45,18 @@ import java.time.format.DateTimeFormatter
 
 private val heading = DateTimeFormatter.ofPattern("EEEE d MMMM")
 private const val GREETING = "Hello, Zaky 👋"
-private val TILE = 88.dp
+private val ICON = 56.dp
 
 /**
- * The front door: a greeting, the plant schedule as a week, the collection beside a line
- * about something that happened, and a plant fact.
+ * The front door: a greeting, the plant schedule as a week, two tiles (the collection and
+ * a random thing that happened, which opens the history), and a plant fact.
  */
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel,
     onOpenPlants: () -> Unit,
     onOpenCollection: () -> Unit,
+    onOpenHistory: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -81,12 +86,10 @@ fun DashboardScreen(
 
             state.date?.let { WeekCard(state.week, it, onOpenPlants) }
 
-            Row(Modifier.padding(top = 14.dp).height(IntrinsicSize.Min)) {
-                CollectionTile(state.cover, onOpenCollection)
-                state.event?.let {
-                    Spacer(Modifier.width(14.dp))
-                    EventCard(it, viewModel::shuffleEvent, Modifier.weight(1f).fillMaxHeight())
-                }
+            Row(Modifier.padding(top = 14.dp)) {
+                CollectionTile(state.cover, state.owned, onOpenCollection, Modifier.weight(1f))
+                Spacer(Modifier.width(14.dp))
+                EventTile(state.event, onOpenHistory, Modifier.weight(1f))
             }
 
             state.fact?.let { FactLine(it.text, viewModel::shuffleFact) }
@@ -95,36 +98,78 @@ fun DashboardScreen(
     }
 }
 
-/** The way into the collection: a square with the newest photo, or 🪴 before there is one. */
+/**
+ * A square tile in the reference's style: an icon in a circle at the top, a small
+ * "• label" and a bold title at the bottom.
+ */
 @Composable
-private fun CollectionTile(cover: String?, onOpen: () -> Unit) {
-    val shape = RoundedCornerShape(24.dp)
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(TILE)
+private fun Tile(
+    color: Color,
+    ink: Color,
+    label: String,
+    title: String,
+    onClick: () -> Unit,
+    description: String,
+    modifier: Modifier,
+    titleStyle: TextStyle = MaterialTheme.typography.titleLarge,
+    icon: @Composable () -> Unit,
+) {
+    val shape = RoundedCornerShape(32.dp)
+    Column(
+        modifier = modifier
+            .aspectRatio(1f)
+            .shadow(10.dp, shape, ambientColor = Fresh.Ink.copy(alpha = 0.08f), spotColor = Fresh.Ink.copy(alpha = 0.08f))
             .clip(shape)
-            .background(Fresh.Card)
-            .clickable(role = Role.Button, onClickLabel = "Open collection", onClick = onOpen)
-            .semantics { contentDescription = "Open collection" },
+            .background(color)
+            .clickable(role = Role.Button, onClickLabel = description, onClick = onClick)
+            .semantics(mergeDescendants = true) { contentDescription = description }
+            .padding(18.dp),
     ) {
-        if (cover == null) Text("🪴", fontSize = 36.sp)
-        else DexPhoto(cover, Modifier.size(TILE), side = 240)
+        icon()
+        Spacer(Modifier.weight(1f))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(6.dp).background(ink, CircleShape))
+            Spacer(Modifier.width(8.dp))
+            Text(label, style = Label, color = ink.copy(alpha = 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(title, style = titleStyle, fontWeight = FontWeight.Bold, color = ink, maxLines = 3, overflow = TextOverflow.Ellipsis)
     }
 }
 
-/** "You last watered Basil 4 days ago." A tap shows another. */
+/** The way into the collection: the newest photo (or 🪴) and how many plants. */
 @Composable
-private fun EventCard(line: String, onShuffle: () -> Unit, modifier: Modifier) {
-    Box(
-        contentAlignment = Alignment.CenterStart,
-        modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
-            .background(Fresh.Pastel)
-            .clickable(onClickLabel = "Show another", onClick = onShuffle)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+private fun CollectionTile(cover: String?, owned: String, onOpen: () -> Unit, modifier: Modifier) {
+    Tile(Lilac, Color.White, owned, "Collection", onOpen, "Open collection", modifier) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(ICON).clip(CircleShape).background(Color.White),
+        ) {
+            if (cover == null) Text("🪴", fontSize = 26.sp)
+            else DexPhoto(cover, Modifier.size(ICON), side = 160)
+        }
+    }
+}
+
+/** A random thing that happened, new each time the app opens; the way into the history. */
+@Composable
+private fun EventTile(event: String?, onOpen: () -> Unit, modifier: Modifier) {
+    Tile(
+        color = Fresh.Page,
+        ink = Fresh.Ink,
+        label = "History",
+        title = event ?: "Nothing yet",
+        onClick = onOpen,
+        description = "Open history",
+        modifier = modifier,
+        titleStyle = MaterialTheme.typography.titleSmall,
     ) {
-        Text(line, style = MaterialTheme.typography.bodyLarge, color = Fresh.GreenDeep, maxLines = 3, overflow = TextOverflow.Ellipsis)
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(ICON).clip(CircleShape).background(Lilac.copy(alpha = 0.18f)),
+        ) {
+            Text("🕘", fontSize = 24.sp)
+        }
     }
 }
 

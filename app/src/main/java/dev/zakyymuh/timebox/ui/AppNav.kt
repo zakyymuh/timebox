@@ -32,6 +32,8 @@ import dev.zakyymuh.timebox.ui.soil.AirSpaceViewModel
 import dev.zakyymuh.timebox.ui.soil.SoilStatusViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.ui.dashboard.DashboardViewModel
+import dev.zakyymuh.timebox.ui.history.HistoryScreen
+import dev.zakyymuh.timebox.ui.history.HistoryViewModel
 import dev.zakyymuh.timebox.ui.encyclopedia.EncyclopediaScreen
 import dev.zakyymuh.timebox.ui.encyclopedia.EntryScreen
 import dev.zakyymuh.timebox.ui.plants.CalendarScreen
@@ -86,7 +88,23 @@ fun AppNav(start: String?) {
                 viewModel = vm,
                 onOpenPlants = { entry.ifResumed { nav.go(Destinations.PLANTS) } },
                 onOpenCollection = { entry.ifResumed { nav.go(Destinations.COLLECTION) } },
+                onOpenHistory = { entry.ifResumed { nav.go(Destinations.HISTORY) } },
             )
+        }
+
+        composable(Destinations.HISTORY) { entry ->
+            val vm: HistoryViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer {
+                        HistoryViewModel(
+                            plants = ServiceLocator.plantRepository(context),
+                            dex = ServiceLocator.dexRepository(context),
+                            clock = ServiceLocator.clock,
+                        )
+                    }
+                },
+            )
+            HistoryScreen(viewModel = vm, onBack = { entry.ifResumed { nav.popBackStack() } })
         }
 
         composable(Destinations.PLANTS) { entry ->

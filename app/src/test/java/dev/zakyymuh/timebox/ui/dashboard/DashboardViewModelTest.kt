@@ -74,6 +74,14 @@ class DashboardViewModelTest {
     }
 
     @Test
+    fun `the collection tile counts owned plants, not wishes`() = runBlocking {
+        dex.add(DexForm("Greenovia"), owned = true, photo = null)
+        dex.add(DexForm("Variegata"), owned = false, photo = null)
+        dex.add(DexForm("Aloe"), owned = true, photo = null)
+        assertEquals("2 plants", vm().await { it.owned == "2 plants" }.owned)
+    }
+
+    @Test
     fun `the fun fact is drawn at random when the app opens`() = runBlocking {
         val state = vm(Random(3)).await { it.date != null }
         assertEquals(FunFacts.random(Random(3)), state.fact)

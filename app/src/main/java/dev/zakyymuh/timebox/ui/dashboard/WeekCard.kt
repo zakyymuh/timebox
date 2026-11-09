@@ -47,8 +47,8 @@ import dev.zakyymuh.timebox.ui.theme.Small
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-/** Today's pill, as in the owner's reference. */
-private val Today = Color(0xFFB98AEB)
+/** Today's pill and the collection tile, as in the owner's references. */
+internal val Lilac = Color(0xFFB98AEB)
 private val dayName = DateTimeFormatter.ofPattern("EEE")
 private val dayHeading = DateTimeFormatter.ofPattern("EEEE d MMMM")
 private val RING = 5.dp
@@ -126,7 +126,7 @@ private fun DayPill(day: StripDay, isToday: Boolean, isSelected: Boolean, width:
         modifier = Modifier
             .width(width)
             .clip(shape)
-            .background(if (isToday) Today else Fresh.Card)
+            .background(if (isToday) Lilac else Fresh.Card)
             .border(if (isSelected) 3.5.dp else 2.dp, border, shape)
             .clickable(role = Role.Tab, onClickLabel = day.date.format(dayHeading), onClick = onClick)
             .padding(top = 14.dp, bottom = RING),
