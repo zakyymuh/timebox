@@ -10,18 +10,24 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * Your vehicles and their service logs.
  *
  * Version 1 started fresh when the service log moved out of papacti: one `service` table.
- * Version 2 adds `vehicle` and ties every service to one. Version 3 adds `expiry`.
+ * Version 2 adds `vehicle` and ties every service to one. Version 3 adds `expiry`, and
+ * version 4 `reminder_sent`.
  */
-@Database(entities = [VehicleEntity::class, ServiceEntity::class, ExpiryEntity::class], version = 3, exportSchema = false)
+@Database(
+    entities = [VehicleEntity::class, ServiceEntity::class, ExpiryEntity::class, ReminderSentEntity::class],
+    version = 4,
+    exportSchema = false,
+)
 @TypeConverters(Converters::class)
 abstract class MotorDatabase : RoomDatabase() {
     abstract fun vehicleDao(): VehicleDao
     abstract fun serviceDao(): ServiceDao
     abstract fun expiryDao(): ExpiryDao
+    abstract fun reminderDao(): ReminderDao
 }
 
 /** Every migration, oldest first. Never fallbackToDestructiveMigration: that would delete the log. */
-val MIGRATIONS: Array<Migration> get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+val MIGRATIONS: Array<Migration> get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
 
 /**
  * Adds `vehicle`, and a `vehicleId` on every service. Version 1 knew one motorcycle
@@ -65,5 +71,16 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
                 "FOREIGN KEY(`vehicleId`) REFERENCES `vehicle`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         )
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_expiry_vehicleId` ON `expiry` (`vehicleId`)")
+    }
+}
+
+/** Adds `reminder_sent`. Nothing existing is touched. */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `reminder_sent` (`expiryId` INTEGER NOT NULL, `date` TEXT NOT NULL, `tag` TEXT NOT NULL, " +
+                "PRIMARY KEY(`expiryId`, `date`, `tag`), " +
+                "FOREIGN KEY(`expiryId`) REFERENCES `expiry`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        )
     }
 }

@@ -60,6 +60,24 @@ class ExpiryRepositoryTest {
     }
 
     @Test
+    fun `a reminder is due once, and renewing starts the next pair`() = runTest {
+        val avanza = vehicles.save(0, VehicleForm(VehicleType.CAR, "Avanza"))
+        // 9 Nov 2026 in Jakarta; 16 Nov is a week out.
+        val id = repo.save(0, ExpiryForm(avanza, "STNK tax", LocalDate.of(2026, 11, 16), 12))
+        repo.save(0, ExpiryForm(null, "SIM C", LocalDate.of(2027, 6, 1), 60))
+        val reminders = ReminderRepository(db.reminderDao(), repo, vehicles, clock)
+
+        val due = reminders.dueToday().single()
+        assertEquals("STNK tax Avanza expires in 1 week, 16 Nov", due.title)
+        reminders.markSent(due)
+        reminders.markSent(due)
+        assertEquals(emptyList<Any>(), reminders.dueToday())
+
+        repo.setDate(id, LocalDate.of(2026, 12, 1))
+        assertEquals("STNK tax Avanza expires in 22 days, 1 Dec", reminders.dueToday().single().title)
+    }
+
+    @Test
     fun `deleting a vehicle takes its dates but leaves yours`() = runTest {
         val vario = vehicles.save(0, VehicleForm(VehicleType.MOTORCYCLE, "Vario"))
         repo.save(0, ExpiryForm(vario, "STNK tax", LocalDate.of(2027, 1, 1), 12))

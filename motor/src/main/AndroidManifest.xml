@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- No permissions at all: no network, no notifications, nothing in the background. -->
+    <!--
+      The only permissions this app asks for, both for the expiry reminders. No INTERNET:
+      the app has no network access of any kind. No exact-alarm permission: a reminder a
+      few minutes late is fine, so it uses an inexact alarm and asks for nothing.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -19,5 +26,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <receiver
+            android:name=".nudge.ExpiryReceiver"
+            android:exported="false" />
+
+        <!-- Alarms do not survive a reboot, so the daily expiry check is re-armed on boot. -->
+        <receiver
+            android:name=".nudge.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

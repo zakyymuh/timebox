@@ -6,6 +6,7 @@ import dev.zakyymuh.motor.data.ExpiryRepository
 import dev.zakyymuh.motor.data.MIGRATIONS
 import dev.zakyymuh.motor.data.MotorDatabase
 import dev.zakyymuh.motor.data.PhotoStore
+import dev.zakyymuh.motor.data.ReminderRepository
 import dev.zakyymuh.motor.data.ServiceRepository
 import dev.zakyymuh.motor.data.VehicleRepository
 import java.time.Clock
@@ -32,6 +33,9 @@ object ServiceLocator {
     fun vehicleRepository(context: Context) = VehicleRepository(db(context).vehicleDao(), clock)
 
     fun expiryRepository(context: Context) = ExpiryRepository(db(context).expiryDao(), clock)
+
+    fun reminderRepository(context: Context) =
+        ReminderRepository(db(context).reminderDao(), expiryRepository(context), vehicleRepository(context), clock)
 
     fun photoStore(context: Context) = PhotoStore(context.applicationContext)
 }

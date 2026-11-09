@@ -33,6 +33,9 @@ abstract class VehicleDao {
     @Query("SELECT * FROM vehicle ORDER BY createdAt, id")
     abstract fun vehiclesFlow(): Flow<List<VehicleEntity>>
 
+    @Query("SELECT * FROM vehicle ORDER BY createdAt, id")
+    abstract suspend fun vehicles(): List<VehicleEntity>
+
     @Query("SELECT * FROM vehicle WHERE id = :id")
     abstract fun vehicleFlow(id: Long): Flow<VehicleEntity?>
 
@@ -72,6 +75,8 @@ class VehicleRepository(
     fun vehiclesFlow(): Flow<List<Vehicle>> = dao.vehiclesFlow().map { rows -> rows.map(VehicleEntity::toModel) }
 
     fun vehicleFlow(id: Long): Flow<Vehicle?> = dao.vehicleFlow(id).map { it?.toModel() }
+
+    suspend fun vehicles(): List<Vehicle> = dao.vehicles().map(VehicleEntity::toModel)
 
     suspend fun vehicle(id: Long): Vehicle? = dao.vehicle(id)?.toModel()
 

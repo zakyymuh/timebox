@@ -64,9 +64,7 @@ import java.util.Locale
 
 private val shortDate = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH)
 
-/** "SIM C", or "STNK tax Avanza" when it is a vehicle's. */
-fun Expiry.title(vehicles: Map<Long, Vehicle>): String =
-    vehicleId?.let { vehicles[it] }?.let { "$name ${it.name}" } ?: name
+fun Expiry.title(vehicles: Map<Long, Vehicle>): String = title(vehicleId?.let(vehicles::get)?.name)
 
 /** One row on home: the expiry and what to call it. */
 data class ExpiryRow(val expiry: Expiry, val title: String)

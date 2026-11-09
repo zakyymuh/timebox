@@ -17,7 +17,10 @@ data class Expiry(
     val name: String,
     val date: LocalDate,
     val renewMonths: Int,
-)
+) {
+    /** "SIM C", or "STNK tax Avanza" when it is a vehicle's. */
+    fun title(vehicleName: String?): String = if (vehicleName == null) name else "$name $vehicleName"
+}
 
 /** A ready-made kind of expiry, to fill in the name and renewal in one tap. */
 data class ExpiryKind(val name: String, val renewMonths: Int)

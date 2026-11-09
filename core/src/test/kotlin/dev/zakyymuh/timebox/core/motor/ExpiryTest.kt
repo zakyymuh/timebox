@@ -66,6 +66,12 @@ class ExpiryTest {
     }
 
     @Test
+    fun `a vehicle's date is named after the vehicle too`() {
+        assertEquals("STNK tax Avanza", expiry(today).title("Avanza"))
+        assertEquals("STNK tax", expiry(today).title(null))
+    }
+
+    @Test
     fun `renewal periods read naturally`() {
         assertEquals("1 year", Expiries.period(12))
         assertEquals("5 years", Expiries.period(60))

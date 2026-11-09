@@ -6,7 +6,7 @@ This repo builds three Android apps:
 |---|---|---|---|
 | **papacti** | `:app` | `dev.zakyymuh.timebox` | Plant schedule, calendar, encyclopedia, collection and wishlist, soil air-space tests, and the 18:00 watering reminder |
 | **Daily** (Habits) | `:habits` | `dev.zakyymuh.habits` | Today's list, the home-screen widget, and the 06:30 morning reminder |
-| **Motor** | `:motor` | `dev.zakyymuh.motor` | The motorcycle service log |
+| **Motor** | `:motor` | `dev.zakyymuh.motor` | Your vehicles and their service logs, the dates your SIM and STNK run out, and the 09:00 expiry reminder |
 
 There is no Android SDK on the machine this was written on, and the connection there
 runs at roughly 150 KB/s. So the APKs are built in CI and downloaded, rather than built
@@ -67,7 +67,10 @@ Before the split, one app held all three features. The order matters:
    phone rebooted, so the reminder stops until the app is next opened. papacti's old
    grant doesn't carry over, because Daily is a new app. Check papacti still has it
    too, for the 18:00 watering reminder.
-4. **Add the widget again.** It now belongs to Daily: long-press the home screen →
+4. **Open Motor once** and allow notifications, so the daily 09:00 expiry check is
+   armed. On HyperOS, turn on **Settings → Apps → Motor → Autostart** too, for the
+   same reason as Daily.
+5. **Add the widget again.** It now belongs to Daily: long-press the home screen →
    Widgets → Daily. The old widget disappears when papacti is updated.
 
 ## Building locally
