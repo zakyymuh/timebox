@@ -13,6 +13,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import java.time.Instant
+import java.time.LocalDate
 
 /**
  * The phone already holds a version 1 database with real services in it. This builds
@@ -73,6 +75,18 @@ class MigrationTest {
         val services = current.serviceDao().recordsFlow(vehicles.single().id).first()
         assertEquals(listOf("Bengkel Jaya", "AHASS"), services.map { it.place })
         assertEquals(13_000, services.first().odometer)
+    }
+
+    @Test
+    fun `the upgrade adds an empty dates table that works`() = runTest {
+        createVersion1(listOf("AHASS"))
+        val current = open()
+        assertTrue(current.expiryDao().all().isEmpty())
+        val vehicleId = current.vehicleDao().vehiclesFlow().first().single().id
+        current.expiryDao().upsert(
+            ExpiryEntity(vehicleId = vehicleId, name = "STNK tax", date = LocalDate.of(2027, 3, 12), renewMonths = 12, createdAt = Instant.EPOCH),
+        )
+        assertEquals(listOf("STNK tax"), current.expiryDao().all().map { it.name })
     }
 
     @Test

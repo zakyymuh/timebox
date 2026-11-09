@@ -10,17 +10,18 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * Your vehicles and their service logs.
  *
  * Version 1 started fresh when the service log moved out of papacti: one `service` table.
- * Version 2 adds `vehicle` and ties every service to one.
+ * Version 2 adds `vehicle` and ties every service to one. Version 3 adds `expiry`.
  */
-@Database(entities = [VehicleEntity::class, ServiceEntity::class], version = 2, exportSchema = false)
+@Database(entities = [VehicleEntity::class, ServiceEntity::class, ExpiryEntity::class], version = 3, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class MotorDatabase : RoomDatabase() {
     abstract fun vehicleDao(): VehicleDao
     abstract fun serviceDao(): ServiceDao
+    abstract fun expiryDao(): ExpiryDao
 }
 
 /** Every migration, oldest first. Never fallbackToDestructiveMigration: that would delete the log. */
-val MIGRATIONS: Array<Migration> get() = arrayOf(MIGRATION_1_2)
+val MIGRATIONS: Array<Migration> get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
 
 /**
  * Adds `vehicle`, and a `vehicleId` on every service. Version 1 knew one motorcycle
@@ -52,5 +53,17 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
         db.execSQL("DROP TABLE service")
         db.execSQL("ALTER TABLE service_new RENAME TO service")
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_service_vehicleId` ON `service` (`vehicleId`)")
+    }
+}
+
+/** Adds `expiry`. Nothing existing is touched. */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `expiry` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `vehicleId` INTEGER, " +
+                "`name` TEXT NOT NULL, `date` TEXT NOT NULL, `renewMonths` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, " +
+                "FOREIGN KEY(`vehicleId`) REFERENCES `vehicle`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_expiry_vehicleId` ON `expiry` (`vehicleId`)")
     }
 }

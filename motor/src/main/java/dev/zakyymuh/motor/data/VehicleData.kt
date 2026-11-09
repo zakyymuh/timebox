@@ -49,6 +49,9 @@ abstract class VehicleDao {
     @Query("DELETE FROM service WHERE vehicleId = :id")
     abstract suspend fun deleteServices(id: Long)
 
+    @Query("DELETE FROM expiry WHERE vehicleId = :id")
+    abstract suspend fun deleteExpiries(id: Long)
+
     /**
      * The foreign key cascades too, but saying it outright keeps a delete correct even
      * if foreign keys are ever switched off on a connection.
@@ -56,6 +59,7 @@ abstract class VehicleDao {
     @Transaction
     open suspend fun delete(id: Long) {
         deleteServices(id)
+        deleteExpiries(id)
         deleteVehicle(id)
     }
 }
@@ -88,6 +92,6 @@ class VehicleRepository(
         return if (id != 0L) id else rowId
     }
 
-    /** Deletes the vehicle and its service log. */
+    /** Deletes the vehicle, its service log and its dates. */
     suspend fun delete(id: Long) = dao.delete(id)
 }

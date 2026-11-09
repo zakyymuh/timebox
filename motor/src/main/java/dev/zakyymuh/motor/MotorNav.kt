@@ -14,6 +14,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import dev.zakyymuh.motor.ui.ExpiryEditScreen
+import dev.zakyymuh.motor.ui.ExpiryEditViewModel
+import dev.zakyymuh.motor.ui.ExpiryListViewModel
 import dev.zakyymuh.motor.ui.HomeScreen
 import dev.zakyymuh.motor.ui.ServiceEditScreen
 import dev.zakyymuh.motor.ui.ServiceEditViewModel
@@ -29,15 +32,18 @@ private const val HOME = "home"
 private const val VEHICLE = "vehicle/{vehicleId}"
 private const val VEHICLE_EDIT = "vehicle/edit/{id}"
 private const val SERVICE_EDIT = "service/edit/{vehicleId}/{id}"
+private const val EXPIRY_EDIT = "expiry/edit/{id}"
 
 private fun vehicle(id: Long) = "vehicle/$id"
 private fun vehicleEdit(id: Long) = "vehicle/edit/$id"
 private fun serviceEdit(vehicleId: Long, id: Long) = "service/edit/$vehicleId/$id"
+private fun expiryEdit(id: Long) = "expiry/edit/$id"
 
 private fun NavBackStackEntry.long(name: String): Long = arguments?.getLong(name) ?: 0L
 
 /**
- * Home lists your vehicles; a vehicle opens its service log. Back on home closes the app.
+ * Home lists the dates that run out and your vehicles; a vehicle opens its service log.
+ * Back on home closes the app.
  */
 @Composable
 fun MotorNav(onClose: () -> Unit) {
@@ -62,12 +68,22 @@ fun MotorNav(onClose: () -> Unit) {
                     }
                 },
             )
+            val expiries: ExpiryListViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer {
+                        ExpiryListViewModel(ServiceLocator.expiryRepository(context), ServiceLocator.vehicleRepository(context))
+                    }
+                },
+            )
             HomeScreen(
                 vehicles = vehicles,
+                expiries = expiries,
                 photos = photos,
                 onBack = { entry.ifResumed(onClose) },
                 onAddVehicle = { entry.ifResumed { nav.go(vehicleEdit(0)) } },
                 onOpenVehicle = { id -> entry.ifResumed { nav.go(vehicle(id)) } },
+                onAddExpiry = { entry.ifResumed { nav.go(expiryEdit(0)) } },
+                onEditExpiry = { id -> entry.ifResumed { nav.go(expiryEdit(id)) } },
             )
         }
 
@@ -119,6 +135,18 @@ fun MotorNav(onClose: () -> Unit) {
                 },
             )
             ServiceEditScreen(viewModel = vm, onDone = { entry.ifResumed { nav.popBackStack() } })
+        }
+
+        composable(EXPIRY_EDIT, arguments = listOf(navArgument("id") { type = NavType.LongType })) { entry ->
+            val id = entry.long("id")
+            val vm: ExpiryEditViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer {
+                        ExpiryEditViewModel(ServiceLocator.expiryRepository(context), ServiceLocator.vehicleRepository(context), id)
+                    }
+                },
+            )
+            ExpiryEditScreen(viewModel = vm, onDone = { entry.ifResumed { nav.popBackStack() } })
         }
     }
 }

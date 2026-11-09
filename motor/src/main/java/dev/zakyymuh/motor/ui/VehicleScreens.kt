@@ -10,6 +10,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -255,6 +257,7 @@ class VehicleEditViewModel(
 }
 
 /** Add or edit a vehicle: what it is, its name, plate and photo. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun VehicleEditScreen(viewModel: VehicleEditViewModel, onDone: () -> Unit, onDeleted: () -> Unit) {
     val form by viewModel.form.collectAsStateWithLifecycle()
@@ -287,7 +290,7 @@ fun VehicleEditScreen(viewModel: VehicleEditViewModel, onDone: () -> Unit, onDel
             }
 
             Spacer(Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 VehicleType.entries.forEach { type ->
                     Chip("${type.glyph()}  ${type.label}", selected = form.type == type) { viewModel.update(form.copy(type = type)) }
                 }

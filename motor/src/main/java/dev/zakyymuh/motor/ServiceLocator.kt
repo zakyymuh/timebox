@@ -2,6 +2,7 @@ package dev.zakyymuh.motor
 
 import android.content.Context
 import androidx.room.Room
+import dev.zakyymuh.motor.data.ExpiryRepository
 import dev.zakyymuh.motor.data.MIGRATIONS
 import dev.zakyymuh.motor.data.MotorDatabase
 import dev.zakyymuh.motor.data.PhotoStore
@@ -29,6 +30,8 @@ object ServiceLocator {
     fun serviceRepository(context: Context) = ServiceRepository(db(context).serviceDao(), clock)
 
     fun vehicleRepository(context: Context) = VehicleRepository(db(context).vehicleDao(), clock)
+
+    fun expiryRepository(context: Context) = ExpiryRepository(db(context).expiryDao(), clock)
 
     fun photoStore(context: Context) = PhotoStore(context.applicationContext)
 }
