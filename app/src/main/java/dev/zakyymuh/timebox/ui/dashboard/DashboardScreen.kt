@@ -52,6 +52,7 @@ import java.time.format.DateTimeFormatter
 private val heading = DateTimeFormatter.ofPattern("EEEE d MMMM")
 private const val GREETING = "Hello, Zaky 👋"
 private val ICON = 56.dp
+private val SMALL_ICON = 40.dp
 
 /**
  * The front door: a greeting, the plant schedule as a week, two tiles (the collection and
@@ -143,7 +144,7 @@ private fun Tile(
             Text(label, style = Label, color = ink.copy(alpha = 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.height(4.dp))
-        Text(title, style = titleStyle, fontWeight = FontWeight.Bold, color = ink, maxLines = 3, overflow = TextOverflow.Ellipsis)
+        Text(title, style = titleStyle, fontWeight = FontWeight.Bold, color = ink, maxLines = 4, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -189,11 +190,12 @@ private fun EventTile(event: String?, onOpen: () -> Unit, modifier: Modifier) {
         modifier = modifier,
         titleStyle = MaterialTheme.typography.titleSmall,
     ) {
+        // Smaller than the collection's icon, so a whole line about what happened fits.
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(ICON).clip(CircleShape).background(Lilac.copy(alpha = 0.18f)),
+            modifier = Modifier.size(SMALL_ICON).clip(CircleShape).background(Lilac.copy(alpha = 0.18f)),
         ) {
-            Text("🕘", fontSize = 24.sp)
+            Text("🕘", fontSize = 18.sp)
         }
     }
 }
