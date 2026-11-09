@@ -7,6 +7,8 @@ import dev.zakyymuh.timebox.core.DayList
 import dev.zakyymuh.timebox.core.DaySummaries
 import dev.zakyymuh.timebox.core.DaySummary
 import dev.zakyymuh.timebox.core.TodoItem
+import dev.zakyymuh.timebox.core.lastdone.Event
+import dev.zakyymuh.timebox.core.lastdone.LastDone
 import dev.zakyymuh.habits.data.TimeboxRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import kotlin.random.Random
 
 data class DayUiState(
     /** Null until the database answers, so nothing renders a placeholder date. */
@@ -38,6 +41,15 @@ data class DayUiState(
 ) {
     val isEmpty: Boolean get() = items.isEmpty()
 }
+
+/** The "last time I did …" card and sheet. */
+data class LastDoneUi(
+    /** Longest ago first. */
+    val events: List<Event> = emptyList(),
+    /** A random line about a random event; null until something has been logged. */
+    val fact: String? = null,
+    val today: LocalDate? = null,
+)
 
 class TodayViewModel(
     private val repo: TimeboxRepository,
@@ -82,6 +94,15 @@ class TodayViewModel(
                 hasLater = near.later != null,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DayUiState())
+
+    /** Which fact is showing. A new seed is a new random fact; tapping the card shuffles. */
+    private val factSeed = MutableStateFlow(Random.nextInt())
+
+    val lastDone: StateFlow<LastDoneUi> =
+        combine(repo.eventsFlow(), factSeed) { events, seed ->
+            val today = repo.todayDate()
+            LastDoneUi(events, LastDone.funFact(events, today, Random(seed)), today)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LastDoneUi())
 
     init {
         refreshTemplates()
@@ -171,5 +192,19 @@ class TodayViewModel(
             jumpToToday()
             refreshTemplates()
         }
+    }
+
+    // ---- last time I did … -----------------------------------------------------
+
+    fun shuffleFact() {
+        factSeed.value = Random.nextInt()
+    }
+
+    fun markDone(name: String) {
+        viewModelScope.launch { repo.markDone(name) }
+    }
+
+    fun undoLastMark(key: String) {
+        viewModelScope.launch { repo.undoLastMark(key) }
     }
 }

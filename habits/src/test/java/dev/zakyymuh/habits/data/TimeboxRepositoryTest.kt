@@ -2,6 +2,7 @@ package dev.zakyymuh.habits.data
 
 import androidx.room.Room
 import dev.zakyymuh.timebox.core.DaySummaries
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -202,5 +203,31 @@ class TimeboxRepositoryTest {
         assertTrue(repo.todayNow().items.single().isDone)
         assertTrue(repo.setDone(id, false))
         assertFalse(repo.todayNow().items.single().isDone)
+    }
+
+    // ---- last time I did … -----------------------------------------------------
+
+    @Test
+    fun `markDone logs now, trimmed, and ignores a blank name`() = runTest {
+        repo.markDone("  Laundry ")
+        repo.markDone("   ")
+        val event = repo.eventsFlow().first().single()
+        assertEquals("Laundry", event.name)
+        assertEquals(today, event.lastDay)
+        assertEquals(1, event.count)
+    }
+
+    @Test
+    fun `undoLastMark takes back only the latest tap, and the last one removes the event`() = runTest {
+        val week = TimeboxRepository(db.dao(), Clock.fixed(now.minusSeconds(7 * 86_400), zone))
+        week.markDone("laundry")
+        repo.markDone("Laundry")
+
+        repo.undoLastMark("laundry")
+        val left = repo.eventsFlow().first().single()
+        assertEquals(today.minusDays(7), left.lastDay)
+
+        repo.undoLastMark("laundry")
+        assertTrue(repo.eventsFlow().first().isEmpty())
     }
 }

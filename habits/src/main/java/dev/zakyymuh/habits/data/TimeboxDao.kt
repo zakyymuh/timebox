@@ -58,4 +58,18 @@ interface TimeboxDao {
         """,
     )
     suspend fun recentDatesWithItems(before: LocalDate, limit: Int): List<LocalDate>
+
+    // ---- last time I did … -----------------------------------------------------
+
+    @Query("SELECT * FROM mark")
+    fun marksFlow(): Flow<List<MarkEntity>>
+
+    @Query("SELECT * FROM mark")
+    suspend fun marks(): List<MarkEntity>
+
+    @androidx.room.Insert
+    suspend fun insertMark(mark: MarkEntity)
+
+    @Query("DELETE FROM mark WHERE id = :id")
+    suspend fun deleteMark(id: Long)
 }

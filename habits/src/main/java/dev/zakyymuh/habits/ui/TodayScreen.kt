@@ -76,7 +76,9 @@ private val fullHeading = DateTimeFormatter.ofPattern("EEEE d MMMM")
 @Composable
 fun TodayScreen(viewModel: TodayViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val lastDone by viewModel.lastDone.collectAsStateWithLifecycle()
     var adding by remember { mutableStateOf(false) }
+    var lastTimeOpen by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -106,6 +108,17 @@ fun TodayScreen(viewModel: TodayViewModel) {
 
             Spacer(Modifier.height(20.dp))
 
+            // Only on today: the record of a past day is about that day, not about now.
+            if (state.isToday && state.date != null) {
+                FunFactCard(
+                    fact = lastDone.fact,
+                    tracked = lastDone.events.size,
+                    onShuffle = viewModel::shuffleFact,
+                    onOpen = { lastTimeOpen = true },
+                )
+                Spacer(Modifier.height(16.dp))
+            }
+
             if (state.isEmpty) {
                 EmptyDay(state, viewModel, Modifier.weight(1f))
             } else {
@@ -114,6 +127,15 @@ fun TodayScreen(viewModel: TodayViewModel) {
 
             if (!state.editable) ReadOnlyFooter()
         }
+    }
+
+    if (lastTimeOpen) {
+        LastTimeSheet(
+            ui = lastDone,
+            onDidIt = viewModel::markDone,
+            onUndo = viewModel::undoLastMark,
+            onDismiss = { lastTimeOpen = false },
+        )
     }
 
     if (adding && state.editable) {

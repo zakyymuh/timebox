@@ -3,8 +3,12 @@ package dev.zakyymuh.habits.data
 import dev.zakyymuh.timebox.core.DayList
 import dev.zakyymuh.timebox.core.Items
 import dev.zakyymuh.timebox.core.TodoItem
+import dev.zakyymuh.timebox.core.lastdone.Event
+import dev.zakyymuh.timebox.core.lastdone.LastDone
+import dev.zakyymuh.timebox.core.lastdone.Mark
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import java.time.Clock
 import java.time.LocalDate
 
@@ -122,6 +126,30 @@ class TimeboxRepository(
     /** Recent days that had items, newest first, for the one-tap morning path. */
     suspend fun recentDays(limit: Int): List<DayList> =
         dao.recentDatesWithItems(today(), limit).map { dayNow(it) }
+
+    // ---- last time I did … -----------------------------------------------------
+    // No onChanged here: the widget shows today's list, which marks never change.
+
+    /** Every logged thing, the longest ago first. */
+    fun eventsFlow(): Flow<List<Event>> =
+        dao.marksFlow().map { rows -> LastDone.summarise(rows.map { Mark(it.name, it.at) }, clock.zone) }
+
+    /** "I did this just now." A new name starts a new event. */
+    suspend fun markDone(name: String) {
+        if (name.isBlank()) return
+        dao.insertMark(MarkEntity(name = name.trim(), at = clock.instant()))
+    }
+
+    /**
+     * Takes back the most recent tap for [key], for a mistaken one. Undoing the only
+     * tap removes the event. Matched in Kotlin rather than SQL, whose lower() is ASCII-only.
+     */
+    suspend fun undoLastMark(key: String) {
+        dao.marks()
+            .filter { LastDone.key(it.name) == key }
+            .maxWithOrNull(compareBy<MarkEntity> { it.at }.thenBy { it.id })
+            ?.let { dao.deleteMark(it.id) }
+    }
 }
 
 private fun TodoItemEntity.toModel() = TodoItem(id, position, text, doneAt)

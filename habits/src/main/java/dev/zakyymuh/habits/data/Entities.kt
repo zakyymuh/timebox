@@ -27,3 +27,14 @@ data class TodoItemEntity(
     val text: String,
     val doneAt: Instant?,
 )
+
+/**
+ * One time something was done — "laundry, at this moment". Every tap is kept, not just
+ * the latest, so the app can say how often it usually happens.
+ */
+@Entity(tableName = "mark", indices = [Index("name")])
+data class MarkEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val at: Instant,
+)
