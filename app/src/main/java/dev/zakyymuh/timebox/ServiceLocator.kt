@@ -3,6 +3,7 @@ package dev.zakyymuh.timebox
 import android.content.Context
 import androidx.room.Room
 import dev.zakyymuh.timebox.data.ALL_MIGRATIONS
+import dev.zakyymuh.timebox.data.NoteRepository
 import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PhotoStore
 import dev.zakyymuh.timebox.data.SoilRepository
@@ -49,6 +50,13 @@ object ServiceLocator {
         soilRepository ?: synchronized(this) {
             soilRepository ?: SoilRepository(database(context).airTestDao(), database(context).plantDao(), clock)
                 .also { soilRepository = it }
+        }
+
+    private var noteRepository: NoteRepository? = null
+
+    fun noteRepository(context: Context): NoteRepository =
+        noteRepository ?: synchronized(this) {
+            noteRepository ?: NoteRepository(database(context).noteDao(), clock).also { noteRepository = it }
         }
 
     fun photoStore(context: Context): PhotoStore =

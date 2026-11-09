@@ -5,8 +5,8 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
 @Database(
-    entities = [PlantEntity::class, WateringEntity::class, DexEntity::class, AirTestEntity::class],
-    version = 8,
+    entities = [PlantEntity::class, WateringEntity::class, DexEntity::class, AirTestEntity::class, NoteEntity::class],
+    version = 9,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -16,4 +16,6 @@ abstract class TimeboxDatabase : RoomDatabase() {
     abstract fun dexDao(): DexDao
 
     abstract fun airTestDao(): AirTestDao
+
+    abstract fun noteDao(): NoteDao
 }

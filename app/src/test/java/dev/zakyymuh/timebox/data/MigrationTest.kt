@@ -174,7 +174,7 @@ class MigrationTest {
      * Built from the v1 file by running the real 1→7 migrations, so it is exactly what
      * an upgrade from any older install would have produced.
      */
-    private fun createVersion7() {
+    private fun createVersion7(vararg extra: String) {
         createVersion1()
         val helper = FrameworkSQLiteOpenHelperFactory().create(
             SupportSQLiteOpenHelper.Configuration.builder(context)
@@ -194,6 +194,7 @@ class MigrationTest {
             execSQL("INSERT INTO watering (plantId, date, wateredAt) VALUES (1, '$day', 0)")
             execSQL("INSERT INTO dex (number, name, species, owned, photo, acquired, note, createdAt, priceLow, priceHigh) VALUES (1, 'Astrophytum', '', 1, NULL, '$day', '', 0, NULL, NULL)")
             execSQL("INSERT INTO air_test (date, mix, potMl, drainedMl, pouredMl, createdAt) VALUES ('$day', 'Mix A', 500, 110, NULL, 0)")
+            extra.forEach(::execSQL)
         }
         helper.close()
     }
@@ -216,5 +217,26 @@ class MigrationTest {
         assertFalse("day" in tables)
         assertFalse("todo_item" in tables)
         assertFalse("service" in tables)
+    }
+
+    @Test
+    fun `the upgrade to 9 logs last watered as a watering for repeating plants never watered`() = runTest {
+        createVersion7(
+            "INSERT INTO plant (id, name, colour, everyDays, onceDate, anchor, snoozedUntil) VALUES (2, 'Basil', 'MOSS', 3, NULL, '2026-11-05', NULL)",
+            "INSERT INTO plant (id, name, colour, everyDays, onceDate, anchor, snoozedUntil) VALUES (3, 'Seed', 'MOSS', NULL, '2026-11-10', '2026-11-06', NULL)",
+        )
+        val current = openCurrent()
+        val byPlant = current.plantDao().waterings().groupBy({ it.plantId }, { it.date })
+        assertEquals(listOf(day), byPlant[1]) // already watered: untouched
+        assertEquals(listOf(LocalDate.of(2026, 11, 5)), byPlant[2])
+        assertEquals(null, byPlant[3]) // one-time: its anchor is not a watering
+    }
+
+    @Test
+    fun `the upgrade to 9 adds an empty notes table that works`() = runTest {
+        createVersion7()
+        val current = openCurrent()
+        current.noteDao().insert(NoteEntity(text = "Repotted", date = day, createdAt = Instant.EPOCH))
+        assertEquals(listOf("Repotted"), current.noteDao().notesFlow().first().map { it.text })
     }
 }

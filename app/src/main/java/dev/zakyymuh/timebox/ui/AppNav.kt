@@ -99,6 +99,7 @@ fun AppNav(start: String?) {
                         HistoryViewModel(
                             plants = ServiceLocator.plantRepository(context),
                             dex = ServiceLocator.dexRepository(context),
+                            notes = ServiceLocator.noteRepository(context),
                             clock = ServiceLocator.clock,
                         )
                     }

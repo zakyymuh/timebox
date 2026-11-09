@@ -32,6 +32,13 @@ import dev.zakyymuh.timebox.ui.common.TopBar
 import dev.zakyymuh.timebox.ui.common.softFieldColors
 import dev.zakyymuh.timebox.ui.theme.Fresh
 import dev.zakyymuh.timebox.ui.theme.Label
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.remember
+import dev.zakyymuh.timebox.data.NoteRepository
+import dev.zakyymuh.timebox.ui.common.DateField
+import dev.zakyymuh.timebox.ui.common.RoundButton
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 private val shortDate = DateTimeFormatter.ofPattern("d MMM")
@@ -42,10 +49,13 @@ fun HistoryScreen(viewModel: HistoryViewModel, onBack: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     // The field keeps its own text so typing never waits on the database.
     var text by rememberSaveable { mutableStateOf(state.query) }
+    var adding by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(containerColor = Fresh.Page) { insets ->
         Column(Modifier.padding(insets).fillMaxSize().padding(horizontal = 20.dp)) {
-            TopBar(title = "History", onBack = onBack)
+            TopBar(title = "History", onBack = onBack) {
+                RoundButton(glyph = "+", onClick = { adding = true }, size = 40.dp, description = "Add an event")
+            }
             TextField(
                 value = text,
                 onValueChange = { text = it; viewModel.search(it) },
@@ -79,11 +89,52 @@ fun HistoryScreen(viewModel: HistoryViewModel, onBack: () -> Unit) {
             }
         }
     }
+
+    if (adding) {
+        AddEventDialog(
+            today = viewModel.today(),
+            onAdd = { note, date -> adding = false; viewModel.addNote(note, date) },
+            onDismiss = { adding = false },
+        )
+    }
+}
+
+/** Write down anything for the history: "Repotted the Monstera", on a day (today by default). */
+@Composable
+private fun AddEventDialog(today: LocalDate, onAdd: (String, LocalDate) -> Unit, onDismiss: () -> Unit) {
+    var note by rememberSaveable { mutableStateOf("") }
+    var date by remember { mutableStateOf(today) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add an event") },
+        text = {
+            Column {
+                TextField(
+                    value = note,
+                    onValueChange = { note = it.take(NoteRepository.MAX_TEXT) },
+                    placeholder = { Text("e.g. Repotted the Monstera", color = Fresh.InkSoft) },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = softFieldColors(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(10.dp))
+                DateField("When", date) { date = it }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onAdd(note, date) }, enabled = note.isNotBlank()) { Text("Add") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 @Composable
 private fun EventRow(event: HistoryEvent, showDate: Boolean) {
-    val icon = if (event.kind == HistoryKind.Watered) "💧" else "🪴"
+    val icon = when (event.kind) {
+        HistoryKind.Watered -> "💧"
+        HistoryKind.Joined -> "🪴"
+        HistoryKind.Note -> "📝"
+    }
     SoftCard(corner = 18.dp, modifier = Modifier.padding(bottom = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(icon)

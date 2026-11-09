@@ -6,6 +6,7 @@ import dev.zakyymuh.timebox.core.collection.DexForm
 import dev.zakyymuh.timebox.core.plants.PlantColour
 import dev.zakyymuh.timebox.core.plants.PlantForm
 import dev.zakyymuh.timebox.data.DexRepository
+import dev.zakyymuh.timebox.data.NoteRepository
 import dev.zakyymuh.timebox.data.PlantRepository
 import dev.zakyymuh.timebox.data.TimeboxDatabase
 import kotlinx.coroutines.Dispatchers
@@ -68,7 +69,7 @@ class HistoryViewModelTest {
     fun `the history groups waterings and arrivals by date`() = runBlocking {
         plants.water(plant("Basil"))
         dex.add(DexForm("Monstera"), owned = true, photo = null, acquired = d(20, 10))
-        val state = HistoryViewModel(plants, dex, clock).await { s -> s.groups.sumOf { it.events.size } == 2 }
+        val state = HistoryViewModel(plants, dex, NoteRepository(db.noteDao(), clock), clock).await { s -> s.groups.sumOf { it.events.size } == 2 }
         assertEquals(listOf("Today", "October 2026"), state.groups.map { it.title })
     }
 
@@ -76,12 +77,22 @@ class HistoryViewModelTest {
     fun `search narrows the list as you type`() = runBlocking {
         plants.water(plant("Basil"))
         plants.water(plant("Aloe"))
-        val model = HistoryViewModel(plants, dex, clock)
+        val model = HistoryViewModel(plants, dex, NoteRepository(db.noteDao(), clock), clock)
         model.await { s -> s.groups.sumOf { it.events.size } == 2 }
         model.search("bas")
         val state = model.await { it.query == "bas" && it.groups.sumOf { g -> g.events.size } == 1 }
         assertEquals("Watered Basil", state.groups.single().events.single().text)
         model.search("cactus")
         assertEquals("Nothing matches ‘cactus’", model.await { it.query == "cactus" && it.empty != null }.empty)
+    }
+
+    @Test
+    fun `a note written down shows under its date, and blank ones are ignored`() = runBlocking {
+        val model = HistoryViewModel(plants, dex, NoteRepository(db.noteDao(), clock), clock)
+        model.addNote("   ", d(7))
+        model.addNote("  Repotted the Monstera ", d(6))
+        val state = model.await { s -> s.groups.isNotEmpty() }
+        assertEquals("Yesterday", state.groups.single().title)
+        assertEquals(listOf("Repotted the Monstera"), state.groups.single().events.map { it.text })
     }
 }

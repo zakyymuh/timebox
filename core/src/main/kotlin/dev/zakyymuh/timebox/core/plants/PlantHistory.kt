@@ -5,7 +5,10 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-enum class HistoryKind { Watered, Joined }
+enum class HistoryKind { Watered, Joined, Note }
+
+/** Anything the owner wrote down themselves: "Repotted the Monstera". */
+data class HistoryNote(val id: Long, val text: String, val date: LocalDate)
 
 /** One thing that happened: "Watered Basil" on a day. [subject] is the plant's name. */
 data class HistoryEvent(val date: LocalDate, val subject: String, val text: String, val kind: HistoryKind)
@@ -14,23 +17,30 @@ data class HistoryEvent(val date: LocalDate, val subject: String, val text: Stri
 data class HistoryGroup(val title: String, val events: List<HistoryEvent>)
 
 /**
- * The history behind the dashboard's event tile: every watering and every plant that
- * joined the collection, newest first. Photos are not dated, so they cannot be placed.
+ * The history behind the dashboard's event tile: every watering, every plant that joined
+ * the collection and every note written down, newest first. Photos are not dated, so they cannot be placed.
  */
 object PlantHistory {
 
     private val day = DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH)
     private val month = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH)
 
-    fun events(plants: List<Plant>, waterings: List<Watering>, entries: List<DexEntry>): List<HistoryEvent> {
+    fun events(
+        plants: List<Plant>,
+        waterings: List<Watering>,
+        entries: List<DexEntry>,
+        notes: List<HistoryNote> = emptyList(),
+    ): List<HistoryEvent> {
         val names = plants.associate { it.id to it.name }
         val watered = waterings.sortedByDescending { it.id }.mapNotNull { w ->
             names[w.plantId]?.let { HistoryEvent(w.date, it, "Watered $it", HistoryKind.Watered) }
         }
         val joined = entries.filter { it.owned && it.acquired != null }.sortedByDescending { it.id }
             .map { HistoryEvent(it.acquired!!, it.name, "${it.name} joined your collection", HistoryKind.Joined) }
-        // Stable sort: within a day, the order above (newest logged first) is kept.
-        return (watered + joined).sortedByDescending { it.date }
+        val written = notes.sortedByDescending { it.id }
+            .map { HistoryEvent(it.date, "", it.text, HistoryKind.Note) }
+        // Stable sort: within a day, notes come first, then the order above (newest logged first).
+        return (written + watered + joined).sortedByDescending { it.date }
     }
 
     /** "Today", "Yesterday", a day this month, else the whole month. */

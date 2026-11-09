@@ -66,4 +66,16 @@ class PlantHistoryTest {
         assertEquals("Nothing matches ‘cactus’", PlantHistory.emptyMessage(emptyList(), " cactus "))
         assertNull(PlantHistory.emptyMessage(events, "aloe"))
     }
+
+    @Test
+    fun `free-text events join the history by date and can be searched`() {
+        val notes = listOf(HistoryNote(1, "Repotted the Monstera", d(8)), HistoryNote(2, "New fertiliser", d(9)))
+        val all = PlantHistory.events(listOf(basil, aloe), waterings, entries, notes)
+        assertEquals(
+            listOf("New fertiliser", "Watered Aloe", "Watered Basil", "Repotted the Monstera"),
+            all.take(4).map { it.text },
+        )
+        assertEquals(listOf(HistoryKind.Note), all.filter { it.text.startsWith("New") }.map { it.kind })
+        assertEquals(listOf("Repotted the Monstera", "Monstera joined your collection"), PlantHistory.search(all, "monstera").map { it.text })
+    }
 }
