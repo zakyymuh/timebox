@@ -45,6 +45,8 @@ import dev.zakyymuh.timebox.core.motor.ServiceForm
 import dev.zakyymuh.timebox.core.motor.ServiceLog
 import dev.zakyymuh.timebox.core.motor.ServiceRecord
 import dev.zakyymuh.motor.data.ServiceRepository
+import dev.zakyymuh.motor.data.VehicleRepository
+import dev.zakyymuh.timebox.core.motor.Vehicle
 import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.common.SoftCard
 import dev.zakyymuh.timebox.ui.common.TopBar
@@ -63,14 +65,25 @@ import java.time.format.DateTimeFormatter
 
 private val dateFormat = DateTimeFormatter.ofPattern("EEE d MMM yyyy")
 
-class ServiceListViewModel(private val repo: ServiceRepository) : ViewModel() {
-    val records: StateFlow<List<ServiceRecord>?> = repo.recordsFlow()
+class ServiceListViewModel(
+    private val repo: ServiceRepository,
+    vehicles: VehicleRepository,
+    vehicleId: Long,
+) : ViewModel() {
+    val records: StateFlow<List<ServiceRecord>?> = repo.recordsFlow(vehicleId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val vehicle: StateFlow<Vehicle?> = vehicles.vehicleFlow(vehicleId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun year(): Int = repo.todayDate().year
 }
 
-class ServiceEditViewModel(private val repo: ServiceRepository, private val id: Long) : ViewModel() {
+class ServiceEditViewModel(
+    private val repo: ServiceRepository,
+    private val id: Long,
+    private val vehicleId: Long,
+) : ViewModel() {
     val isNew = id == 0L
     val today = repo.todayDate()
 
@@ -99,7 +112,7 @@ class ServiceEditViewModel(private val repo: ServiceRepository, private val id: 
         if (busy || !_form.value.isValid(today)) return
         busy = true
         viewModelScope.launch {
-            repo.save(id, _form.value)
+            repo.save(id, vehicleId, _form.value)
             onDone()
         }
     }
@@ -114,19 +127,26 @@ class ServiceEditViewModel(private val repo: ServiceRepository, private val id: 
     }
 }
 
-/** Every service, newest first, with what this year has cost so far. */
+/** One vehicle's services, newest first, with what this year has cost so far. */
 @Composable
 fun ServiceListScreen(
     viewModel: ServiceListViewModel,
     onBack: () -> Unit,
+    onEditVehicle: () -> Unit,
     onAdd: () -> Unit,
     onEdit: (Long) -> Unit,
 ) {
     val records by viewModel.records.collectAsStateWithLifecycle()
+    val vehicle by viewModel.vehicle.collectAsStateWithLifecycle()
     Scaffold(containerColor = Fresh.Page) { insets ->
         Column(Modifier.padding(insets).padding(horizontal = 20.dp).fillMaxSize()) {
-            TopBar(title = "Motorcycle service", onBack = onBack) {
+            TopBar(title = vehicle?.name ?: "", onBack = onBack) {
+                RoundButton("✎", onClick = onEditVehicle, description = "Edit vehicle")
+                Spacer(Modifier.width(8.dp))
                 RoundButton("+", onClick = onAdd, container = Fresh.Ink, content = Color.White, description = "Log a service")
+            }
+            vehicle?.plate?.takeIf { it.isNotEmpty() }?.let {
+                Text(it, style = Label, color = Fresh.InkSoft, modifier = Modifier.padding(start = 4.dp, bottom = 12.dp))
             }
             val all = records ?: return@Column
             if (all.isEmpty()) {

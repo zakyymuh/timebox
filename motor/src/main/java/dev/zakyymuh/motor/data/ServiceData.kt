@@ -2,6 +2,8 @@ package dev.zakyymuh.motor.data
 
 import androidx.room.Dao
 import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
@@ -13,10 +15,17 @@ import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 
-/** One motorcycle service (v6). */
-@Entity(tableName = "service")
+/** One service of one vehicle (v1; v2 adds [vehicleId]). */
+@Entity(
+    tableName = "service",
+    foreignKeys = [
+        ForeignKey(entity = VehicleEntity::class, parentColumns = ["id"], childColumns = ["vehicleId"], onDelete = ForeignKey.CASCADE),
+    ],
+    indices = [Index("vehicleId")],
+)
 data class ServiceEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val vehicleId: Long,
     val date: LocalDate,
     val place: String,
     val price: Long?,
@@ -30,7 +39,10 @@ data class ServiceEntity(
 @Dao
 interface ServiceDao {
     @Query("SELECT * FROM service ORDER BY date DESC, id DESC")
-    fun recordsFlow(): Flow<List<ServiceEntity>>
+    fun allFlow(): Flow<List<ServiceEntity>>
+
+    @Query("SELECT * FROM service WHERE vehicleId = :vehicleId ORDER BY date DESC, id DESC")
+    fun recordsFlow(vehicleId: Long): Flow<List<ServiceEntity>>
 
     @Query("SELECT * FROM service WHERE id = :id")
     suspend fun record(id: Long): ServiceEntity?
@@ -43,22 +55,31 @@ interface ServiceDao {
     suspend fun delete(id: Long)
 }
 
-/** The only door to the motorcycle service log. */
+/** The only door to the service log. */
 class ServiceRepository(private val dao: ServiceDao, private val clock: Clock) {
 
     fun todayDate(): LocalDate = LocalDate.now(clock)
 
-    fun recordsFlow(): Flow<List<ServiceRecord>> = dao.recordsFlow().map { it.map(ServiceEntity::toModel) }
+    fun recordsFlow(vehicleId: Long): Flow<List<ServiceRecord>> =
+        dao.recordsFlow(vehicleId).map { it.map(ServiceEntity::toModel) }
+
+    /** Every vehicle's services, keyed by vehicle id. */
+    fun byVehicleFlow(): Flow<Map<Long, List<ServiceRecord>>> =
+        dao.allFlow().map { rows -> rows.groupBy({ it.vehicleId }, ServiceEntity::toModel) }
 
     suspend fun record(id: Long): ServiceRecord? = dao.record(id)?.toModel()
 
-    /** Saves [form] as record [id], or as a new one when [id] is 0. Returns the record's id. */
-    suspend fun save(id: Long, form: ServiceForm): Long {
+    /**
+     * Saves [form] as record [id] of [vehicleId], or as a new one when [id] is 0. Returns
+     * the record's id. An existing record keeps the vehicle it was logged for.
+     */
+    suspend fun save(id: Long, vehicleId: Long, form: ServiceForm): Long {
         require(form.isValid(todayDate())) { "invalid service form" }
         val existing = if (id != 0L) dao.record(id) else null
         val rowId = dao.upsert(
             ServiceEntity(
                 id = id,
+                vehicleId = existing?.vehicleId ?: vehicleId,
                 date = form.date,
                 place = form.place.trim(),
                 price = form.price,
