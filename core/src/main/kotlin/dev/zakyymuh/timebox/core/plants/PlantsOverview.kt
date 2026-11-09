@@ -69,11 +69,16 @@ object PlantCopy {
         is Recurrence.Once -> "once"
     }
 
-    fun dashboard(overview: PlantsOverview): String {
-        if (overview.due.isNotEmpty()) return "${overview.due.size} due today"
-        val next = overview.next ?: return "No plants yet"
-        return "Next: ${next.plant.name} ${whenLabel(next.status)}"
+    /** Beside a plant in the dashboard's day list. */
+    fun mark(mark: DayMark): String = when (mark) {
+        DayMark.Watered -> "watered"
+        is DayMark.Due -> if (mark.daysLate == 0) "due today" else whenLabel(PlantStatus.Due(mark.daysLate))
+        DayMark.Coming -> "due"
     }
+
+    /** The dashboard's day list when nothing falls on that day. */
+    fun emptyDay(date: LocalDate, today: LocalDate): String =
+        if (date.isBefore(today)) "Nothing watered" else "Nothing due"
 
     fun notification(overview: PlantsOverview): String? = when (overview.due.size) {
         0 -> null

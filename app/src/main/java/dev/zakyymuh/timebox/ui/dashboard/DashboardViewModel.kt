@@ -5,9 +5,8 @@ import androidx.lifecycle.viewModelScope
 import dev.zakyymuh.timebox.core.collection.Dex
 import dev.zakyymuh.timebox.core.plants.FunFact
 import dev.zakyymuh.timebox.core.plants.FunFacts
-import dev.zakyymuh.timebox.core.plants.PlantCopy
-import dev.zakyymuh.timebox.core.plants.PlantRow
-import dev.zakyymuh.timebox.core.plants.PlantsOverview
+import dev.zakyymuh.timebox.core.plants.StripDay
+import dev.zakyymuh.timebox.core.plants.WeekStrip
 import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PlantRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,9 +21,8 @@ import kotlin.random.Random
 /** [date] is null until the database has answered, so nothing flashes. */
 data class DashboardState(
     val date: LocalDate? = null,
-    val plants: String = "",
-    /** The plant to water soonest — the most overdue one, else the next coming up. */
-    val nextWatering: PlantRow? = null,
+    /** Three days back, today, three days ahead: what was watered and what is due. */
+    val week: List<StripDay> = emptyList(),
     val collection: String = "",
     /** Up to three photos from the collection, newest number first, for the card. */
     val thumbnails: List<String> = emptyList(),
@@ -51,11 +49,9 @@ class DashboardViewModel(
         todayDate,
         fact,
     ) { plantList, waterings, entries, date, shownFact ->
-        val overview = PlantsOverview.of(plantList, waterings, date)
         DashboardState(
             date = date,
-            plants = PlantCopy.dashboard(overview),
-            nextWatering = overview.due.firstOrNull() ?: overview.upcoming.firstOrNull(),
+            week = WeekStrip.of(plantList, waterings, date),
             collection = Dex.summary(entries),
             thumbnails = entries.filter { it.owned && it.photo != null }.sortedByDescending { it.number }
                 .take(3).mapNotNull { it.photo },

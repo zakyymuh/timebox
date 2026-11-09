@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -35,14 +34,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.core.plants.FunFact
-import dev.zakyymuh.timebox.core.plants.PlantCopy
-import dev.zakyymuh.timebox.core.plants.PlantRow
-import dev.zakyymuh.timebox.core.plants.PlantStatus
 import dev.zakyymuh.timebox.ui.collection.DexPhoto
 import dev.zakyymuh.timebox.ui.common.Pill
 import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.common.SoftCard
-import dev.zakyymuh.timebox.ui.plants.PlantDot
 import dev.zakyymuh.timebox.ui.theme.Fresh
 import dev.zakyymuh.timebox.ui.theme.Label
 import java.time.format.DateTimeFormatter
@@ -51,7 +46,7 @@ private val heading = DateTimeFormatter.ofPattern("EEEE d MMMM")
 private const val GREETING = "Hello, Zaky 👋"
 
 /**
- * The front door: a greeting, the plant schedule, the next watering, the collection and a
+ * The front door: a greeting, the plant schedule as a week, the collection and a
  * fun fact, with "Add plant" floating at the bottom centre.
  */
 @Composable
@@ -91,61 +86,13 @@ fun DashboardScreen(
                 modifier = Modifier.padding(top = 4.dp, bottom = 24.dp),
             )
 
-            // The one big door. Full width now that the daily list lives in its own app.
-            DoorCard(
-                title = "Plant schedule",
-                dark = false,
-                onClick = onOpenPlants,
-                modifier = Modifier.fillMaxWidth().height(160.dp),
-            ) { soft ->
-                Text(state.plants, style = Label, color = soft, maxLines = 3, overflow = TextOverflow.Ellipsis)
-            }
-
-            state.nextWatering?.let { NextWateringCard(it, onOpenPlants) }
+            state.date?.let { WeekCard(state.week, it, onOpenPlants) }
 
             CollectionCard(state, onOpenCollection)
 
             state.fact?.let { FactCard(it, onOpenEntry, onOpenEncyclopedia, viewModel::closeFact) }
             // Room for the floating button, so the last card can scroll clear of it.
             Spacer(Modifier.height(96.dp))
-        }
-    }
-}
-
-/** The big door to the plant schedule; [dark] keeps the reference's dark variant available. */
-@Composable
-private fun DoorCard(
-    title: String,
-    dark: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier,
-    status: @Composable (soft: Color) -> Unit,
-) {
-    val text = if (dark) Color.White else Fresh.Ink
-    val soft = if (dark) Color.White.copy(alpha = 0.7f) else Fresh.InkSoft
-    SoftCard(
-        color = if (dark) Fresh.Ink else Fresh.Page,
-        onClick = onClick,
-        modifier = modifier.shadow(
-            elevation = if (dark) 0.dp else 10.dp,
-            shape = RoundedCornerShape(28.dp),
-            ambientColor = Fresh.Ink.copy(alpha = 0.08f),
-            spotColor = Fresh.Ink.copy(alpha = 0.08f),
-        ),
-    ) {
-        Text(title, style = MaterialTheme.typography.titleLarge, color = text, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Spacer(Modifier.weight(1f))
-        Row(verticalAlignment = Alignment.Bottom) {
-            Box(Modifier.weight(1f)) { status(soft) }
-            Spacer(Modifier.width(8.dp))
-            RoundButton(
-                glyph = "→",
-                onClick = onClick,
-                container = if (dark) Fresh.Pastel else Fresh.Card,
-                content = if (dark) Fresh.GreenDeep else Fresh.Ink,
-                size = 40.dp,
-                description = "Open $title",
-            )
         }
     }
 }
@@ -238,46 +185,5 @@ private fun AddPlantButton(onClick: () -> Unit) {
         Text("+", style = MaterialTheme.typography.titleMedium, color = Color.White)
         Spacer(Modifier.width(10.dp))
         Text("Add plant", style = MaterialTheme.typography.titleMedium, color = Color.White)
-    }
-}
-
-/** When the next watering is: the plant, how soon, and the date. Green when it is due now. */
-@Composable
-private fun NextWateringCard(row: PlantRow, onOpen: () -> Unit) {
-    val due = row.status is PlantStatus.Due
-    val ink = if (due) Fresh.GreenDeep else Fresh.Ink
-    val soft = if (due) Fresh.GreenDeep.copy(alpha = 0.75f) else Fresh.InkSoft
-    SoftCard(
-        color = if (due) Fresh.Pastel else Fresh.Card,
-        corner = 24.dp,
-        onClick = onOpen,
-        modifier = Modifier.padding(top = 14.dp),
-    ) {
-        Text("💧  Next watering", style = Label, color = soft)
-        Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    PlantDot(row.plant.colour, size = 12.dp)
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        row.plant.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = ink,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                row.nextDue?.let {
-                    Text(it.format(heading), style = Label, color = soft, modifier = Modifier.padding(top = 4.dp))
-                }
-            }
-            Spacer(Modifier.width(8.dp))
-            Pill(
-                text = PlantCopy.whenLabel(row.status),
-                color = if (due) Fresh.Green else Fresh.Page,
-                textColor = if (due) Color.White else Fresh.Ink,
-            )
-        }
     }
 }
