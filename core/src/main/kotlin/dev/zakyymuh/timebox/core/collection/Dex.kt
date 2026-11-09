@@ -58,12 +58,4 @@ object Dex {
         if (values.isEmpty()) return null
         return "Rp " + values.joinToString(" – ") { Money.rupiah(it).removePrefix("Rp ") }
     }
-
-    fun summary(entries: List<DexEntry>): String {
-        val owned = entries.count { it.owned }
-        val wished = entries.size - owned
-        if (entries.isEmpty()) return "Start your collection"
-        val plants = if (owned == 1) "1 plant" else "$owned plants"
-        return if (wished == 0) plants else "$plants · $wished on wishlist"
-    }
 }

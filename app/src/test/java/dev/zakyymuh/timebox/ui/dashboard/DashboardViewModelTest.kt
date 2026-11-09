@@ -20,6 +20,8 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -64,11 +66,11 @@ class DashboardViewModelTest {
         withTimeout(5_000) { state.first(check) }
 
     @Test
-    fun `the collection card sums up both lists`() = runBlocking {
+    fun `the collection tile shows the newest owned photo`() = runBlocking {
         dex.add(DexForm("Greenovia"), owned = true, photo = "g.jpg")
-        dex.add(DexForm("Variegata"), owned = false, photo = null)
-        val state = vm().await { it.collection == "1 plant · 1 on wishlist" }
-        assertEquals(listOf("g.jpg"), state.thumbnails)
+        dex.add(DexForm("Variegata"), owned = false, photo = "v.jpg")
+        dex.add(DexForm("Aloe"), owned = true, photo = "a.jpg")
+        assertEquals("a.jpg", vm().await { it.cover != null }.cover)
     }
 
     @Test
@@ -78,12 +80,25 @@ class DashboardViewModelTest {
     }
 
     @Test
-    fun `closing the fun fact hides it`() = runBlocking {
+    fun `tapping the fun fact shows another one`() = runBlocking {
         val model = vm()
-        model.await { it.fact != null }
-        model.closeFact()
-        model.await { it.date != null && it.fact == null }
+        val first = model.await { it.fact != null }.fact
+        model.shuffleFact()
+        model.await { it.fact != null && it.fact != first }
         Unit
+    }
+
+    @Test
+    fun `no plant event shows until something has happened`() = runBlocking {
+        assertNull(vm().await { it.date != null }.event)
+    }
+
+    @Test
+    fun `a watering gives a plant event line`() = runBlocking {
+        val aloe = plant("Aloe", everyDays = 3, lastWatered = d(4))
+        plants.water(aloe)
+        val state = vm().await { it.event != null }
+        assertTrue(state.event!!.contains("Aloe"))
     }
 
     @Test

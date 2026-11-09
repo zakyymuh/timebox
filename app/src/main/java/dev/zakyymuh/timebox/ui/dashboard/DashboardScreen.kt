@@ -1,9 +1,14 @@
 package dev.zakyymuh.timebox.ui.dashboard
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import dev.zakyymuh.timebox.ui.theme.Small
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FabPosition
@@ -33,29 +37,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.zakyymuh.timebox.core.plants.FunFact
 import dev.zakyymuh.timebox.ui.collection.DexPhoto
-import dev.zakyymuh.timebox.ui.common.Pill
-import dev.zakyymuh.timebox.ui.common.RoundButton
-import dev.zakyymuh.timebox.ui.common.SoftCard
 import dev.zakyymuh.timebox.ui.theme.Fresh
 import dev.zakyymuh.timebox.ui.theme.Label
 import java.time.format.DateTimeFormatter
 
 private val heading = DateTimeFormatter.ofPattern("EEEE d MMMM")
 private const val GREETING = "Hello, Zaky 👋"
+private val TILE = 88.dp
 
 /**
- * The front door: a greeting, the plant schedule as a week, the collection and a
- * fun fact, with "Add plant" floating at the bottom centre.
+ * The front door: a greeting, the plant schedule as a week, the collection beside a line
+ * about something that happened, and a plant fact, with "Add plant" floating at the
+ * bottom centre.
  */
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel,
     onOpenPlants: () -> Unit,
     onOpenCollection: () -> Unit,
-    onOpenEntry: (String) -> Unit,
-    onOpenEncyclopedia: () -> Unit,
     onAddPlant: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -88,85 +88,68 @@ fun DashboardScreen(
 
             state.date?.let { WeekCard(state.week, it, onOpenPlants) }
 
-            CollectionCard(state, onOpenCollection)
+            Row(Modifier.padding(top = 14.dp).height(IntrinsicSize.Min)) {
+                CollectionTile(state.cover, onOpenCollection)
+                state.event?.let {
+                    Spacer(Modifier.width(14.dp))
+                    EventCard(it, viewModel::shuffleEvent, Modifier.weight(1f).fillMaxHeight())
+                }
+            }
 
-            state.fact?.let { FactCard(it, onOpenEntry, onOpenEncyclopedia, viewModel::closeFact) }
+            state.fact?.let { FactLine(it.text, viewModel::shuffleFact) }
             // Room for the floating button, so the last card can scroll clear of it.
             Spacer(Modifier.height(96.dp))
         }
     }
 }
 
-/** The plant dex: a few photos, the count, and the way in. */
+/** The way into the collection: a square with the newest photo, or 🪴 before there is one. */
 @Composable
-private fun CollectionCard(state: DashboardState, onOpen: () -> Unit) {
-    SoftCard(corner = 24.dp, onClick = onOpen, modifier = Modifier.padding(top = 14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (state.thumbnails.isEmpty()) {
-                DexPhoto(null, Modifier.size(44.dp).clip(CircleShape), emojiSize = 22.sp)
-            } else {
-                // Overlapping round photos, newest on top.
-                Box(Modifier.width((44 + 22 * (state.thumbnails.size - 1)).dp).height(44.dp)) {
-                    state.thumbnails.reversed().forEachIndexed { i, photo ->
-                        DexPhoto(
-                            photo,
-                            Modifier
-                                .padding(start = (22 * i).dp)
-                                .size(44.dp)
-                                .border(2.dp, Fresh.Card, CircleShape)
-                                .clip(CircleShape),
-                            side = 160,
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text("My plant collection", style = MaterialTheme.typography.titleMedium, color = Fresh.Ink)
-                Text(state.collection, style = Label, color = Fresh.InkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            Spacer(Modifier.width(8.dp))
-            RoundButton("→", onClick = onOpen, container = Fresh.Page, size = 40.dp, description = "Open collection")
-        }
+private fun CollectionTile(cover: String?, onOpen: () -> Unit) {
+    val shape = RoundedCornerShape(24.dp)
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(TILE)
+            .clip(shape)
+            .background(Fresh.Card)
+            .clickable(role = Role.Button, onClickLabel = "Open collection", onClick = onOpen)
+            .semantics { contentDescription = "Open collection" },
+    ) {
+        if (cover == null) Text("🪴", fontSize = 36.sp)
+        else DexPhoto(cover, Modifier.size(TILE), side = 240)
     }
 }
 
-/** "Did you know?": a random plant fact each time the app opens; × hides it until next time. */
+/** "You last watered Basil 4 days ago." A tap shows another. */
 @Composable
-private fun FactCard(
-    fact: FunFact,
-    onOpenEntry: (String) -> Unit,
-    onOpenEncyclopedia: () -> Unit,
-    onClose: () -> Unit,
-) {
-    SoftCard(
-        color = Fresh.Pastel,
-        onClick = { onOpenEntry(fact.entry.id) },
-        modifier = Modifier.padding(top = 14.dp),
+private fun EventCard(line: String, onShuffle: () -> Unit, modifier: Modifier) {
+    Box(
+        contentAlignment = Alignment.CenterStart,
+        modifier = modifier
+            .clip(RoundedCornerShape(24.dp))
+            .background(Fresh.Pastel)
+            .clickable(onClickLabel = "Show another", onClick = onShuffle)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("🌵  Did you know?", style = MaterialTheme.typography.titleMedium, color = Fresh.GreenDeep, modifier = Modifier.weight(1f))
-            Pill(
-                text = "Encyclopedia",
-                color = Fresh.Page,
-                textColor = Fresh.GreenDeep,
-                modifier = Modifier.clickable(onClick = onOpenEncyclopedia),
-            )
-            Spacer(Modifier.width(6.dp))
-            RoundButton(
-                glyph = "×",
-                onClick = onClose,
-                container = Fresh.Page,
-                content = Fresh.GreenDeep,
-                size = 32.dp,
-                description = "Close fun fact",
-            )
-        }
-        Spacer(Modifier.height(10.dp))
-        Text(fact.text, style = MaterialTheme.typography.bodyLarge, color = Fresh.GreenDeep)
-        Spacer(Modifier.height(8.dp))
-        Text("${fact.entry.name} →", style = Label, color = Fresh.GreenDeep.copy(alpha = 0.75f))
+        Text(line, style = MaterialTheme.typography.bodyLarge, color = Fresh.GreenDeep, maxLines = 3, overflow = TextOverflow.Ellipsis)
     }
+}
+
+/** A plant fact, small and quiet. A tap shows another. */
+@Composable
+private fun FactLine(text: String, onShuffle: () -> Unit) {
+    Text(
+        text,
+        style = Small,
+        color = Fresh.InkSoft,
+        modifier = Modifier
+            .padding(top = 18.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClickLabel = "Show another fact", onClick = onShuffle)
+            .padding(horizontal = 4.dp, vertical = 6.dp),
+    )
 }
 
 /** The floating "+ Add plant" pill at the bottom centre. */

@@ -2,9 +2,9 @@ package dev.zakyymuh.timebox.ui.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dev.zakyymuh.timebox.core.collection.Dex
 import dev.zakyymuh.timebox.core.plants.FunFact
 import dev.zakyymuh.timebox.core.plants.FunFacts
+import dev.zakyymuh.timebox.core.plants.PlantEvents
 import dev.zakyymuh.timebox.core.plants.StripDay
 import dev.zakyymuh.timebox.core.plants.WeekStrip
 import dev.zakyymuh.timebox.data.DexRepository
@@ -23,10 +23,11 @@ data class DashboardState(
     val date: LocalDate? = null,
     /** Three days back, today, three days ahead: what was watered and what is due. */
     val week: List<StripDay> = emptyList(),
-    val collection: String = "",
-    /** Up to three photos from the collection, newest number first, for the card. */
-    val thumbnails: List<String> = emptyList(),
-    /** "Did you know?" — null once closed. */
+    /** The newest owned photo, for the collection tile; null shows 🪴. */
+    val cover: String? = null,
+    /** A random line about a watering or the collection; null until anything has happened. */
+    val event: String? = null,
+    /** A plant fact from the encyclopedia; tapping it draws another. */
     val fact: FunFact? = null,
 )
 
@@ -34,34 +35,42 @@ class DashboardViewModel(
     private val plants: PlantRepository,
     private val dex: DexRepository,
     private val clock: Clock,
-    random: Random = Random.Default,
+    private val random: Random = Random.Default,
 ) : ViewModel() {
 
     private val todayDate = MutableStateFlow(LocalDate.now(clock))
 
-    /** Drawn once per ViewModel, i.e. once each time the app is opened. */
-    private val fact = MutableStateFlow<FunFact?>(FunFacts.random(random))
+    /** Drawn when the app opens; a tap draws again. */
+    private val fact = MutableStateFlow(FunFacts.random(random))
+
+    /** Which event line is showing. A new seed is a new random line. */
+    private val eventSeed = MutableStateFlow(random.nextInt())
 
     val state: StateFlow<DashboardState> = combine(
         plants.plantsFlow(),
         plants.wateringsFlow(),
         dex.entriesFlow(),
         todayDate,
-        fact,
-    ) { plantList, waterings, entries, date, shownFact ->
+        combine(fact, eventSeed, ::Pair),
+    ) { plantList, waterings, entries, date, (shownFact, seed) ->
         DashboardState(
             date = date,
             week = WeekStrip.of(plantList, waterings, date),
-            collection = Dex.summary(entries),
-            thumbnails = entries.filter { it.owned && it.photo != null }.sortedByDescending { it.number }
-                .take(3).mapNotNull { it.photo },
+            cover = entries.filter { it.owned && it.photo != null }.maxByOrNull { it.number }?.photo,
+            event = PlantEvents.random(plantList, waterings, entries, date, Random(seed)),
             fact = shownFact,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardState())
 
-    /** Hides the fun fact until the app is next opened. */
-    fun closeFact() {
-        fact.value = null
+    /** Another fact, never the one already showing. */
+    fun shuffleFact() {
+        val shown = fact.value
+        fact.value = generateSequence { FunFacts.random(random) }.first { it != shown }
+    }
+
+    /** Another event line. */
+    fun shuffleEvent() {
+        eventSeed.value = random.nextInt()
     }
 
     /** Re-reads today, for when the app comes back after midnight. */
