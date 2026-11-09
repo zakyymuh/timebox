@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed-icon layer (Android 13+): the same motorcycle in one colour; the system tints it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Scaled down about the centre so the wheels stay inside the safe circle. -->
+    <group android:pivotX="54" android:pivotY="54" android:scaleX="0.82" android:scaleY="0.82" android:translateY="-3">
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="5" android:fillColor="#00000000"
+        android:pathData="M34,53 a11,11 0 1,0 0.01,0 Z" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="5" android:fillColor="#00000000"
+        android:pathData="M74,53 a11,11 0 1,0 0.01,0 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M34,61.5 a2.5,2.5 0 1,0 0.01,0 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M74,61.5 a2.5,2.5 0 1,0 0.01,0 Z" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="4" android:strokeLineCap="round"
+        android:fillColor="#00000000" android:pathData="M34,64 L48,56" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="4" android:strokeLineCap="round"
+        android:fillColor="#00000000" android:pathData="M74,64 L66,41" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="4" android:strokeLineCap="round"
+        android:fillColor="#00000000" android:pathData="M62,40 L70,38" />
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M44,49 Q54,40 66,45 L64,57 L50,59 Z" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="5" android:strokeLineCap="round"
+        android:fillColor="#00000000" android:pathData="M32,47 L46,47" />
+    </group>
+</vector>

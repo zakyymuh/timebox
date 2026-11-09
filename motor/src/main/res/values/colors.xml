@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fresh.Pastel, behind the launcher icon. -->
+    <color name="ic_launcher_background">#CDEBD5</color>
+</resources>
