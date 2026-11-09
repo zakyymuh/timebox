@@ -16,7 +16,17 @@ sealed interface DayMark {
 
 data class DayPlant(val plant: Plant, val mark: DayMark)
 
-data class StripDay(val date: LocalDate, val plants: List<DayPlant>)
+/** A day pill's border: solid green once watered, light green while a plant is still to do. */
+enum class DayBorder { Watered, ToDo, None }
+
+data class StripDay(val date: LocalDate, val plants: List<DayPlant>) {
+    val border: DayBorder
+        get() = when {
+            plants.any { it.mark == DayMark.Watered } -> DayBorder.Watered
+            plants.isNotEmpty() -> DayBorder.ToDo
+            else -> DayBorder.None
+        }
+}
 
 /**
  * The dashboard's week: three days back, today, three days ahead. The past shows what was

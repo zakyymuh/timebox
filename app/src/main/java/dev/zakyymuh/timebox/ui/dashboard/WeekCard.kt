@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import dev.zakyymuh.timebox.core.plants.DayBorder
 import dev.zakyymuh.timebox.core.plants.DayMark
 import dev.zakyymuh.timebox.core.plants.PlantCopy
 import dev.zakyymuh.timebox.core.plants.StripDay
@@ -50,7 +51,7 @@ import java.time.format.DateTimeFormatter
 private val Today = Color(0xFFB98AEB)
 private val dayName = DateTimeFormatter.ofPattern("EEE")
 private val dayHeading = DateTimeFormatter.ofPattern("EEEE d MMMM")
-private const val MAX_DOTS = 3
+private val RING = 5.dp
 private val CARD_PADDING = 20.dp
 private val GAP = 8.dp
 
@@ -106,36 +107,37 @@ private fun DayPills(week: List<StripDay>, today: LocalDate, selected: LocalDate
     }
 }
 
+/**
+ * Day name on top, the date in a white circle at the bottom. The circle sits [RING] in
+ * from the sides and the bottom, so it shares a centre with the pill's round end and the
+ * ring around it is even. The border tells the watering: solid green once watered, light
+ * green while a plant is still to do. A selected day's border is thicker.
+ */
 @Composable
 private fun DayPill(day: StripDay, isToday: Boolean, isSelected: Boolean, width: Dp, onClick: () -> Unit) {
     val shape = RoundedCornerShape(percent = 50)
+    val border = when (day.border) {
+        DayBorder.Watered -> Fresh.Green
+        DayBorder.ToDo -> Fresh.Green.copy(alpha = 0.45f)
+        DayBorder.None -> if (isSelected && !isToday) Fresh.Ink else Color.White
+    }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .width(width)
             .clip(shape)
             .background(if (isToday) Today else Fresh.Card)
-            .border(2.dp, if (isSelected && !isToday) Fresh.Ink else Color.White, shape)
+            .border(if (isSelected) 3.5.dp else 2.dp, border, shape)
             .clickable(role = Role.Tab, onClickLabel = day.date.format(dayHeading), onClick = onClick)
-            .padding(top = 14.dp, bottom = 10.dp),
+            .padding(top = 14.dp, bottom = RING),
     ) {
         Text(day.date.format(dayName), style = Label, color = if (isToday) Color.White else Fresh.InkSoft, maxLines = 1)
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(width - 10.dp).clip(CircleShape).background(Color.White),
+            modifier = Modifier.size(width - RING * 2).clip(CircleShape).background(Color.White),
         ) {
             Text(day.date.dayOfMonth.toString(), style = MaterialTheme.typography.titleMedium, color = Fresh.Ink)
-        }
-        Spacer(Modifier.height(8.dp))
-        // One dot per plant: solid for a logged watering, hollow for one still to do.
-        Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.height(8.dp)) {
-            day.plants.take(MAX_DOTS).forEach {
-                PlantDot(it.plant.colour, size = 7.dp, hollow = it.mark != DayMark.Watered)
-            }
-            if (day.plants.size > MAX_DOTS) {
-                Box(Modifier.size(7.dp).background(Fresh.InkSoft, CircleShape))
-            }
         }
     }
 }

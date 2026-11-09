@@ -113,4 +113,17 @@ class WeekStripTest {
         assertEquals("Nothing due", PlantCopy.emptyDay(today, today))
         assertEquals("Nothing due", PlantCopy.emptyDay(d(13), today))
     }
+
+    @Test
+    fun `a day's border - watered beats to do, and an empty day has none`() {
+        val basil = plant(1, "Basil", every = 7, anchor = d(4)) // due today
+        val fern = plant(2, "Fern", every = 30, anchor = d(1))
+        val days = strip(listOf(basil, fern), listOf(Watering(1, 2, d(9))))
+        assertEquals(DayBorder.Watered, days[1].border)
+        assertEquals(DayBorder.ToDo, days[3].border)
+        assertEquals(DayBorder.None, days[0].border)
+        val both = StripDay(today, listOf(DayPlant(basil, DayMark.Watered), DayPlant(basil, DayMark.Due(0))))
+        assertEquals(DayBorder.Watered, both.border)
+        assertEquals(DayBorder.ToDo, StripDay(d(13), listOf(DayPlant(basil, DayMark.Coming))).border)
+    }
 }
