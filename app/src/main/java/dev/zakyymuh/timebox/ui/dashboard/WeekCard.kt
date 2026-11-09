@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -37,7 +36,6 @@ import dev.zakyymuh.timebox.core.plants.DayBorder
 import dev.zakyymuh.timebox.core.plants.DayMark
 import dev.zakyymuh.timebox.core.plants.PlantCopy
 import dev.zakyymuh.timebox.core.plants.StripDay
-import dev.zakyymuh.timebox.core.plants.WeekStrip
 import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.common.SoftCard
 import dev.zakyymuh.timebox.ui.plants.PlantDot
@@ -52,12 +50,11 @@ internal val Lilac = Color(0xFFB98AEB)
 private val dayName = DateTimeFormatter.ofPattern("EEE")
 private val dayHeading = DateTimeFormatter.ofPattern("EEEE d MMMM")
 private val RING = 5.dp
-private val CARD_PADDING = 20.dp
-private val GAP = 8.dp
+private val GAP = 4.dp
 
 /**
- * The plant schedule as a week: seven day pills with today in the middle, the outer two
- * cut in half by the card's edge. Tapping a pill lists that day's plants underneath;
+ * The plant schedule as a week: seven day pills with today in the middle, all inside
+ * the card. Tapping a pill lists that day's plants underneath;
  * tapping anywhere else opens the schedule.
  */
 @Composable
@@ -85,19 +82,13 @@ fun WeekCard(week: List<StripDay>, today: LocalDate, onOpen: () -> Unit) {
 }
 
 /**
- * Six pill-widths fill the card edge to edge, so the seven pills overhang by half a pill
- * on each side; the card's rounded clip does the cropping.
+ * All seven pills fit inside the card, a small gap apart.
  */
 @Composable
 private fun DayPills(week: List<StripDay>, today: LocalDate, selected: LocalDate, onSelect: (LocalDate) -> Unit) {
     BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        val cardWidth = maxWidth + CARD_PADDING * 2
-        val visible = WeekStrip.SIDE * 2
-        val pill = (cardWidth - GAP * visible) / visible
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(GAP),
-            modifier = Modifier.requiredWidth(pill * week.size + GAP * (week.size - 1)),
-        ) {
+        val pill = (maxWidth - GAP * (week.size - 1)) / week.size.coerceAtLeast(1)
+        Row(horizontalArrangement = Arrangement.spacedBy(GAP), modifier = Modifier.fillMaxWidth()) {
             week.forEach { day ->
                 DayPill(day, isToday = day.date == today, isSelected = day.date == selected, width = pill) {
                     onSelect(day.date)
