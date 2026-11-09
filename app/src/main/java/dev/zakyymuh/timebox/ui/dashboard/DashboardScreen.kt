@@ -41,6 +41,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.ui.collection.DexPhoto
 import dev.zakyymuh.timebox.ui.theme.Fresh
 import dev.zakyymuh.timebox.ui.theme.Label
+import dev.zakyymuh.timebox.core.plants.WateringMonth
+import dev.zakyymuh.timebox.ui.common.SoftCard
+import dev.zakyymuh.timebox.ui.plants.PlantDot
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 private val heading = DateTimeFormatter.ofPattern("EEEE d MMMM")
@@ -91,6 +95,8 @@ fun DashboardScreen(
                 Spacer(Modifier.width(14.dp))
                 EventTile(state.event, onOpenHistory, Modifier.weight(1f))
             }
+
+            state.date?.let { date -> state.month?.let { MonthCard(it, date, onOpenHistory) } }
 
             state.fact?.let { FactLine(it.text, viewModel::shuffleFact) }
             Spacer(Modifier.height(32.dp))
@@ -169,6 +175,54 @@ private fun EventTile(event: String?, onOpen: () -> Unit, modifier: Modifier) {
             modifier = Modifier.size(ICON).clip(CircleShape).background(Lilac.copy(alpha = 0.18f)),
         ) {
             Text("🕘", fontSize = 24.sp)
+        }
+    }
+}
+
+/** This month's watering: how many so far, against last month, and per plant. Opens the history. */
+@Composable
+private fun MonthCard(month: WateringMonth, today: LocalDate, onOpen: () -> Unit) {
+    SoftCard(
+        color = Fresh.Page,
+        corner = 32.dp,
+        onClick = onOpen,
+        modifier = Modifier
+            .padding(top = 14.dp)
+            .shadow(10.dp, RoundedCornerShape(32.dp), ambientColor = Fresh.Ink.copy(alpha = 0.08f), spotColor = Fresh.Ink.copy(alpha = 0.08f)),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(6.dp).background(Fresh.Green, CircleShape))
+            Spacer(Modifier.width(8.dp))
+            Text("💧 This month", style = Label, color = Fresh.InkSoft)
+        }
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                WateringMonth.headline(month),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = Fresh.Ink,
+                modifier = Modifier.weight(1f),
+            )
+            Text(WateringMonth.compare(month, today), style = Label, color = Fresh.InkSoft)
+        }
+        if (month.perPlant.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            month.perPlant.forEach { (plant, count) ->
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 3.dp)) {
+                    PlantDot(plant.colour, size = 10.dp)
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        plant.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Fresh.Ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text("×$count", style = Label, color = Fresh.InkSoft)
+                }
+            }
         }
     }
 }

@@ -6,6 +6,7 @@ import dev.zakyymuh.timebox.core.plants.FunFact
 import dev.zakyymuh.timebox.core.plants.FunFacts
 import dev.zakyymuh.timebox.core.plants.PlantEvents
 import dev.zakyymuh.timebox.core.plants.StripDay
+import dev.zakyymuh.timebox.core.plants.WateringMonth
 import dev.zakyymuh.timebox.core.plants.WeekStrip
 import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PlantRepository
@@ -23,6 +24,8 @@ data class DashboardState(
     val date: LocalDate? = null,
     /** Three days back, today, three days ahead: what was watered and what is due. */
     val week: List<StripDay> = emptyList(),
+    /** How much watering this month, for the card under the tiles. */
+    val month: WateringMonth? = null,
     /** "3 plants" on the collection tile. */
     val owned: String = "",
     /** The newest owned photo, for the collection tile; null shows 🪴. */
@@ -58,6 +61,7 @@ class DashboardViewModel(
         DashboardState(
             date = date,
             week = WeekStrip.of(plantList, waterings, date),
+            month = WateringMonth.of(plantList, waterings, date),
             owned = entries.count { it.owned }.let { if (it == 1) "1 plant" else "$it plants" },
             cover = entries.filter { it.owned && it.photo != null }.maxByOrNull { it.number }?.photo,
             event = PlantEvents.random(plantList, waterings, entries, date, Random(eventSeed)),
