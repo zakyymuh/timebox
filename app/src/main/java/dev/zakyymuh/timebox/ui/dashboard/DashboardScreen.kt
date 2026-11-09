@@ -3,6 +3,15 @@ package dev.zakyymuh.timebox.ui.dashboard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import dev.zakyymuh.timebox.core.plants.Plant
+import dev.zakyymuh.timebox.ui.plants.PlantDot
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -67,7 +76,15 @@ fun DashboardScreen(
 
     Scaffold(
         containerColor = Fresh.Page,
-        floatingActionButton = { AddPlantButton(onAddPlant) },
+        floatingActionButton = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (state.plants.isNotEmpty()) {
+                    DeletePlantButton(state.plants, viewModel::deletePlant)
+                    Spacer(Modifier.width(10.dp))
+                }
+                AddPlantButton(onAddPlant)
+            }
+        },
         floatingActionButtonPosition = FabPosition.Center,
     ) { insets ->
         Column(
@@ -150,6 +167,67 @@ private fun FactLine(text: String, onShuffle: () -> Unit) {
             .clickable(onClickLabel = "Show another fact", onClick = onShuffle)
             .padding(horizontal = 4.dp, vertical = 6.dp),
     )
+}
+
+/**
+ * The round bin beside Add plant: pick a plant, then the same "Delete Basil?" confirm as
+ * the edit screen.
+ */
+@Composable
+private fun DeletePlantButton(plants: List<Plant>, onDelete: (Long) -> Unit) {
+    var picking by remember { mutableStateOf(false) }
+    var chosen by remember { mutableStateOf<Plant?>(null) }
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .shadow(12.dp, CircleShape, ambientColor = Fresh.Ink.copy(alpha = 0.2f), spotColor = Fresh.Ink.copy(alpha = 0.2f))
+            .size(56.dp)
+            .clip(CircleShape)
+            .background(Fresh.Page)
+            .clickable(role = Role.Button, onClickLabel = "Delete a plant") { picking = true }
+            .semantics { contentDescription = "Delete a plant" },
+    ) {
+        Text("🗑", fontSize = 20.sp)
+    }
+
+    if (picking) {
+        AlertDialog(
+            onDismissRequest = { picking = false },
+            title = { Text("Delete which plant?") },
+            text = {
+                Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
+                    plants.forEach { plant ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { picking = false; chosen = plant }
+                                .padding(horizontal = 8.dp, vertical = 12.dp),
+                        ) {
+                            PlantDot(plant.colour, size = 12.dp)
+                            Spacer(Modifier.width(12.dp))
+                            Text(plant.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { picking = false }) { Text("Cancel") } },
+        )
+    }
+
+    chosen?.let { plant ->
+        AlertDialog(
+            onDismissRequest = { chosen = null },
+            title = { Text("Delete ${plant.name.trim()}?") },
+            text = { Text("Its watering history goes too. This can't be undone.") },
+            confirmButton = {
+                TextButton(onClick = { chosen = null; onDelete(plant.id) }) { Text("Delete", color = Fresh.Error) }
+            },
+            dismissButton = { TextButton(onClick = { chosen = null }) { Text("Cancel") } },
+        )
+    }
 }
 
 /** The floating "+ Add plant" pill at the bottom centre. */

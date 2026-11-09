@@ -139,4 +139,24 @@ class DashboardViewModelTest {
         assertEquals(listOf("Basil" to DayMark.Coming), on(9))
         assertEquals(listOf("Aloe" to DayMark.Coming), on(10))
     }
+
+    @Test
+    fun `the delete list has every plant, by name`() = runBlocking {
+        plant("Greenovia", everyDays = 4, lastWatered = d(7))
+        plant("Aloe", everyDays = 3, lastWatered = d(4))
+        val state = vm().await { it.plants.size == 2 }
+        assertEquals(listOf("Aloe", "Greenovia"), state.plants.map { it.name })
+    }
+
+    @Test
+    fun `deleting a plant from the dashboard removes it`() = runBlocking {
+        val aloe = plant("Aloe", everyDays = 3, lastWatered = d(4))
+        plant("Basil", everyDays = 2, lastWatered = d(7))
+        val model = vm()
+        model.await { it.plants.size == 2 }
+        model.deletePlant(aloe)
+        val state = model.await { it.plants.size == 1 }
+        assertEquals(listOf("Basil"), state.plants.map { it.name })
+        assertTrue(state.week.none { day -> day.plants.any { it.plant.name == "Aloe" } })
+    }
 }
