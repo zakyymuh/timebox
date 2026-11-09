@@ -3,6 +3,8 @@ package dev.zakyymuh.timebox.ui.dashboard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.shadow
@@ -118,19 +120,21 @@ private fun Tile(
     description: String,
     modifier: Modifier,
     titleStyle: TextStyle = MaterialTheme.typography.titleLarge,
+    backdrop: @Composable BoxScope.() -> Unit = {},
     icon: @Composable () -> Unit,
 ) {
     val shape = RoundedCornerShape(32.dp)
-    Column(
+    Box(
         modifier = modifier
             .aspectRatio(1f)
             .shadow(10.dp, shape, ambientColor = Fresh.Ink.copy(alpha = 0.08f), spotColor = Fresh.Ink.copy(alpha = 0.08f))
             .clip(shape)
             .background(color)
             .clickable(role = Role.Button, onClickLabel = description, onClick = onClick)
-            .semantics(mergeDescendants = true) { contentDescription = description }
-            .padding(18.dp),
+            .semantics(mergeDescendants = true) { contentDescription = description },
     ) {
+        backdrop()
+        Column(Modifier.matchParentSize().padding(18.dp)) {
         icon()
         Spacer(Modifier.weight(1f))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -140,19 +144,34 @@ private fun Tile(
         }
         Spacer(Modifier.height(4.dp))
         Text(title, style = titleStyle, fontWeight = FontWeight.Bold, color = ink, maxLines = 3, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 
-/** The way into the collection: the newest photo (or 🪴) and how many plants. */
+/**
+ * The way into the collection: a random photo from it fills the tile (new each open),
+ * darkened at the bottom so the white text reads. Lilac until there is a photo.
+ */
 @Composable
 private fun CollectionTile(cover: String?, owned: String, onOpen: () -> Unit, modifier: Modifier) {
-    Tile(Lilac, Color.White, owned, "Collection", onOpen, "Open collection", modifier) {
+    Tile(
+        Lilac, Color.White, owned, "Collection", onOpen, "Open collection", modifier,
+        backdrop = {
+            if (cover != null) {
+                DexPhoto(cover, Modifier.matchParentSize(), side = 480)
+                Box(
+                    Modifier.matchParentSize().background(
+                        Brush.verticalGradient(0.35f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.6f)),
+                    ),
+                )
+            }
+        },
+    ) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier.size(ICON).clip(CircleShape).background(Color.White),
         ) {
-            if (cover == null) Text("🪴", fontSize = 26.sp)
-            else DexPhoto(cover, Modifier.size(ICON), side = 160)
+            Text("🪴", fontSize = 26.sp)
         }
     }
 }

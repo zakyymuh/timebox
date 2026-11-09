@@ -28,7 +28,7 @@ data class DashboardState(
     val month: WateringMonth? = null,
     /** "3 plants" on the collection tile. */
     val owned: String = "",
-    /** The newest owned photo, for the collection tile; null shows 🪴. */
+    /** A random owned photo, the collection tile's background; null keeps it lilac. */
     val cover: String? = null,
     /** A random line about a watering or the collection, new each time the app opens; null until anything has happened. */
     val event: String? = null,
@@ -51,6 +51,9 @@ class DashboardViewModel(
     /** Which event line shows: drawn once, so it is new each time the app opens. */
     private val eventSeed = random.nextInt()
 
+    /** Which photo is the collection tile's background: drawn once, so it changes each open. */
+    private val coverSeed = random.nextInt()
+
     val state: StateFlow<DashboardState> = combine(
         plants.plantsFlow(),
         plants.wateringsFlow(),
@@ -63,7 +66,8 @@ class DashboardViewModel(
             week = WeekStrip.of(plantList, waterings, date),
             month = WateringMonth.of(plantList, waterings, date),
             owned = entries.count { it.owned }.let { if (it == 1) "1 plant" else "$it plants" },
-            cover = entries.filter { it.owned && it.photo != null }.maxByOrNull { it.number }?.photo,
+            cover = entries.filter { it.owned && it.photo != null }.sortedBy { it.number }
+                .let { photos -> photos.getOrNull(Math.floorMod(coverSeed, photos.size.coerceAtLeast(1)))?.photo },
             event = PlantEvents.random(plantList, waterings, entries, date, Random(eventSeed)),
             fact = shownFact,
         )

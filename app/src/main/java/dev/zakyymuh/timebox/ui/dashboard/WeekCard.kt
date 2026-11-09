@@ -47,6 +47,9 @@ import java.time.format.DateTimeFormatter
 
 /** Today's pill and the collection tile, as in the owner's references. */
 internal val Lilac = Color(0xFFB98AEB)
+
+/** A day with a watering logged. */
+private val WateredBlue = Color(0xFFCFE6FF)
 private val dayName = DateTimeFormatter.ofPattern("EEE")
 private val dayHeading = DateTimeFormatter.ofPattern("EEEE d MMMM")
 private val RING = 5.dp
@@ -101,23 +104,30 @@ private fun DayPills(week: List<StripDay>, today: LocalDate, selected: LocalDate
 /**
  * Day name on top, the date in a white circle at the bottom. The circle sits [RING] in
  * from the sides and the bottom, so it shares a centre with the pill's round end and the
- * ring around it is even. The border tells the watering: solid green once watered, light
- * green while a plant is still to do. A selected day's border is thicker.
+ * ring around it is even. A watered day is light blue; a day with a plant still to do has
+ * a light green border. A selected day's border is thicker.
  */
 @Composable
 private fun DayPill(day: StripDay, isToday: Boolean, isSelected: Boolean, width: Dp, onClick: () -> Unit) {
     val shape = RoundedCornerShape(percent = 50)
-    val border = when (day.border) {
-        DayBorder.Watered -> Fresh.Green
-        DayBorder.ToDo -> Fresh.Green.copy(alpha = 0.45f)
-        DayBorder.None -> if (isSelected && !isToday) Fresh.Ink else Color.White
+    val watered = day.border == DayBorder.Watered
+    val border = when {
+        day.border == DayBorder.ToDo -> Fresh.Green.copy(alpha = 0.45f)
+        isSelected && !isToday -> Fresh.Ink
+        else -> Color.White
+    }
+    // Today stays lilac so it is easy to find; when watered, its date circle turns blue.
+    val fill = when {
+        isToday -> Lilac
+        watered -> WateredBlue
+        else -> Fresh.Card
     }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .width(width)
             .clip(shape)
-            .background(if (isToday) Lilac else Fresh.Card)
+            .background(fill)
             .border(if (isSelected) 3.5.dp else 2.dp, border, shape)
             .clickable(role = Role.Tab, onClickLabel = day.date.format(dayHeading), onClick = onClick)
             .padding(top = 14.dp, bottom = RING),
@@ -126,7 +136,8 @@ private fun DayPill(day: StripDay, isToday: Boolean, isSelected: Boolean, width:
         Spacer(Modifier.height(10.dp))
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(width - RING * 2).clip(CircleShape).background(Color.White),
+            modifier = Modifier.size(width - RING * 2).clip(CircleShape)
+                .background(if (isToday && watered) WateredBlue else Color.White),
         ) {
             Text(day.date.dayOfMonth.toString(), style = MaterialTheme.typography.titleMedium, color = Fresh.Ink)
         }

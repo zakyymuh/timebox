@@ -16,7 +16,7 @@ sealed interface DayMark {
 
 data class DayPlant(val plant: Plant, val mark: DayMark)
 
-/** A day pill's border: solid green once watered, light green while a plant is still to do. */
+/** How a day pill shows watering: light blue once watered, a light green border while a plant is still to do. */
 enum class DayBorder { Watered, ToDo, None }
 
 data class StripDay(val date: LocalDate, val plants: List<DayPlant>) {

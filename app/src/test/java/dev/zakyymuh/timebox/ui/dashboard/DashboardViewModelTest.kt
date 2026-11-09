@@ -66,11 +66,12 @@ class DashboardViewModelTest {
         withTimeout(5_000) { state.first(check) }
 
     @Test
-    fun `the collection tile shows the newest owned photo`() = runBlocking {
+    fun `the collection tile shows a random owned photo, never a wish`() = runBlocking {
         dex.add(DexForm("Greenovia"), owned = true, photo = "g.jpg")
         dex.add(DexForm("Variegata"), owned = false, photo = "v.jpg")
         dex.add(DexForm("Aloe"), owned = true, photo = "a.jpg")
-        assertEquals("a.jpg", vm().await { it.cover != null }.cover)
+        val covers = (1..12).map { seed -> vm(Random(seed)).await { it.cover != null }.cover }.toSet()
+        assertEquals(setOf("g.jpg", "a.jpg"), covers)
     }
 
     @Test
