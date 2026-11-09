@@ -86,7 +86,6 @@ fun AppNav(start: String?) {
                 viewModel = vm,
                 onOpenPlants = { entry.ifResumed { nav.go(Destinations.PLANTS) } },
                 onOpenCollection = { entry.ifResumed { nav.go(Destinations.COLLECTION) } },
-                onAddPlant = { entry.ifResumed { nav.go(Destinations.edit(0)) } },
             )
         }
 

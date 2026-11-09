@@ -3,15 +3,6 @@ package dev.zakyymuh.timebox.ui.dashboard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import dev.zakyymuh.timebox.core.plants.Plant
-import dev.zakyymuh.timebox.ui.plants.PlantDot
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,7 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FabPosition
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -38,8 +28,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -57,15 +45,13 @@ private val TILE = 88.dp
 
 /**
  * The front door: a greeting, the plant schedule as a week, the collection beside a line
- * about something that happened, and a plant fact, with "Add plant" floating at the
- * bottom centre.
+ * about something that happened, and a plant fact.
  */
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel,
     onOpenPlants: () -> Unit,
     onOpenCollection: () -> Unit,
-    onAddPlant: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -76,16 +62,6 @@ fun DashboardScreen(
 
     Scaffold(
         containerColor = Fresh.Page,
-        floatingActionButton = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (state.plants.isNotEmpty()) {
-                    DeletePlantButton(state.plants, viewModel::deletePlant)
-                    Spacer(Modifier.width(10.dp))
-                }
-                AddPlantButton(onAddPlant)
-            }
-        },
-        floatingActionButtonPosition = FabPosition.Center,
     ) { insets ->
         Column(
             modifier = Modifier
@@ -114,8 +90,7 @@ fun DashboardScreen(
             }
 
             state.fact?.let { FactLine(it.text, viewModel::shuffleFact) }
-            // Room for the floating button, so the last card can scroll clear of it.
-            Spacer(Modifier.height(96.dp))
+            Spacer(Modifier.height(32.dp))
         }
     }
 }
@@ -167,84 +142,4 @@ private fun FactLine(text: String, onShuffle: () -> Unit) {
             .clickable(onClickLabel = "Show another fact", onClick = onShuffle)
             .padding(horizontal = 4.dp, vertical = 6.dp),
     )
-}
-
-/**
- * The round bin beside Add plant: pick a plant, then the same "Delete Basil?" confirm as
- * the edit screen.
- */
-@Composable
-private fun DeletePlantButton(plants: List<Plant>, onDelete: (Long) -> Unit) {
-    var picking by remember { mutableStateOf(false) }
-    var chosen by remember { mutableStateOf<Plant?>(null) }
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .shadow(12.dp, CircleShape, ambientColor = Fresh.Ink.copy(alpha = 0.2f), spotColor = Fresh.Ink.copy(alpha = 0.2f))
-            .size(56.dp)
-            .clip(CircleShape)
-            .background(Fresh.Page)
-            .clickable(role = Role.Button, onClickLabel = "Delete a plant") { picking = true }
-            .semantics { contentDescription = "Delete a plant" },
-    ) {
-        Text("🗑", fontSize = 20.sp)
-    }
-
-    if (picking) {
-        AlertDialog(
-            onDismissRequest = { picking = false },
-            title = { Text("Delete which plant?") },
-            text = {
-                Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
-                    plants.forEach { plant ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable { picking = false; chosen = plant }
-                                .padding(horizontal = 8.dp, vertical = 12.dp),
-                        ) {
-                            PlantDot(plant.colour, size = 12.dp)
-                            Spacer(Modifier.width(12.dp))
-                            Text(plant.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = { TextButton(onClick = { picking = false }) { Text("Cancel") } },
-        )
-    }
-
-    chosen?.let { plant ->
-        AlertDialog(
-            onDismissRequest = { chosen = null },
-            title = { Text("Delete ${plant.name.trim()}?") },
-            text = { Text("Its watering history goes too. This can't be undone.") },
-            confirmButton = {
-                TextButton(onClick = { chosen = null; onDelete(plant.id) }) { Text("Delete", color = Fresh.Error) }
-            },
-            dismissButton = { TextButton(onClick = { chosen = null }) { Text("Cancel") } },
-        )
-    }
-}
-
-/** The floating "+ Add plant" pill at the bottom centre. */
-@Composable
-private fun AddPlantButton(onClick: () -> Unit) {
-    val shape = RoundedCornerShape(28.dp)
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .shadow(12.dp, shape, ambientColor = Fresh.Ink.copy(alpha = 0.2f), spotColor = Fresh.Ink.copy(alpha = 0.2f))
-            .clip(shape)
-            .background(Fresh.Ink)
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-    ) {
-        Text("+", style = MaterialTheme.typography.titleMedium, color = Color.White)
-        Spacer(Modifier.width(10.dp))
-        Text("Add plant", style = MaterialTheme.typography.titleMedium, color = Color.White)
-    }
 }

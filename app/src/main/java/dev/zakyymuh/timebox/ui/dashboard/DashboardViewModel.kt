@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.zakyymuh.timebox.core.plants.FunFact
 import dev.zakyymuh.timebox.core.plants.FunFacts
-import dev.zakyymuh.timebox.core.plants.Plant
 import dev.zakyymuh.timebox.core.plants.PlantEvents
 import dev.zakyymuh.timebox.core.plants.StripDay
 import dev.zakyymuh.timebox.core.plants.WeekStrip
@@ -15,7 +14,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.LocalDate
 import kotlin.random.Random
@@ -25,8 +23,6 @@ data class DashboardState(
     val date: LocalDate? = null,
     /** Three days back, today, three days ahead: what was watered and what is due. */
     val week: List<StripDay> = emptyList(),
-    /** Every plant by name, for the Delete button's list. */
-    val plants: List<Plant> = emptyList(),
     /** The newest owned photo, for the collection tile; null shows 🪴. */
     val cover: String? = null,
     /** A random line about a watering or the collection; null until anything has happened. */
@@ -60,7 +56,6 @@ class DashboardViewModel(
         DashboardState(
             date = date,
             week = WeekStrip.of(plantList, waterings, date),
-            plants = plantList.sortedBy { it.name.lowercase() },
             cover = entries.filter { it.owned && it.photo != null }.maxByOrNull { it.number }?.photo,
             event = PlantEvents.random(plantList, waterings, entries, date, Random(seed)),
             fact = shownFact,
@@ -71,11 +66,6 @@ class DashboardViewModel(
     fun shuffleFact() {
         val shown = fact.value
         fact.value = generateSequence { FunFacts.random(random) }.first { it != shown }
-    }
-
-    /** Deletes a plant and its watering history, after the screen has asked. */
-    fun deletePlant(id: Long) {
-        viewModelScope.launch { plants.delete(id) }
     }
 
     /** Another event line. */
