@@ -3,6 +3,7 @@ package dev.zakyymuh.timebox.ui.dashboard
 import androidx.room.Room
 import dev.zakyymuh.timebox.TestClock
 import dev.zakyymuh.timebox.core.collection.DexForm
+import dev.zakyymuh.timebox.core.plants.DayMark
 import dev.zakyymuh.timebox.core.plants.PlantColour
 import dev.zakyymuh.timebox.core.plants.PlantForm
 import dev.zakyymuh.timebox.core.plants.FunFacts
@@ -19,7 +20,6 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -107,25 +107,21 @@ class DashboardViewModelTest {
         ))
 
     @Test
-    fun `the next watering card shows the soonest plant`() = runBlocking {
-        plant("Greenovia", everyDays = 4, lastWatered = d(7)) // due the 11th
-        plant("Basil", everyDays = 2, lastWatered = d(7)) // due the 9th
-        val state = vm().await { it.nextWatering != null && it.date != null }
-        assertEquals("Basil", state.nextWatering?.plant?.name)
-        assertEquals(d(9), state.nextWatering?.nextDue)
-    }
-
-    @Test
-    fun `a plant due today comes before one coming up`() = runBlocking {
-        plant("Greenovia", everyDays = 4, lastWatered = d(7))
-        plant("Aloe", everyDays = 3, lastWatered = d(4)) // due today, the 7th
-        val state = vm().await { it.nextWatering != null && it.date != null }
-        assertEquals("Aloe", state.nextWatering?.plant?.name)
-    }
-
-    @Test
-    fun `no plants means no next watering card`() = runBlocking {
+    fun `the week runs from three days back to three days ahead`() = runBlocking {
         val state = vm().await { it.date != null }
-        assertNull(state.nextWatering)
+        assertEquals((4..10).map(::d), state.week.map { it.date })
+    }
+
+    @Test
+    fun `the week shows today's watering and what is coming`() = runBlocking {
+        val aloe = plant("Aloe", everyDays = 3, lastWatered = d(4)) // due today, the 7th
+        plant("Basil", everyDays = 2, lastWatered = d(7)) // due the 9th
+        plants.water(aloe)
+        val state = vm().await { s -> s.week.any { it.plants.isNotEmpty() } }
+        fun on(day: Int) = state.week.single { it.date == d(day) }.plants.map { it.plant.name to it.mark }
+        assertEquals(listOf("Aloe" to DayMark.Watered), on(7))
+        assertEquals(emptyList<Pair<String, DayMark>>(), on(8))
+        assertEquals(listOf("Basil" to DayMark.Coming), on(9))
+        assertEquals(listOf("Aloe" to DayMark.Coming), on(10))
     }
 }

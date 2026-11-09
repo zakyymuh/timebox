@@ -1,0 +1,116 @@
+package dev.zakyymuh.timebox.core.plants
+
+import org.junit.Assert.assertEquals
+import org.junit.Test
+import java.time.LocalDate
+
+class WeekStripTest {
+
+    private val today = LocalDate.of(2026, 11, 11)
+    private fun d(day: Int) = LocalDate.of(2026, 11, day)
+
+    private fun plant(id: Long, name: String, every: Int, anchor: LocalDate, snooze: LocalDate? = null) = Plant(
+        id = id, name = name, colour = PlantColour.MOSS,
+        recurrence = Recurrence.EveryDays(every), anchor = anchor, snoozedUntil = snooze,
+    )
+
+    private fun strip(plants: List<Plant>, waterings: List<Watering> = emptyList()) =
+        WeekStrip.of(plants, waterings, today)
+
+    private fun names(day: StripDay) = day.plants.map { it.plant.name to it.mark }
+
+    @Test
+    fun `seven days with today in the middle, in date order`() {
+        assertEquals((8..14).map(::d), strip(emptyList()).map { it.date })
+    }
+
+    @Test
+    fun `past days show the waterings that were logged`() {
+        val fern = plant(1, "Fern", every = 30, anchor = d(1))
+        val days = strip(listOf(fern), listOf(Watering(1, 1, d(9))))
+        assertEquals(listOf("Fern" to DayMark.Watered), names(days[1]))
+        assertEquals(emptyList<Pair<String, DayMark>>(), names(days[0]))
+    }
+
+    @Test
+    fun `waterings older than three days, or for deleted plants, are left out`() {
+        val fern = plant(1, "Fern", every = 30, anchor = d(1))
+        val days = strip(listOf(fern), listOf(Watering(1, 1, d(7)), Watering(2, 99, d(9))))
+        assertEquals(List(7) { emptyList<Pair<String, DayMark>>() }, days.map(::names))
+    }
+
+    @Test
+    fun `today shows overdue plants first, then plants due today`() {
+        val late = plant(1, "Aloe", every = 7, anchor = d(2)) // due the 9th
+        val now = plant(2, "Basil", every = 7, anchor = d(4)) // due the 11th
+        assertEquals(
+            listOf("Aloe" to DayMark.Due(2), "Basil" to DayMark.Due(0)),
+            names(strip(listOf(now, late))[3]),
+        )
+    }
+
+    @Test
+    fun `a plant watered today shows as watered, not due`() {
+        val basil = plant(1, "Basil", every = 7, anchor = d(4))
+        assertEquals(
+            listOf("Basil" to DayMark.Watered),
+            names(strip(listOf(basil), listOf(Watering(1, 1, today)))[3]),
+        )
+    }
+
+    @Test
+    fun `a repeating plant appears on every coming day it falls on`() {
+        val cress = plant(1, "Cress", every = 1, anchor = d(10)) // due today, then daily
+        val days = strip(listOf(cress))
+        assertEquals(listOf("Cress" to DayMark.Due(0)), names(days[3]))
+        (4..6).forEach { assertEquals(listOf("Cress" to DayMark.Coming), names(days[it])) }
+    }
+
+    @Test
+    fun `an overdue plant's next run counts from today`() {
+        val aloe = plant(1, "Aloe", every = 2, anchor = d(5)) // due the 7th, 4 days late
+        val days = strip(listOf(aloe))
+        assertEquals(listOf("Aloe" to DayMark.Due(4)), names(days[3]))
+        assertEquals(emptyList<Pair<String, DayMark>>(), names(days[4]))
+        assertEquals(listOf("Aloe" to DayMark.Coming), names(days[5]))
+    }
+
+    @Test
+    fun `a snoozed plant first shows on its snooze day`() {
+        val fig = plant(1, "Fig", every = 7, anchor = d(3), snooze = d(13)) // due the 10th, snoozed
+        val days = strip(listOf(fig))
+        assertEquals(emptyList<Pair<String, DayMark>>(), names(days[3]))
+        assertEquals(listOf("Fig" to DayMark.Coming), names(days[5]))
+    }
+
+    @Test
+    fun `a one-time plant shows once, and not at all once done`() {
+        val seed = Plant(1, "Seed", PlantColour.OCHRE, Recurrence.Once(d(13)), anchor = d(1))
+        assertEquals(listOf(0, 0, 0, 0, 0, 1, 0), strip(listOf(seed)).map { it.plants.size })
+        val done = strip(listOf(seed), listOf(Watering(1, 1, d(5))))
+        assertEquals(List(7) { 0 }, done.map { it.plants.size })
+    }
+
+    @Test
+    fun `coming plants are ordered by name`() {
+        val b = plant(1, "Bonsai", every = 7, anchor = d(5)) // due the 12th
+        val a = plant(2, "Agave", every = 7, anchor = d(5))
+        assertEquals(listOf("Agave", "Bonsai"), strip(listOf(b, a))[4].plants.map { it.plant.name })
+    }
+
+    @Test
+    fun `each mark has a short label for the day's list`() {
+        assertEquals("watered", PlantCopy.mark(DayMark.Watered))
+        assertEquals("due today", PlantCopy.mark(DayMark.Due(0)))
+        assertEquals("1 day late", PlantCopy.mark(DayMark.Due(1)))
+        assertEquals("3 days late", PlantCopy.mark(DayMark.Due(3)))
+        assertEquals("due", PlantCopy.mark(DayMark.Coming))
+    }
+
+    @Test
+    fun `an empty day says so, in the past and ahead`() {
+        assertEquals("Nothing watered", PlantCopy.emptyDay(d(9), today))
+        assertEquals("Nothing due", PlantCopy.emptyDay(today, today))
+        assertEquals("Nothing due", PlantCopy.emptyDay(d(13), today))
+    }
+}

@@ -45,15 +45,6 @@ class PlantsOverviewTest {
     }
 
     @Test
-    fun `dashboard copy`() {
-        assertEquals("No plants yet", PlantCopy.dashboard(overview()))
-        assertEquals("1 due today", PlantCopy.dashboard(overview(basil, monstera)))
-        assertEquals("2 due today", PlantCopy.dashboard(overview(basil, fern)))
-        assertEquals("Next: Monstera tomorrow", PlantCopy.dashboard(overview(monstera, snake)))
-        assertEquals("Next: Snake plant in 4 days", PlantCopy.dashboard(overview(snake)))
-    }
-
-    @Test
     fun `notification copy`() {
         assertNull(PlantCopy.notification(overview(monstera)))
         assertEquals("Basil needs water", PlantCopy.notification(overview(basil, monstera)))
