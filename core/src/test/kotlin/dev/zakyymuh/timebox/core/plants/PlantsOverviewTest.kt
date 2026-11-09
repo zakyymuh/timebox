@@ -45,13 +45,6 @@ class PlantsOverviewTest {
     }
 
     @Test
-    fun `notification copy`() {
-        assertNull(PlantCopy.notification(overview(monstera)))
-        assertEquals("Basil needs water", PlantCopy.notification(overview(basil, monstera)))
-        assertEquals("2 plants need water", PlantCopy.notification(overview(basil, fern)))
-    }
-
-    @Test
     fun `whenLabel copy`() {
         assertEquals("today", PlantCopy.whenLabel(PlantStatus.Due(0)))
         assertEquals("1 day late", PlantCopy.whenLabel(PlantStatus.Due(1)))

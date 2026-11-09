@@ -11,7 +11,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import dev.zakyymuh.timebox.ServiceLocator
-import dev.zakyymuh.timebox.core.plants.PlantCopy
+import dev.zakyymuh.timebox.core.plants.PlantNotices
 import dev.zakyymuh.timebox.core.soil.SampleStatus
 import dev.zakyymuh.timebox.ui.Destinations
 import kotlinx.coroutines.CoroutineScope
@@ -19,8 +19,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
- * Posts "Basil needs water" at 18:00 when anything is due or overdue, then schedules
- * tomorrow's check. Overdue plants keep being included every evening until watered.
+ * At 18:00 posts one "Basil needs water" per plant that is due or overdue, then schedules
+ * tomorrow's check. Overdue plants get one again every evening until watered.
  * Runs from a cold-started process, so it reaches storage through [ServiceLocator].
  */
 class PlantReceiver : BroadcastReceiver() {
@@ -37,12 +37,11 @@ class PlantReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val overview = ServiceLocator.plantRepository(appContext).overviewNow()
-                val text = PlantCopy.notification(overview)
-                    ?: if (forced) "No plants need water today" else null
-                // One plant due: offer "Watered" / "Still moist" right on the notification.
-                // Several: just open the app — bulk actions make watering the wrong one easy.
-                val only = overview.due.singleOrNull()?.plant?.id
-                if (text != null) notify(appContext, reminder, text, only)
+                val notices = PlantNotices.evening(overview)
+                // One notification per plant, each with its own buttons.
+                clearStale(appContext, notices.map { PlantNotices.notificationId(it.plantId) }.toSet())
+                notices.forEach { notify(appContext, reminder, it.title, it.plantId) }
+                if (notices.isEmpty() && forced) notify(appContext, reminder, "No plants need water today", null)
                 // Every 2 waterings since the last soil test: remind to re-check the sample.
                 val soil = ServiceLocator.soilRepository(appContext).statusNow()
                 if (soil is SampleStatus.Due) notifySoil(appContext, reminder, soil)
@@ -58,7 +57,7 @@ class PlantReceiver : BroadcastReceiver() {
 
         val open = PendingIntent.getActivity(
             context,
-            EveningReminder.REQUEST_CODE,
+            plantId?.let(PlantNotices::openCode) ?: EveningReminder.REQUEST_CODE,
             Destinations.intent(context, Destinations.PLANTS),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -70,13 +69,23 @@ class PlantReceiver : BroadcastReceiver() {
             .setContentIntent(open)
             .setAutoCancel(true)
         if (plantId != null) {
-            builder.addAction(0, "Watered", action(context, PlantActions.ACTION_WATER, plantId, REQUEST_WATER))
-            builder.addAction(0, "Still moist", action(context, PlantActions.ACTION_CHECK, plantId, REQUEST_CHECK))
+            builder.addAction(0, "Watered", action(context, PlantActions.ACTION_WATER, plantId, PlantNotices.waterCode(plantId)))
+            builder.addAction(0, "Still moist", action(context, PlantActions.ACTION_CHECK, plantId, PlantNotices.checkCode(plantId)))
         }
-        val notification = builder.build()
+        val id = plantId?.let(PlantNotices::notificationId) ?: EveningReminder.NOTIFICATION_ID
+        context.getSystemService(NotificationManager::class.java)?.notify(id, builder.build())
+    }
 
-        context.getSystemService(NotificationManager::class.java)
-            ?.notify(EveningReminder.NOTIFICATION_ID, notification)
+    /**
+     * Takes down last evening's plant notifications that no longer apply (watered since,
+     * snoozed, deleted) and the old single combined one, so only tonight's list shows.
+     */
+    private fun clearStale(context: Context, keep: Set<Int>) {
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        manager.cancel(EveningReminder.NOTIFICATION_ID)
+        manager.activeNotifications
+            .filter { it.id >= PlantNotices.notificationId(0) && it.id !in keep }
+            .forEach { manager.cancel(it.id) }
     }
 
     private fun notifySoil(context: Context, reminder: EveningReminder, status: SampleStatus.Due) {
@@ -115,8 +124,6 @@ class PlantReceiver : BroadcastReceiver() {
 
     companion object {
         const val EXTRA_FORCE = "force"
-        private const val REQUEST_WATER = 201
-        private const val REQUEST_CHECK = 202
         private const val REQUEST_SOIL = 203
         private const val SOIL_NOTIFICATION_ID = 3
     }

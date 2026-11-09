@@ -80,12 +80,6 @@ object PlantCopy {
     fun emptyDay(date: LocalDate, today: LocalDate): String =
         if (date.isBefore(today)) "Nothing watered" else "Nothing due"
 
-    fun notification(overview: PlantsOverview): String? = when (overview.due.size) {
-        0 -> null
-        1 -> "${overview.due.single().plant.name} needs water"
-        else -> "${overview.due.size} plants need water"
-    }
-
     fun lastWatered(date: LocalDate?, today: LocalDate): String {
         if (date == null) return "Not watered yet"
         return when (val days = java.time.temporal.ChronoUnit.DAYS.between(date, today).toInt()) {
