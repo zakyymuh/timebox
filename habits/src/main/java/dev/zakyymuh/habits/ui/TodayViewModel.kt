@@ -7,8 +7,8 @@ import dev.zakyymuh.timebox.core.DayList
 import dev.zakyymuh.timebox.core.DaySummaries
 import dev.zakyymuh.timebox.core.DaySummary
 import dev.zakyymuh.timebox.core.TodoItem
-import dev.zakyymuh.timebox.core.lastdone.Event
 import dev.zakyymuh.timebox.core.lastdone.LastDone
+import dev.zakyymuh.timebox.ui.lastdone.LastDoneUi
 import dev.zakyymuh.habits.data.TimeboxRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -41,15 +41,6 @@ data class DayUiState(
 ) {
     val isEmpty: Boolean get() = items.isEmpty()
 }
-
-/** The "last time I did …" card and sheet. */
-data class LastDoneUi(
-    /** Longest ago first. */
-    val events: List<Event> = emptyList(),
-    /** A random line about a random event; null until something has been logged. */
-    val fact: String? = null,
-    val today: LocalDate? = null,
-)
 
 class TodayViewModel(
     private val repo: TimeboxRepository,

@@ -90,6 +90,15 @@ class MigrationTest {
     }
 
     @Test
+    fun `the upgrade adds an empty chores table that works`() = runTest {
+        createVersion1(emptyList())
+        val current = open()
+        assertTrue(current.markDao().marks().isEmpty())
+        current.markDao().insert(MarkEntity(name = "SIM for car", at = Instant.EPOCH, vehicleId = null))
+        assertEquals(listOf("SIM for car"), current.markDao().marks().map { it.name })
+    }
+
+    @Test
     fun `an empty version 1 database gets no made-up vehicle`() = runTest {
         createVersion1(emptyList())
         val current = open()

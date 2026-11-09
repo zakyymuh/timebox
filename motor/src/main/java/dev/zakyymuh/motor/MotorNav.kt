@@ -18,6 +18,7 @@ import dev.zakyymuh.motor.ui.ExpiryEditScreen
 import dev.zakyymuh.motor.ui.ExpiryEditViewModel
 import dev.zakyymuh.motor.ui.ExpiryListViewModel
 import dev.zakyymuh.motor.ui.HomeScreen
+import dev.zakyymuh.motor.ui.LastTimeViewModel
 import dev.zakyymuh.motor.ui.ServiceEditScreen
 import dev.zakyymuh.motor.ui.ServiceEditViewModel
 import dev.zakyymuh.motor.ui.ServiceListScreen
@@ -75,9 +76,17 @@ fun MotorNav(onClose: () -> Unit) {
                     }
                 },
             )
+            val lastTime: LastTimeViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer {
+                        LastTimeViewModel(ServiceLocator.markRepository(context), ServiceLocator.vehicleRepository(context))
+                    }
+                },
+            )
             HomeScreen(
                 vehicles = vehicles,
                 expiries = expiries,
+                lastTime = lastTime,
                 photos = photos,
                 onBack = { entry.ifResumed(onClose) },
                 onAddVehicle = { entry.ifResumed { nav.go(vehicleEdit(0)) } },

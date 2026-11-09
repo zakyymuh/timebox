@@ -1,10 +1,11 @@
-package dev.zakyymuh.habits.ui
+package dev.zakyymuh.timebox.ui.lastdone
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -47,6 +48,15 @@ import dev.zakyymuh.timebox.ui.theme.Label
 import dev.zakyymuh.timebox.ui.theme.Small
 import java.time.LocalDate
 
+/** The "last time I did …" card and sheet. Daily and Motor both show them. */
+data class LastDoneUi(
+    /** Longest ago first. */
+    val events: List<Event> = emptyList(),
+    /** A random line about a random event; null until something has been logged. */
+    val fact: String? = null,
+    val today: LocalDate? = null,
+)
+
 /**
  * A random line about something logged in "Last time" — "Your last “laundry” was 7 days
  * ago." Tap the line for another; tap "Last time ›" to log or look things up.
@@ -57,6 +67,8 @@ fun FunFactCard(
     tracked: Int,
     onShuffle: () -> Unit,
     onOpen: () -> Unit,
+    /** What the card says before anything is logged. */
+    intro: String = "Keep track of when you last did things — laundry, a haircut, new bedsheets.",
 ) {
     Column(
         modifier = Modifier
@@ -86,7 +98,7 @@ fun FunFactCard(
         }
         Spacer(Modifier.height(8.dp))
         Text(
-            text = fact ?: "Keep track of when you last did things — laundry, a haircut, new bedsheets.",
+            text = fact ?: intro,
             style = MaterialTheme.typography.bodyLarge,
             color = if (fact == null) Fresh.InkSoft else Fresh.Ink,
         )
@@ -104,6 +116,12 @@ fun LastTimeSheet(
     onDidIt: (String) -> Unit,
     onUndo: (String) -> Unit,
     onDismiss: () -> Unit,
+    /** "Did it" on a row already in the list; by default it logs that name again. */
+    onAgain: (Event) -> Unit = { onDidIt(it.name) },
+    /** The text field's placeholder. */
+    prompt: String = "What did you just do?",
+    /** Shown under the text field, for choices about what is logged — Motor's vehicle. */
+    options: @Composable ColumnScope.() -> Unit = {},
 ) {
     var draft by remember { mutableStateOf("") }
     val haptics = LocalHapticFeedback.current
@@ -112,6 +130,11 @@ fun LastTimeSheet(
         if (name.isBlank()) return
         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
         onDidIt(name)
+    }
+
+    fun again(event: Event) {
+        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        onAgain(event)
     }
 
     ModalBottomSheet(
@@ -149,7 +172,7 @@ fun LastTimeSheet(
                         .padding(horizontal = 18.dp, vertical = 16.dp),
                 ) {
                     if (draft.isEmpty()) {
-                        Text("What did you just do?", style = MaterialTheme.typography.bodyLarge, color = Fresh.InkSoft)
+                        Text(prompt, style = MaterialTheme.typography.bodyLarge, color = Fresh.InkSoft)
                     }
                     BasicTextField(
                         value = draft,
@@ -178,6 +201,7 @@ fun LastTimeSheet(
                 color = Fresh.InkSoft,
                 modifier = Modifier.padding(top = 8.dp, start = 4.dp),
             )
+            options()
 
             Spacer(Modifier.height(16.dp))
 
@@ -193,7 +217,7 @@ fun LastTimeSheet(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     items(ui.events, key = { it.key }) { event ->
-                        EventRow(event, ui.today, onDidIt = { log(event.name) }, onUndo = { onUndo(event.key) })
+                        EventRow(event, ui.today, onDidIt = { again(event) }, onUndo = { onUndo(event.key) })
                     }
                 }
             }

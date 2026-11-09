@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import dev.zakyymuh.motor.data.ExpiryRepository
 import dev.zakyymuh.motor.data.MIGRATIONS
+import dev.zakyymuh.motor.data.MarkRepository
 import dev.zakyymuh.motor.data.MotorDatabase
 import dev.zakyymuh.motor.data.PhotoStore
 import dev.zakyymuh.motor.data.ReminderRepository
@@ -36,6 +37,8 @@ object ServiceLocator {
 
     fun reminderRepository(context: Context) =
         ReminderRepository(db(context).reminderDao(), expiryRepository(context), vehicleRepository(context), clock)
+
+    fun markRepository(context: Context) = MarkRepository(db(context).markDao(), vehicleRepository(context), clock)
 
     fun photoStore(context: Context) = PhotoStore(context.applicationContext)
 }
