@@ -14,8 +14,17 @@ data class TodoItem(
     val position: Int,
     val text: String,
     val doneAt: Instant? = null,
+    /** An emoji shown big on the item's card, or null for a plain card. */
+    val icon: String? = null,
+    /** A line or two of detail under the name, or null for none. */
+    val description: String? = null,
+    /** When "Working on it" was tapped; null if it never was. */
+    val startedAt: Instant? = null,
 ) {
     val isDone: Boolean get() = doneAt != null
+
+    /** Started and not yet finished. While true the card holds the screen until Done. */
+    val isWorking: Boolean get() = startedAt != null && doneAt == null
 }
 
 /**

@@ -205,6 +205,51 @@ class TimeboxRepositoryTest {
         assertFalse(repo.todayNow().items.single().isDone)
     }
 
+    // ---- cards ------------------------------------------------------------------
+
+    @Test
+    fun `addItem keeps the icon and a trimmed description, and a blank description is none`() = runTest {
+        repo.addItem("Laundry", icon = "🧺", description = "  whites first ")
+        repo.addItem("Run", icon = "🏃", description = "   ")
+        val (laundry, run) = repo.todayNow().items
+        assertEquals("🧺", laundry.icon)
+        assertEquals("whites first", laundry.description)
+        assertEquals("🏃", run.icon)
+        assertNull(run.description)
+    }
+
+    @Test
+    fun `startWorking marks a card in progress, and Done finishes it`() = runTest {
+        repo.addItem("Laundry")
+        val id = repo.todayNow().items.single().id
+        assertTrue(repo.startWorking(id))
+        assertTrue(repo.todayNow().items.single().isWorking)
+
+        assertTrue(repo.setDone(id, true))
+        val done = repo.todayNow().items.single()
+        assertTrue(done.isDone)
+        assertFalse(done.isWorking)
+    }
+
+    @Test
+    fun `only one card can be in progress at a time`() = runTest {
+        repo.addItem("Laundry")
+        repo.addItem("Run")
+        val (a, b) = repo.todayNow().items.map { it.id }
+        assertTrue(repo.startWorking(a))
+        assertFalse(repo.startWorking(b))
+        assertEquals(listOf(true, false), repo.todayNow().items.map { it.isWorking })
+    }
+
+    @Test
+    fun `a finished card cannot be started again`() = runTest {
+        repo.addItem("Laundry")
+        val id = repo.todayNow().items.single().id
+        repo.setDone(id, true)
+        assertFalse(repo.startWorking(id))
+        assertFalse(repo.todayNow().items.single().isWorking)
+    }
+
     // ---- last time I did … -----------------------------------------------------
 
     @Test

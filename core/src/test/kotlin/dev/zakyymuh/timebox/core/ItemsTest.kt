@@ -114,6 +114,26 @@ class ItemsTest {
     }
 
     @Test
+    fun `templateFrom keeps each card's icon and description but not that it was being worked on`() {
+        val source = DayList(
+            yesterday, "x",
+            listOf(TodoItem(1, 0, "Laundry", icon = "🧺", description = "whites first", startedAt = now)),
+        )
+        val copy = Items.templateFrom(source, today).items.single()
+        assertEquals("🧺", copy.icon)
+        assertEquals("whites first", copy.description)
+        assertNull(copy.startedAt)
+        assertFalse(copy.isWorking)
+    }
+
+    @Test
+    fun `an item is being worked on only between starting and finishing`() {
+        assertFalse(TodoItem(1, 0, "a").isWorking)
+        assertTrue(TodoItem(1, 0, "a", startedAt = now).isWorking)
+        assertFalse(TodoItem(1, 0, "a", doneAt = now, startedAt = now).isWorking)
+    }
+
+    @Test
     fun `templateFrom clears ids so the copies save as new rows`() {
         val source = DayList(yesterday, "x", listOf(item(7, 0), item(9, 1)))
         assertTrue(Items.templateFrom(source, today).items.all { it.id == 0L })

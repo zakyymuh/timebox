@@ -26,6 +26,9 @@ data class TodoItemEntity(
     val position: Int,
     val text: String,
     val doneAt: Instant?,
+    val icon: String? = null,
+    val description: String? = null,
+    val startedAt: Instant? = null,
 )
 
 /**

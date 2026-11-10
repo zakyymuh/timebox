@@ -24,6 +24,13 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import kotlin.random.Random
 
+/** What is being typed into the add sheet: a name, an optional icon and description. */
+data class Draft(
+    val text: String = "",
+    val icon: String = CardIcons.default,
+    val description: String = "",
+)
+
 data class DayUiState(
     /** Null until the database answers, so nothing renders a placeholder date. */
     val date: LocalDate? = null,
@@ -35,7 +42,7 @@ data class DayUiState(
     val summary: DaySummary = DaySummary(0, 0),
     /** Earlier days with items, offered as one-tap starting points on an empty morning. */
     val templates: List<DayList> = emptyList(),
-    val draft: String = "",
+    val draft: Draft = Draft(),
     val hasEarlier: Boolean = false,
     val hasLater: Boolean = false,
 ) {
@@ -49,7 +56,7 @@ class TodayViewModel(
     /** The day being looked at. Starts on today and returns there on demand. */
     private val viewing = MutableStateFlow(repo.todayDate())
 
-    private val draft = MutableStateFlow("")
+    private val draft = MutableStateFlow(Draft())
     private val templates = MutableStateFlow<List<DayList>>(emptyList())
     private val neighbours = MutableStateFlow(Neighbours())
 
@@ -151,30 +158,38 @@ class TodayViewModel(
     }
 
     fun onDraftChanged(text: String) {
-        draft.value = text
+        draft.value = draft.value.copy(text = text)
     }
 
-    /** Commits the draft as a new item and clears the field, ready for the next one. */
+    fun onDraftIcon(icon: String) {
+        draft.value = draft.value.copy(icon = icon)
+    }
+
+    fun onDraftDescription(text: String) {
+        draft.value = draft.value.copy(description = text)
+    }
+
+    /**
+     * Commits the draft as a new card and clears the name and description, ready for the
+     * next one. The icon stays picked, since a run of similar tasks often shares one.
+     */
     fun addDraft() {
-        val text = draft.value
-        if (text.isBlank()) return
-        draft.value = ""
+        val d = draft.value
+        if (d.text.isBlank()) return
+        draft.value = d.copy(text = "", description = "")
         viewModelScope.launch {
-            repo.addItem(text)
+            repo.addItem(d.text, d.icon, d.description)
             refreshNeighbours()
         }
     }
 
-    fun toggle(itemId: Long) {
-        viewModelScope.launch { repo.toggle(itemId) }
+    /** "Working on it": the card turns dark and holds the screen until [finish]. */
+    fun startWorking(itemId: Long) {
+        viewModelScope.launch { repo.startWorking(itemId) }
     }
 
-    fun remove(itemId: Long) {
-        viewModelScope.launch { repo.remove(itemId) }
-    }
-
-    fun move(fromIndex: Int, toIndex: Int) {
-        viewModelScope.launch { repo.move(fromIndex, toIndex) }
+    fun finish(itemId: Long) {
+        viewModelScope.launch { repo.setDone(itemId, true) }
     }
 
     fun useTemplate(date: LocalDate) {

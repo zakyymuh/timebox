@@ -62,14 +62,27 @@ class TimeboxRepository(
         onChanged()
     }
 
-    suspend fun addItem(text: String) {
+    suspend fun addItem(text: String, icon: String? = null, description: String? = null) {
         if (text.isBlank()) return
         val date = today()
         val existing = dao.items(date)
         dao.upsertItems(
-            listOf(TodoItemEntity(0L, date, existing.size, text.trim(), null)),
+            listOf(
+                TodoItemEntity(
+                    0L, date, existing.size, text.trim(), null,
+                    icon = icon?.trim()?.ifEmpty { null },
+                    description = description?.trim()?.ifEmpty { null },
+                ),
+            ),
         )
         onChanged()
+    }
+
+    /** "Working on it". Returns false if refused; see [TimeboxDao.startWorking]. */
+    suspend fun startWorking(itemId: Long): Boolean {
+        val changed = dao.startWorking(itemId, clock.instant()) > 0
+        if (changed) onChanged()
+        return changed
     }
 
     suspend fun toggle(itemId: Long) {
@@ -152,7 +165,7 @@ class TimeboxRepository(
     }
 }
 
-private fun TodoItemEntity.toModel() = TodoItem(id, position, text, doneAt)
+private fun TodoItemEntity.toModel() = TodoItem(id, position, text, doneAt, icon, description, startedAt)
 
 private fun TodoItem.toEntity(date: LocalDate) =
-    TodoItemEntity(id, date, position, text, doneAt)
+    TodoItemEntity(id, date, position, text, doneAt, icon, description, startedAt)

@@ -56,10 +56,10 @@ class MigrationTest {
     }
 
     @Test
-    fun `a version 1 database upgrades to 2 with its lists kept and no marks`() = runTest {
+    fun `a version 1 database upgrades with its lists kept and no marks`() = runTest {
         createVersion1()
         val current = Room.databaseBuilder(context, HabitsDatabase::class.java, name)
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .allowMainThreadQueries()
             .build()
             .also { db = it }
@@ -67,5 +67,19 @@ class MigrationTest {
         assertEquals(listOf("cuci piring", "repotting", "beberes"), current.dao().items(day).map { it.text })
         assertEquals("tidy up", current.dao().day(day)?.note)
         assertTrue(current.dao().marksFlow().first().isEmpty())
+    }
+
+    @Test
+    fun `a version 1 database upgrades to 3 with every card plain and not in progress`() = runTest {
+        createVersion1()
+        val current = Room.databaseBuilder(context, HabitsDatabase::class.java, name)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .allowMainThreadQueries()
+            .build()
+            .also { db = it }
+
+        val items = current.dao().items(day)
+        assertEquals(listOf("cuci piring", "repotting", "beberes"), items.map { it.text })
+        assertTrue(items.all { it.icon == null && it.description == null && it.startedAt == null })
     }
 }

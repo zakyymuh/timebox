@@ -31,6 +31,22 @@ interface TimeboxDao {
     @Query("UPDATE todo_item SET doneAt = :at WHERE id = :id AND doneAt IS NULL")
     suspend fun markDone(id: Long, at: java.time.Instant): Int
 
+    /**
+     * "Working on it". Atomic, and refused if the item is finished, already started, or
+     * another item on its day is still in progress: one card holds the screen at a time.
+     */
+    @Query(
+        """
+        UPDATE todo_item SET startedAt = :at
+        WHERE id = :id AND doneAt IS NULL AND startedAt IS NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM todo_item AS other
+            WHERE other.date = todo_item.date AND other.startedAt IS NOT NULL AND other.doneAt IS NULL
+          )
+        """,
+    )
+    suspend fun startWorking(id: Long, at: java.time.Instant): Int
+
     @Query("UPDATE todo_item SET doneAt = NULL WHERE id = :id AND doneAt IS NOT NULL")
     suspend fun markUndone(id: Long): Int
 

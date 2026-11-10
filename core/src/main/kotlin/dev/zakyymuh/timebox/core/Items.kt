@@ -41,7 +41,7 @@ object Items {
     /**
      * Copies a previous day's items as a fresh list for [newDate].
      *
-     * Everything recording history is dropped: the done instants, and the ids, so the
+     * Everything recording history is dropped: the done and started instants, and the ids, so the
      * copies save as new rows rather than overwriting the day they came from. The old
      * note goes too — today's note is today's to write.
      */
@@ -49,6 +49,8 @@ object Items {
         DayList(
             date = newDate,
             note = null,
-            items = renumber(day.items.map { TodoItem(0L, it.position, it.text) }),
+            items = renumber(
+                day.items.map { TodoItem(0L, it.position, it.text, icon = it.icon, description = it.description) },
+            ),
         )
 }
