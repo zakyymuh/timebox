@@ -192,6 +192,17 @@ class TodayViewModel(
         viewModelScope.launch { repo.setDone(itemId, true) }
     }
 
+    fun editItem(itemId: Long, text: String, icon: String?, description: String?) {
+        viewModelScope.launch { repo.editItem(itemId, text, icon, description) }
+    }
+
+    fun remove(itemId: Long) {
+        viewModelScope.launch {
+            repo.remove(itemId)
+            refreshNeighbours()
+        }
+    }
+
     fun useTemplate(date: LocalDate) {
         viewModelScope.launch {
             repo.useTemplate(date)

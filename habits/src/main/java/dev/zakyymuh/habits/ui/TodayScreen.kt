@@ -6,6 +6,7 @@ import dev.zakyymuh.timebox.ui.lastdone.LastTimeSheet
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import dev.zakyymuh.timebox.core.TodoItem
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -74,6 +75,9 @@ fun TodayScreen(viewModel: TodayViewModel) {
     val lastDone by viewModel.lastDone.collectAsStateWithLifecycle()
     var adding by remember { mutableStateOf(false) }
     var lastTimeOpen by remember { mutableStateOf(false) }
+    // The card held down for its Edit / Delete popup, and the card being edited.
+    var acting by remember { mutableStateOf<TodoItem?>(null) }
+    var editing by remember { mutableStateOf<TodoItem?>(null) }
     // The card being worked on, or -1. While there is one, the whole app is locked to it.
     val inHand = state.items.indexOfFirst { it.isWorking }
 
@@ -131,6 +135,7 @@ fun TodayScreen(viewModel: TodayViewModel) {
                         editable = state.editable,
                         onStart = viewModel::startWorking,
                         onDone = viewModel::finish,
+                        onHold = { acting = it },
                         // Room under the cards for the round + button.
                         modifier = Modifier.weight(1f).padding(bottom = if (state.editable) 96.dp else 0.dp),
                     )
@@ -139,6 +144,29 @@ fun TodayScreen(viewModel: TodayViewModel) {
 
             if (!state.editable) Box(Modifier.padding(horizontal = 20.dp)) { ReadOnlyFooter() }
         }
+    }
+
+    acting?.let { item ->
+        CardActions(
+            item = item,
+            onEdit = {
+                acting = null
+                editing = item
+            },
+            onDelete = {
+                acting = null
+                viewModel.remove(item.id)
+            },
+            onDismiss = { acting = null },
+        )
+    }
+
+    editing?.let { item ->
+        EditDialog(
+            item = item,
+            onSave = { text, icon, description -> viewModel.editItem(item.id, text, icon, description) },
+            onDismiss = { editing = null },
+        )
     }
 
     if (lastTimeOpen) {
@@ -151,7 +179,7 @@ fun TodayScreen(viewModel: TodayViewModel) {
     }
 
     if (adding && state.editable && inHand < 0) {
-        AddDialog(
+        IdeaDialog(
             draft = state.draft,
             onDraftChanged = viewModel::onDraftChanged,
             onIcon = viewModel::onDraftIcon,
@@ -295,13 +323,17 @@ private fun TemplateChip(day: DayList, onUse: (LocalDate) -> Unit) {
  * so does a tap outside the popup.
  */
 @Composable
-private fun AddDialog(
+private fun IdeaDialog(
     draft: Draft,
     onDraftChanged: (String) -> Unit,
     onIcon: (String) -> Unit,
     onDescription: (String) -> Unit,
     onAdd: () -> Unit,
     onDismiss: () -> Unit,
+    title: String = "What is your idea?",
+    submitLabel: String = "Add",
+    /** Adding says "ready to go" and stays open for the next; editing just closes. */
+    confirmAndRepeat: Boolean = true,
 ) {
     val haptics = LocalHapticFeedback.current
     val focus = remember { FocusRequester() }
@@ -336,7 +368,7 @@ private fun AddDialog(
                 ReadyToGo()
             } else {
                 Text(
-                    "What is your idea?",
+                    title,
                     style = MaterialTheme.typography.headlineSmall,
                     color = Fresh.Ink,
                     textAlign = TextAlign.Center,
@@ -392,12 +424,12 @@ private fun AddDialog(
                         .clickable(enabled = canAdd) {
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                             onAdd()
-                            ready = true
+                            if (confirmAndRepeat) ready = true else onDismiss()
                         }
                         .padding(vertical = 15.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("Add", style = MaterialTheme.typography.labelLarge, color = if (canAdd) Color.White else Fresh.InkSoft)
+                    Text(submitLabel, style = MaterialTheme.typography.labelLarge, color = if (canAdd) Color.White else Fresh.InkSoft)
                 }
             }
         }
@@ -410,6 +442,87 @@ private fun AddDialog(
         } else {
             focus.requestFocus()
         }
+    }
+}
+
+/** The add popup again, filled in with the card, saving instead of adding. */
+@Composable
+private fun EditDialog(
+    item: TodoItem,
+    onSave: (text: String, icon: String?, description: String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var draft by remember(item.id) {
+        // A card without an icon opens with none picked, and stays without one unless chosen.
+        mutableStateOf(Draft(text = item.text, icon = item.icon.orEmpty(), description = item.description.orEmpty()))
+    }
+    IdeaDialog(
+        draft = draft,
+        onDraftChanged = { draft = draft.copy(text = it) },
+        onIcon = { draft = draft.copy(icon = it) },
+        onDescription = { draft = draft.copy(description = it) },
+        onAdd = { onSave(draft.text, draft.icon, draft.description) },
+        onDismiss = onDismiss,
+        title = "Edit your idea",
+        submitLabel = "Save",
+        confirmAndRepeat = false,
+    )
+}
+
+/**
+ * What holding a card for three seconds opens: Edit or Delete. Delete asks once more, so a
+ * long press by accident cannot lose a card. A tap outside closes it.
+ */
+@Composable
+private fun CardActions(
+    item: TodoItem,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var confirming by remember { mutableStateOf(false) }
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(28.dp))
+                .background(Fresh.Page)
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(item.icon ?: item.text.take(1).uppercase(), style = MaterialTheme.typography.headlineMedium)
+            Text(
+                text = if (confirming) "Delete \"${item.text}\"?" else item.text,
+                style = MaterialTheme.typography.titleMedium,
+                color = Fresh.Ink,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 8.dp, bottom = 18.dp),
+            )
+            if (confirming) {
+                ActionButton("Delete", Fresh.Error, Color.White, onDelete)
+                Spacer(Modifier.height(10.dp))
+                ActionButton("Cancel", Fresh.Card, Fresh.Ink) { confirming = false }
+            } else {
+                ActionButton("Edit", Fresh.Ink, Color.White, onEdit)
+                Spacer(Modifier.height(10.dp))
+                ActionButton("Delete", Fresh.Card, Fresh.Error) { confirming = true }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionButton(label: String, container: Color, content: Color, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(CircleShape)
+            .background(container)
+            .clickable(onClick = onClick)
+            .padding(vertical = 15.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, style = MaterialTheme.typography.labelLarge, color = content)
     }
 }
 

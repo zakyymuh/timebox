@@ -110,6 +110,22 @@ class TimeboxRepository(
         onChanged()
     }
 
+    /** Edits a card's name, icon and description; its place, progress and tick stay. */
+    suspend fun editItem(itemId: Long, text: String, icon: String?, description: String?) {
+        if (text.isBlank()) return
+        val row = dao.item(itemId) ?: return
+        dao.upsertItems(
+            listOf(
+                row.copy(
+                    text = text.trim(),
+                    icon = icon?.trim()?.ifEmpty { null },
+                    description = description?.trim()?.ifEmpty { null },
+                ),
+            ),
+        )
+        onChanged()
+    }
+
     suspend fun remove(itemId: Long) {
         val date = today()
         dao.deleteItem(itemId)

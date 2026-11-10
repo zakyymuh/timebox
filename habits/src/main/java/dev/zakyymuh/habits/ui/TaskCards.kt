@@ -12,6 +12,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -84,8 +87,11 @@ fun TaskCards(
     editable: Boolean,
     onStart: (Long) -> Unit,
     onDone: (Long) -> Unit,
+    /** Holding a card for three seconds: open its Edit / Delete popup. */
+    onHold: (TodoItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val haptics = LocalHapticFeedback.current
     // To do first, finished at the back by when they were done; see Items.queue.
     val items = remember(cards) { Items.queue(cards) }
     val working = items.firstOrNull { it.isWorking }
@@ -138,6 +144,11 @@ fun TaskCards(
                         .fillMaxHeight()
                         .graphicsLayer { alpha = fade }
                         .blockTouches(sidelined)
+                        // No editing on a past day, nor while a card holds the app.
+                        .holdFor(HOLD_MILLIS, enabled = editable && working == null, key = item) {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onHold(item)
+                        }
                         .then(
                             // The card is as dark as the app around it now; a faint edge keeps it apart.
                             if (item.isWorking) {
@@ -172,6 +183,32 @@ fun Modifier.blockTouches(on: Boolean): Modifier =
     if (!on) this else pointerInput(Unit) {
         awaitPointerEventScope {
             while (true) awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+        }
+    }
+
+private const val HOLD_MILLIS = 3_000L
+
+/**
+ * Calls [onHold] once a finger has stayed down for [millis]. Lifting sooner, or the pager
+ * taking the touch for a swipe, cancels it, and taps still reach the buttons underneath.
+ * After a hold, the lift is swallowed so it does not also press the button under the finger.
+ * [key] restarts the detector when what [onHold] refers to changes.
+ */
+fun Modifier.holdFor(millis: Long, enabled: Boolean, key: Any?, onHold: () -> Unit): Modifier =
+    if (!enabled) this else pointerInput(millis, key) {
+        awaitEachGesture {
+            awaitFirstDown(requireUnconsumed = false)
+            val ended = withTimeoutOrNull(millis) {
+                waitForUpOrCancellation()
+                true
+            }
+            if (ended == null) {
+                onHold()
+                do {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    event.changes.forEach { it.consume() }
+                } while (event.changes.any { it.pressed })
+            }
         }
     }
 

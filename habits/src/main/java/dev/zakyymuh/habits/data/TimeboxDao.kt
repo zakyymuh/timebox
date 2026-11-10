@@ -47,6 +47,9 @@ interface TimeboxDao {
     )
     suspend fun startWorking(id: Long, at: java.time.Instant): Int
 
+    @Query("SELECT * FROM todo_item WHERE id = :id")
+    suspend fun item(id: Long): TodoItemEntity?
+
     @Query("UPDATE todo_item SET doneAt = NULL WHERE id = :id AND doneAt IS NOT NULL")
     suspend fun markUndone(id: Long): Int
 

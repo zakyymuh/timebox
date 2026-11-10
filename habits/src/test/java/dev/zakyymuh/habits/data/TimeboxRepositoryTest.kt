@@ -232,6 +232,31 @@ class TimeboxRepositoryTest {
     }
 
     @Test
+    fun `editItem changes the name, icon and description and keeps the rest`() = runTest {
+        repo.addItem("Laundry", icon = "🧺", description = "whites")
+        repo.addItem("Run")
+        val laundry = repo.todayNow().items.first()
+        repo.startWorking(laundry.id)
+
+        repo.editItem(laundry.id, "  Ironing ", icon = "🧹", description = "   ")
+
+        val edited = repo.todayNow().items.first()
+        assertEquals("Ironing", edited.text)
+        assertEquals("🧹", edited.icon)
+        assertNull(edited.description)
+        assertEquals(0, edited.position)
+        assertTrue(edited.isWorking)
+    }
+
+    @Test
+    fun `editItem ignores a blank name`() = runTest {
+        repo.addItem("Laundry")
+        val id = repo.todayNow().items.single().id
+        repo.editItem(id, "   ", icon = null, description = null)
+        assertEquals("Laundry", repo.todayNow().items.single().text)
+    }
+
+    @Test
     fun `only one card can be in progress at a time`() = runTest {
         repo.addItem("Laundry")
         repo.addItem("Run")
