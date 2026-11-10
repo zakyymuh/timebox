@@ -1,12 +1,14 @@
 package dev.zakyymuh.habits.ui
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.input.pointer.pointerInput
@@ -112,69 +114,60 @@ fun TaskCards(
             key = { items[it].id },
             modifier = Modifier.weight(1f).fillMaxWidth(),
         ) { page ->
+            val item = items[page]
+            // While one card is in hand the others all but vanish into the dark, and go deaf.
+            val sidelined = working != null && !item.isWorking
+            val fade by animateFloatAsState(if (sidelined) 0.12f else 1f, tween(450), label = "fade")
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 TaskCard(
-                    item = items[page],
+                    item = item,
                     index = page,
                     count = items.size,
                     editable = editable,
                     onStart = onStart,
                     onDone = onDone,
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp).fillMaxHeight(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 460.dp)
+                        .fillMaxHeight()
+                        .graphicsLayer { alpha = fade }
+                        .blockTouches(sidelined)
+                        .then(
+                            // The card is as dark as the app around it now; a faint edge keeps it apart.
+                            if (item.isWorking) {
+                                Modifier
+                                    .shadow(24.dp, RoundedCornerShape(28.dp))
+                                    .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(28.dp))
+                            } else {
+                                Modifier
+                            },
+                        ),
                 )
             }
         }
 
         Spacer(Modifier.height(16.dp))
-        Dots(items, pager.currentPage)
+        Dots(items, pager.currentPage, dark = working != null)
+        Text(
+            text = if (working != null) "Finish this one first" else "",
+            style = Small,
+            color = Color.White.copy(alpha = 0.6f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+        )
     }
 }
 
 /**
- * The full lock while a card is being worked on: the whole app goes dark and swallows every
- * tap and the back button, leaving only the card in hand and its Done.
+ * Swallows every touch on this element and its children while [on]. The cards' lock: while
+ * one card is being worked on, nothing else on the screen answers.
  */
-@Composable
-fun FocusLock(
-    item: TodoItem,
-    index: Int,
-    count: Int,
-    onDone: (Long) -> Unit,
-) {
-    BackHandler { /* stay here until Done */ }
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.72f))
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) awaitPointerEvent().changes.forEach { it.consume() }
-                }
-            }
-            .padding(horizontal = 36.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        TaskCard(
-            item = item,
-            index = index,
-            count = count,
-            editable = true,
-            onStart = {},
-            onDone = onDone,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(460.dp)
-                .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(28.dp)),
-        )
-        Text(
-            text = "Finish this one first",
-            style = Small,
-            color = Color.White.copy(alpha = 0.7f),
-            modifier = Modifier.padding(top = 16.dp),
-        )
+fun Modifier.blockTouches(on: Boolean): Modifier =
+    if (!on) this else pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+        }
     }
-}
 
 /** Open on the card in hand, else the first not yet done, else the first. */
 private fun startPage(items: List<TodoItem>): Int =
@@ -296,7 +289,7 @@ private fun Badge(label: String) {
 
 /** Where you are among the cards; finished ones turn green. */
 @Composable
-private fun Dots(items: List<TodoItem>, current: Int) {
+private fun Dots(items: List<TodoItem>, current: Int, dark: Boolean) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
@@ -309,6 +302,8 @@ private fun Dots(items: List<TodoItem>, current: Int) {
                     .clip(CircleShape)
                     .background(
                         when {
+                            dark && i == current -> Color.White
+                            dark -> Color.White.copy(alpha = 0.18f)
                             i == current -> Fresh.Ink
                             item.isDone -> Fresh.Green
                             else -> DotIdle

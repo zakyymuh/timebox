@@ -6,6 +6,10 @@ import dev.zakyymuh.timebox.ui.lastdone.LastTimeSheet
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.graphics.SolidColor
@@ -73,11 +77,16 @@ fun TodayScreen(viewModel: TodayViewModel) {
     // The card being worked on, or -1. While there is one, the whole app is locked to it.
     val inHand = state.items.indexOfFirst { it.isWorking }
 
-    // The lock is stacked over the screen, so both live in one Box.
-    Box(Modifier.fillMaxSize()) {
+    // "Working on it" locks the app to that card: everything around it turns as dark as the
+    // card, nothing else answers a tap, and back does nothing, until Done.
+    val locked = state.editable && inHand >= 0
+    val page by animateColorAsState(if (locked) Fresh.Ink else Fresh.Page, tween(450), label = "page")
+    val factFade by animateFloatAsState(if (locked) 0.2f else 1f, tween(450), label = "fact")
+    BackHandler(enabled = locked) { /* stay here until Done */ }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Fresh.Page,
+        containerColor = page,
         // One round + in the middle instead of a typing box: tap it to write.
         floatingActionButton = {
             if (state.editable && inHand < 0) {
@@ -92,19 +101,21 @@ fun TodayScreen(viewModel: TodayViewModel) {
                 .padding(insets)
                 .fillMaxSize(),
         ) {
-            Column(Modifier.padding(horizontal = 20.dp)) {
-                Header(state, viewModel)
+            Column(Modifier.padding(horizontal = 20.dp).blockTouches(locked)) {
+                Header(state, viewModel, locked)
 
                 Spacer(Modifier.height(20.dp))
 
                 // Only on today: the record of a past day is about that day, not about now.
                 if (state.isToday && state.date != null) {
-                    FunFactCard(
-                        fact = lastDone.fact,
-                        tracked = lastDone.events.size,
-                        onShuffle = viewModel::shuffleFact,
-                        onOpen = { lastTimeOpen = true },
-                    )
+                    Box(Modifier.alpha(factFade)) {
+                        FunFactCard(
+                            fact = lastDone.fact,
+                            tracked = lastDone.events.size,
+                            onShuffle = viewModel::shuffleFact,
+                            onOpen = { lastTimeOpen = true },
+                        )
+                    }
                     Spacer(Modifier.height(16.dp))
                 }
             }
@@ -130,17 +141,6 @@ fun TodayScreen(viewModel: TodayViewModel) {
         }
     }
 
-    // "Working on it" darkens the whole app and leaves only that card's Done to press.
-    if (state.editable && inHand >= 0) {
-        FocusLock(
-            item = state.items[inHand],
-            index = inHand,
-            count = state.items.size,
-            onDone = viewModel::finish,
-        )
-    }
-    }
-
     if (lastTimeOpen) {
         LastTimeSheet(
             ui = lastDone,
@@ -163,7 +163,11 @@ fun TodayScreen(viewModel: TodayViewModel) {
 }
 
 @Composable
-private fun Header(state: DayUiState, viewModel: TodayViewModel) {
+private fun Header(state: DayUiState, viewModel: TodayViewModel, locked: Boolean) {
+    val title by animateColorAsState(if (locked) Color.White else Fresh.Ink, tween(450), label = "title")
+    val sub by animateColorAsState(
+        if (locked) Color.White.copy(alpha = 0.55f) else Fresh.InkSoft, tween(450), label = "sub",
+    )
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
         verticalAlignment = Alignment.Bottom,
@@ -172,7 +176,7 @@ private fun Header(state: DayUiState, viewModel: TodayViewModel) {
             Text(
                 text = if (state.isToday) "Today" else "Record",
                 style = MaterialTheme.typography.headlineLarge,
-                color = Fresh.Ink,
+                color = title,
             )
             Text(
                 text = when {
@@ -182,14 +186,14 @@ private fun Header(state: DayUiState, viewModel: TodayViewModel) {
                 },
                 style = Label,
                 modifier = Modifier.padding(top = 4.dp),
-                color = Fresh.InkSoft,
+                color = sub,
             )
         }
 
         // Stepping back through the record, and a way straight home again.
-        StepButton("‹", enabled = state.hasEarlier, onClick = viewModel::goEarlier)
+        StepButton("‹", enabled = state.hasEarlier, locked = locked, onClick = viewModel::goEarlier)
         Spacer(Modifier.width(6.dp))
-        StepButton("›", enabled = state.hasLater, onClick = viewModel::goLater)
+        StepButton("›", enabled = state.hasLater, locked = locked, onClick = viewModel::goLater)
     }
 
     if (!state.isToday) {
@@ -205,12 +209,18 @@ private fun Header(state: DayUiState, viewModel: TodayViewModel) {
 }
 
 @Composable
-private fun StepButton(glyph: String, enabled: Boolean, onClick: () -> Unit) {
+private fun StepButton(glyph: String, enabled: Boolean, locked: Boolean, onClick: () -> Unit) {
     RoundButton(
         glyph = glyph,
         onClick = { if (enabled) onClick() },
         size = 40.dp,
-        modifier = Modifier.alpha(if (enabled) 1f else 0.3f),
+        modifier = Modifier.alpha(
+            when {
+                locked -> 0.15f
+                enabled -> 1f
+                else -> 0.3f
+            },
+        ),
     )
 }
 
@@ -281,8 +291,8 @@ private fun TemplateChip(day: DayList, onUse: (LocalDate) -> Unit) {
 
 /**
  * The popup for writing, in the middle of the screen. Add saves the card, says so for a
- * moment, then comes back empty for the next one. Only the × at the top right closes it,
- * so a stray tap outside never loses what was typed.
+ * moment, then comes back empty for the next one. The × at the top right closes it, and
+ * so does a tap outside the popup.
  */
 @Composable
 private fun AddDialog(
@@ -299,7 +309,7 @@ private fun AddDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+        properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = true),
     ) {
         Column(
             modifier = Modifier
