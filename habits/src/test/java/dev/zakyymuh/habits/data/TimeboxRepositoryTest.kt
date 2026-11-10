@@ -232,6 +232,33 @@ class TimeboxRepositoryTest {
     }
 
     @Test
+    fun `a finished card goes to the back of the queue`() = runTest {
+        repo.addItem("Laundry")
+        repo.addItem("Run")
+        repo.addItem("Read")
+        val laundry = repo.todayNow().items.first().id
+        repo.startWorking(laundry)
+        assertTrue(repo.setDone(laundry, true))
+
+        val items = repo.todayNow().items
+        assertEquals(listOf("Run", "Read", "Laundry"), items.map { it.text })
+        assertEquals(listOf(0, 1, 2), items.map { it.position })
+        assertTrue(items.last().isDone)
+    }
+
+    @Test
+    fun `finishing a card twice does not move it again`() = runTest {
+        repo.addItem("Laundry")
+        repo.addItem("Run")
+        val laundry = repo.todayNow().items.first().id
+        repo.setDone(laundry, true)
+        val run = repo.todayNow().items.first().id
+        repo.setDone(run, true)
+        assertFalse(repo.setDone(laundry, true))
+        assertEquals(listOf("Laundry", "Run"), repo.todayNow().items.map { it.text })
+    }
+
+    @Test
     fun `only one card can be in progress at a time`() = runTest {
         repo.addItem("Laundry")
         repo.addItem("Run")

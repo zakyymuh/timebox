@@ -2,6 +2,7 @@ package dev.zakyymuh.habits.data
 
 import androidx.room.Dao
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
@@ -46,6 +47,22 @@ interface TimeboxDao {
         """,
     )
     suspend fun startWorking(id: Long, at: java.time.Instant): Int
+
+    @Query("SELECT * FROM todo_item WHERE id = :id")
+    suspend fun item(id: Long): TodoItemEntity?
+
+    /**
+     * Ticks an item off and sends it to the back of its day's queue, in one transaction so
+     * watchers see a single change. Returns rows ticked: 0 if it was already done.
+     */
+    @Transaction
+    suspend fun finishToBack(id: Long, at: java.time.Instant): Int {
+        if (markDone(id, at) == 0) return 0
+        val date = item(id)?.date ?: return 1
+        val (finished, rest) = items(date).partition { it.id == id }
+        upsertItems((rest + finished).mapIndexed { i, row -> row.copy(position = i) })
+        return 1
+    }
 
     @Query("UPDATE todo_item SET doneAt = NULL WHERE id = :id AND doneAt IS NOT NULL")
     suspend fun markUndone(id: Long): Int

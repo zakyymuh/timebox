@@ -36,7 +36,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -74,7 +75,7 @@ private val DotIdle = Color(0xFFD6DAD3)
  * A card starts with "Working on it". Tapping it turns the card dark and locks the swipe
  * until Done is tapped, so the one thing in hand stays on screen. The lock lives in the
  * database rather than here, so it holds after the app is closed and reopened. After Done
- * the cards slide on to the next unfinished one.
+ * the finished card goes to the back of the queue and the cards slide on to the next one.
  */
 @Composable
 fun TaskCards(
@@ -86,22 +87,24 @@ fun TaskCards(
 ) {
     val working = items.firstOrNull { it.isWorking }
     val pager = rememberPagerState(initialPage = startPage(items)) { items.size }
-    var lastWorking by remember { mutableStateOf<Long?>(null) }
+    val latest by rememberUpdatedState(items)
+    // Where the card in hand sat, so after Done the cards know where to pick up again.
+    var lastWorkingAt by remember { mutableIntStateOf(-1) }
 
     LaunchedEffect(working?.id) {
-        val finished = lastWorking
-        lastWorking = working?.id
+        val from = lastWorkingAt
         if (working != null) {
-            pager.animateScrollToPage(items.indexOfFirst { it.id == working.id })
-        } else if (finished != null) {
-            val from = items.indexOfFirst { it.id == finished }
-            val next = items.indices.firstOrNull { it > from && !items[it].isDone }
-                ?: items.indices.firstOrNull { !items[it].isDone }
-            if (next != null) {
-                // Let the tick land before moving on.
-                delay(350)
-                pager.animateScrollToPage(next)
-            }
+            lastWorkingAt = items.indexOfFirst { it.id == working.id }
+            pager.animateScrollToPage(lastWorkingAt)
+        } else if (from >= 0) {
+            lastWorkingAt = -1
+            // The finished card has gone to the back of the queue and the pager follows it
+            // there; show its tick for a moment, then come back to the card that took its place.
+            delay(450)
+            val now = latest
+            val next = now.indices.firstOrNull { it >= from && !now[it].isDone }
+                ?: now.indices.firstOrNull { !now[it].isDone }
+            if (next != null) pager.animateScrollToPage(next)
         }
     }
 

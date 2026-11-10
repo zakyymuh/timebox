@@ -95,9 +95,10 @@ class TimeboxRepository(
     /**
      * Sets an item done or not, doing nothing if it already is. Returns whether it changed,
      * so a one-tap action from the dashboard can tell a real tick from a repeated tap.
+     * A finished item goes to the back of the queue, so the cards still to do come first.
      */
     suspend fun setDone(itemId: Long, done: Boolean): Boolean {
-        val changed = if (done) dao.markDone(itemId, clock.instant()) else dao.markUndone(itemId)
+        val changed = if (done) dao.finishToBack(itemId, clock.instant()) else dao.markUndone(itemId)
         if (changed > 0) onChanged()
         return changed > 0
     }
