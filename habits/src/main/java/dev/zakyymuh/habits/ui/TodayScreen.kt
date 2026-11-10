@@ -6,8 +6,16 @@ import dev.zakyymuh.timebox.ui.lastdone.LastTimeSheet
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.key
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.Box
@@ -23,7 +31,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -38,10 +45,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.FabPosition
-import androidx.compose.material3.ExperimentalMaterial3Api
 import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.theme.Fresh
 import androidx.compose.ui.graphics.Color
@@ -66,13 +70,17 @@ fun TodayScreen(viewModel: TodayViewModel) {
     val lastDone by viewModel.lastDone.collectAsStateWithLifecycle()
     var adding by remember { mutableStateOf(false) }
     var lastTimeOpen by remember { mutableStateOf(false) }
+    // The card being worked on, or -1. While there is one, the whole app is locked to it.
+    val inHand = state.items.indexOfFirst { it.isWorking }
 
+    // The lock is stacked over the screen, so both live in one Box.
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = Fresh.Page,
         // One round + in the middle instead of a typing box: tap it to write.
         floatingActionButton = {
-            if (state.editable) {
+            if (state.editable && inHand < 0) {
                 // Glows only on an empty morning, inviting the first tap.
                 GlowingAddButton(glowing = state.isEmpty && state.date != null, onClick = { adding = true })
             }
@@ -122,6 +130,17 @@ fun TodayScreen(viewModel: TodayViewModel) {
         }
     }
 
+    // "Working on it" darkens the whole app and leaves only that card's Done to press.
+    if (state.editable && inHand >= 0) {
+        FocusLock(
+            item = state.items[inHand],
+            index = inHand,
+            count = state.items.size,
+            onDone = viewModel::finish,
+        )
+    }
+    }
+
     if (lastTimeOpen) {
         LastTimeSheet(
             ui = lastDone,
@@ -131,10 +150,9 @@ fun TodayScreen(viewModel: TodayViewModel) {
         )
     }
 
-    if (adding && state.editable) {
-        AddSheet(
+    if (adding && state.editable && inHand < 0) {
+        AddDialog(
             draft = state.draft,
-            added = state.items.size,
             onDraftChanged = viewModel::onDraftChanged,
             onIcon = viewModel::onDraftIcon,
             onDescription = viewModel::onDraftDescription,
@@ -262,138 +280,181 @@ private fun TemplateChip(day: DayList, onUse: (LocalDate) -> Unit) {
 }
 
 /**
- * The popup for writing. The keyboard comes up straight away; Enter adds the item and keeps
- * the popup open for the next one, so a whole morning list is typed in one go. Swipe it down
- * or tap Done when finished.
+ * The popup for writing, in the middle of the screen. Add saves the card, says so for a
+ * moment, then comes back empty for the next one. Only the × at the top right closes it,
+ * so a stray tap outside never loses what was typed.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun AddSheet(
+private fun AddDialog(
     draft: Draft,
-    added: Int,
     onDraftChanged: (String) -> Unit,
     onIcon: (String) -> Unit,
     onDescription: (String) -> Unit,
     onAdd: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val haptics = LocalHapticFeedback.current
     val focus = remember { FocusRequester() }
-    ModalBottomSheet(
+    var ready by remember { mutableStateOf(false) }
+
+    Dialog(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = Fresh.Page,
+        properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
     ) {
-        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(28.dp))
+                .background(Fresh.Page)
+                .padding(20.dp),
+        ) {
+            Box(Modifier.fillMaxWidth()) {
                 Text(
-                    "Add to today",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Fresh.Ink,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    "Done",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = Fresh.GreenDeep,
+                    "×",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Fresh.InkSoft,
                     modifier = Modifier
+                        .align(Alignment.TopEnd)
                         .clip(CircleShape)
-                        .background(Fresh.Pastel)
                         .clickable(onClick = onDismiss)
-                        .padding(horizontal = 18.dp, vertical = 10.dp),
+                        .semantics { contentDescription = "Close" }
+                        .padding(horizontal = 10.dp, vertical = 2.dp),
                 )
             }
-            Spacer(Modifier.height(16.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Fresh.Card)
-                        .padding(horizontal = 18.dp, vertical = 16.dp),
-                ) {
-                    if (draft.text.isEmpty()) {
-                        Text("What do you want to do?", style = MaterialTheme.typography.bodyLarge, color = Fresh.InkSoft)
-                    }
-                    BasicTextField(
-                        value = draft.text,
-                        onValueChange = onDraftChanged,
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = Fresh.Ink),
-                        cursorBrush = androidx.compose.ui.graphics.SolidColor(Fresh.Green),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = { onAdd() }),
-                        modifier = Modifier.fillMaxWidth().focusRequester(focus),
-                    )
-                }
-                Spacer(Modifier.width(10.dp))
-                RoundButton(
-                    glyph = "↑",
-                    onClick = onAdd,
-                    container = if (draft.text.isBlank()) Fresh.Card else Fresh.Green,
-                    content = if (draft.text.isBlank()) Fresh.InkSoft else Color.White,
-                    size = 52.dp,
-                    description = "Add",
-                )
-            }
-            Text(
-                text = if (added == 0) "Press enter to add & keep typing" else "$added on today's list · enter to add another",
-                style = Small,
-                color = Fresh.InkSoft,
-                modifier = Modifier.padding(top = 8.dp, start = 4.dp),
-            )
 
-            Text("Icon", style = Label, color = Fresh.InkSoft, modifier = Modifier.padding(top = 16.dp, start = 4.dp))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(top = 8.dp),
-            ) {
-                CardIcons.all.forEach { icon ->
-                    val picked = icon == draft.icon
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (picked) Fresh.Pastel else Fresh.Card)
-                            .border(2.dp, if (picked) Fresh.Green else Color.Transparent, RoundedCornerShape(12.dp))
-                            .clickable { onIcon(icon) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(icon, style = MaterialTheme.typography.titleLarge)
-                    }
-                }
-            }
-
-            Text(
-                "Description (optional)",
-                style = Label,
-                color = Fresh.InkSoft,
-                modifier = Modifier.padding(top = 16.dp, start = 4.dp),
-            )
-            Box(
-                modifier = Modifier
-                    .padding(top = 8.dp)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Fresh.Card)
-                    .padding(horizontal = 18.dp, vertical = 14.dp),
-            ) {
-                if (draft.description.isEmpty()) {
-                    Text("Anything to remember about it", style = MaterialTheme.typography.bodyMedium, color = Fresh.InkSoft)
-                }
-                BasicTextField(
-                    value = draft.description,
-                    onValueChange = onDescription,
-                    minLines = 2,
-                    maxLines = 4,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = Fresh.Ink),
-                    cursorBrush = androidx.compose.ui.graphics.SolidColor(Fresh.Green),
+            if (ready) {
+                ReadyToGo()
+            } else {
+                Text(
+                    "What is your idea?",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Fresh.Ink,
+                    textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                 )
+
+                // One line of icons; swipe it sideways for more.
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .padding(top = 18.dp)
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                ) {
+                    CardIcons.all.forEach { icon ->
+                        val picked = icon == draft.icon
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (picked) Fresh.Pastel else Fresh.Card)
+                                .border(2.dp, if (picked) Fresh.Green else Color.Transparent, RoundedCornerShape(12.dp))
+                                .clickable { onIcon(icon) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(icon, style = MaterialTheme.typography.titleLarge)
+                        }
+                    }
+                }
+
+                Field(
+                    value = draft.text,
+                    onValueChange = onDraftChanged,
+                    placeholder = "What do you want to do?",
+                    singleLine = true,
+                    modifier = Modifier.padding(top = 14.dp).focusRequester(focus),
+                )
+                Field(
+                    value = draft.description,
+                    onValueChange = onDescription,
+                    placeholder = "Description (optional)",
+                    singleLine = false,
+                    modifier = Modifier.padding(top = 10.dp),
+                )
+
+                val canAdd = draft.text.isNotBlank()
+                Box(
+                    modifier = Modifier
+                        .padding(top = 18.dp)
+                        .fillMaxWidth()
+                        .clip(CircleShape)
+                        .background(if (canAdd) Fresh.Green else Fresh.Card)
+                        .clickable(enabled = canAdd) {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onAdd()
+                            ready = true
+                        }
+                        .padding(vertical = 15.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("Add", style = MaterialTheme.typography.labelLarge, color = if (canAdd) Color.White else Fresh.InkSoft)
+                }
             }
         }
     }
-    LaunchedEffect(Unit) { focus.requestFocus() }
+
+    LaunchedEffect(ready) {
+        if (ready) {
+            delay(1_200)
+            ready = false
+        } else {
+            focus.requestFocus()
+        }
+    }
+}
+
+@Composable
+private fun ReadyToGo() {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 36.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier.size(72.dp).clip(CircleShape).background(Fresh.Pastel),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("✓", style = MaterialTheme.typography.headlineMedium, color = Fresh.GreenDeep)
+        }
+        Text(
+            "Your task is ready to go",
+            style = MaterialTheme.typography.titleMedium,
+            color = Fresh.Ink,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 14.dp),
+        )
+    }
+}
+
+@Composable
+private fun Field(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    singleLine: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Fresh.Card)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+    ) {
+        if (value.isEmpty()) {
+            Text(placeholder, style = MaterialTheme.typography.bodyLarge, color = Fresh.InkSoft)
+        }
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = singleLine,
+            minLines = if (singleLine) 1 else 2,
+            maxLines = if (singleLine) 1 else 4,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = Fresh.Ink),
+            cursorBrush = SolidColor(Fresh.Green),
+            keyboardOptions = KeyboardOptions(imeAction = if (singleLine) ImeAction.Next else ImeAction.Default),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }
 
 @Composable

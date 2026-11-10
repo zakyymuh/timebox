@@ -6,7 +6,10 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -124,12 +127,51 @@ fun TaskCards(
 
         Spacer(Modifier.height(16.dp))
         Dots(items, pager.currentPage)
+    }
+}
+
+/**
+ * The full lock while a card is being worked on: the whole app goes dark and swallows every
+ * tap and the back button, leaving only the card in hand and its Done.
+ */
+@Composable
+fun FocusLock(
+    item: TodoItem,
+    index: Int,
+    count: Int,
+    onDone: (Long) -> Unit,
+) {
+    BackHandler { /* stay here until Done */ }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.72f))
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) awaitPointerEvent().changes.forEach { it.consume() }
+                }
+            }
+            .padding(horizontal = 36.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        TaskCard(
+            item = item,
+            index = index,
+            count = count,
+            editable = true,
+            onStart = {},
+            onDone = onDone,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(460.dp)
+                .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(28.dp)),
+        )
         Text(
-            text = if (working != null) "Locked until you tap Done" else "",
+            text = "Finish this one first",
             style = Small,
-            color = Fresh.InkSoft,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            color = Color.White.copy(alpha = 0.7f),
+            modifier = Modifier.padding(top = 16.dp),
         )
     }
 }
