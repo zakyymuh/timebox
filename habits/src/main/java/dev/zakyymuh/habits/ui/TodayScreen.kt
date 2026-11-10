@@ -127,7 +127,7 @@ fun TodayScreen(viewModel: TodayViewModel) {
                 // day on its own first card.
                 key(state.date) {
                     TaskCards(
-                        items = state.items,
+                        cards = state.items,
                         editable = state.editable,
                         onStart = viewModel::startWorking,
                         onDone = viewModel::finish,

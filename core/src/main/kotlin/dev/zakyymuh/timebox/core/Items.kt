@@ -34,6 +34,17 @@ object Items {
         return renumber(working)
     }
 
+    /**
+     * The order the cards are shown in: what is still to do first, in list order, then what
+     * is finished, the earliest finished first. Worked out on reading rather than stored, so
+     * items ticked off anywhere, or before this order existed, still land at the back.
+     */
+    fun queue(items: List<TodoItem>): List<TodoItem> {
+        val (done, open) = items.partition { it.isDone }
+        return open.sortedBy { it.position } +
+            done.sortedWith(compareBy<TodoItem> { it.doneAt }.thenBy { it.position })
+    }
+
     /** Closes gaps left by deleting or moving, keeping the current list order. */
     fun renumber(items: List<TodoItem>): List<TodoItem> =
         items.mapIndexed { index, item -> item.copy(position = index) }

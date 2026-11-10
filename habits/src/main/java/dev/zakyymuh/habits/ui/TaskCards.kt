@@ -54,6 +54,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.zakyymuh.timebox.core.Items
 import dev.zakyymuh.timebox.core.TodoItem
 import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.theme.Fresh
@@ -79,12 +80,14 @@ private val DotIdle = Color(0xFFD6DAD3)
  */
 @Composable
 fun TaskCards(
-    items: List<TodoItem>,
+    cards: List<TodoItem>,
     editable: Boolean,
     onStart: (Long) -> Unit,
     onDone: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // To do first, finished at the back by when they were done; see Items.queue.
+    val items = remember(cards) { Items.queue(cards) }
     val working = items.firstOrNull { it.isWorking }
     val pager = rememberPagerState(initialPage = startPage(items)) { items.size }
     val latest by rememberUpdatedState(items)

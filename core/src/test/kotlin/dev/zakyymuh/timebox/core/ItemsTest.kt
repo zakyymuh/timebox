@@ -127,6 +127,25 @@ class ItemsTest {
     }
 
     @Test
+    fun `queue puts unfinished cards first in list order, then finished ones by when they were done`() {
+        val queue = Items.queue(
+            listOf(
+                item(1, 0, "first, done second", done = now.plusSeconds(60)),
+                item(2, 1, "open"),
+                item(3, 2, "done first", done = now),
+                item(4, 3, "also open"),
+            ),
+        )
+        assertEquals(listOf(2L, 4L, 3L, 1L), queue.map { it.id })
+    }
+
+    @Test
+    fun `queue keeps list order when nothing is done`() {
+        val items = listOf(item(1, 0), item(2, 1), item(3, 2))
+        assertEquals(items, Items.queue(items))
+    }
+
+    @Test
     fun `an item is being worked on only between starting and finishing`() {
         assertFalse(TodoItem(1, 0, "a").isWorking)
         assertTrue(TodoItem(1, 0, "a", startedAt = now).isWorking)
