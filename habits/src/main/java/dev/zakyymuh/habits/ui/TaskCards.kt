@@ -155,7 +155,7 @@ fun TaskCards(
                             if (item.isWorking) {
                                 Modifier
                                     .shadow(24.dp, RoundedCornerShape(28.dp))
-                                    .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(28.dp))
+                                    .border(1.dp, Fresh.Page.copy(alpha = 0.14f), RoundedCornerShape(28.dp))
                             } else {
                                 Modifier
                             },
@@ -169,7 +169,7 @@ fun TaskCards(
         Text(
             text = if (working != null) "Finish this one first" else "",
             style = Small,
-            color = Color.White.copy(alpha = 0.6f),
+            color = Fresh.Page.copy(alpha = 0.6f),
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
         )
@@ -231,8 +231,8 @@ private fun TaskCard(
 ) {
     val working = item.isWorking
     val background by animateColorAsState(if (working) Fresh.Ink else Fresh.Card, label = "card")
-    val ink by animateColorAsState(if (working) Color.White else Fresh.Ink, label = "ink")
-    val soft = if (working) Color.White.copy(alpha = 0.65f) else Fresh.InkSoft
+    val ink by animateColorAsState(if (working) Fresh.Page else Fresh.Ink, label = "ink")
+    val soft = if (working) Fresh.Page.copy(alpha = 0.65f) else Fresh.InkSoft
 
     Column(
         modifier = modifier
@@ -253,7 +253,7 @@ private fun TaskCard(
                 .align(Alignment.CenterHorizontally)
                 .size(128.dp)
                 .clip(CircleShape)
-                .background(if (working) Color.White.copy(alpha = 0.1f) else Fresh.Page),
+                .background(if (working) Fresh.Page.copy(alpha = 0.1f) else Fresh.Page),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -313,7 +313,7 @@ private fun CardButton(label: String, container: Color, onClick: () -> Unit) {
             .padding(vertical = 15.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, style = MaterialTheme.typography.labelLarge, color = Color.White)
+        Text(label, style = MaterialTheme.typography.labelLarge, color = if (container == Fresh.Ink) Fresh.Page else Color.White)
     }
 }
 
@@ -346,8 +346,8 @@ private fun Dots(items: List<TodoItem>, current: Int, dark: Boolean) {
                     .clip(CircleShape)
                     .background(
                         when {
-                            dark && i == current -> Color.White
-                            dark -> Color.White.copy(alpha = 0.18f)
+                            dark && i == current -> Fresh.Page
+                            dark -> Fresh.Page.copy(alpha = 0.18f)
                             i == current -> Fresh.Ink
                             item.isDone -> Fresh.Green
                             else -> DotIdle
@@ -395,7 +395,7 @@ fun GlowingAddButton(glowing: Boolean, onClick: () -> Unit) {
             glyph = "+",
             onClick = onClick,
             container = Fresh.Ink,
-            content = Color.White,
+            content = Fresh.Page,
             size = 64.dp,
             description = "Add something to do",
         )

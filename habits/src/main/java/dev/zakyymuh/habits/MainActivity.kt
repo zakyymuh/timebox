@@ -6,11 +6,8 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -19,6 +16,7 @@ import dev.zakyymuh.habits.nudge.MorningReminder
 import dev.zakyymuh.habits.ui.TodayScreen
 import dev.zakyymuh.habits.ui.TodayViewModel
 import dev.zakyymuh.timebox.ui.theme.DailyTheme
+import dev.zakyymuh.timebox.ui.theme.Appearance
 import dev.zakyymuh.timebox.ui.theme.Fresh
 
 /** One screen: today's list. There is nothing behind it, so Back leaves the app. */
@@ -29,10 +27,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(Fresh.Page.toArgb(), Fresh.Page.toArgb()),
-            navigationBarStyle = SystemBarStyle.light(Fresh.Page.toArgb(), Fresh.Page.toArgb()),
-        )
+        // Light or dark, as picked in Settings; the system bars match the page.
+        Appearance.start(this, Fresh.Garden, Fresh.GardenDark)
 
         // Re-arming an already-armed alarm is harmless, and this covers a first launch
         // and any firing that was missed while the app was not running.

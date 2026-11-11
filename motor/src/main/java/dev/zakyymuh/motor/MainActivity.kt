@@ -6,21 +6,19 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.toArgb
 import dev.zakyymuh.motor.nudge.ExpiryReminder
 import dev.zakyymuh.motor.ui.LaunchIntro
 import dev.zakyymuh.motor.ui.SoulRed
 import dev.zakyymuh.timebox.ui.theme.DailyTheme
-import dev.zakyymuh.timebox.ui.theme.Fresh
+import dev.zakyymuh.timebox.ui.theme.Appearance
+import dev.zakyymuh.motor.ui.SoulRedDark
 
 class MainActivity : ComponentActivity() {
 
@@ -28,14 +26,9 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* either way, carry on */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // First of all: every colour below and in the screens is read from this palette.
-        Fresh.use(SoulRed)
         super.onCreate(savedInstanceState)
-        // Always light, like papacti: dark bar icons on the white page.
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(Fresh.Page.toArgb(), Fresh.Page.toArgb()),
-            navigationBarStyle = SystemBarStyle.light(Fresh.Page.toArgb(), Fresh.Page.toArgb()),
-        )
+        // Light or dark, as picked in Settings; the system bars match the page.
+        Appearance.start(this, SoulRed, SoulRedDark)
 
         // Re-arming an already-armed alarm is harmless, and this covers a first launch
         // and any check that was missed while the app was not running.

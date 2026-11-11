@@ -35,4 +35,5 @@ dependencies {
     api(libs.compose.material3)
     api(libs.androidx.navigation.compose)
     api(libs.androidx.lifecycle.runtime.ktx)
+    api(libs.androidx.activity.compose)
 }

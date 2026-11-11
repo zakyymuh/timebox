@@ -1,12 +1,14 @@
 package dev.zakyymuh.timebox.ui.theme
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 
 /** Built when first drawn, so it picks up the palette the app chose with [Fresh.use]. */
-private fun freshScheme() = lightColorScheme(
+private fun freshScheme(): ColorScheme = (if (Fresh.Dark) darkColorScheme() else lightColorScheme()).copy(
     background = Fresh.Page,
     onBackground = Fresh.Ink,
     surface = Fresh.Page,
@@ -36,8 +38,8 @@ private fun freshScheme() = lightColorScheme(
 )
 
 /**
- * Always light, in the app's [Fresh] palette, whatever the phone's dark-mode setting
- * (owner's call). No dynamic colour either: Material You would repaint it with the wallpaper.
+ * The app's [Fresh] palette, light or dark as picked in Settings ([Appearance]). No dynamic
+ * colour: Material You would repaint it with the wallpaper.
  */
 @Composable
 fun DailyTheme(content: @Composable () -> Unit) {

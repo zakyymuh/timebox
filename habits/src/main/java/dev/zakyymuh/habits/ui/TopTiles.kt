@@ -80,8 +80,8 @@ private fun Tile(
     /** A sentence rather than a figure: smaller, and up to two lines. */
     small: Boolean = false,
 ) {
-    val ink = if (dark) Color.White else Fresh.Ink
-    val soft = if (dark) Color.White.copy(alpha = 0.6f) else Fresh.InkSoft
+    val ink = if (dark) Fresh.Page else Fresh.Ink
+    val soft = if (dark) Fresh.Page.copy(alpha = 0.6f) else Fresh.InkSoft
     Column(
         modifier = modifier
             .height(136.dp)
@@ -94,7 +94,7 @@ private fun Tile(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(if (dark) Color.White.copy(alpha = 0.12f) else Fresh.Page),
+                .background(if (dark) Fresh.Page.copy(alpha = 0.12f) else Fresh.Page),
             contentAlignment = Alignment.Center,
         ) {
             Text(icon, style = MaterialTheme.typography.titleMedium)

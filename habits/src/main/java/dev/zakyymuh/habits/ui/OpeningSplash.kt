@@ -80,7 +80,7 @@ fun OpeningSplash(onFinished: () -> Unit) {
                 fun at(x: Float, y: Float) = Offset(x * u, y * u)
 
                 // The calendar, fading out.
-                val cal = Color.White.copy(alpha = 1f - phase(550f, 300f))
+                val cal = Fresh.Page.copy(alpha = 1f - phase(550f, 300f))
                 drawRoundRect(cal, at(8f, 10f), Size(32f * u, 30f * u), CornerRadius(5f * u), style = line)
                 drawLine(cal, at(8f, 18f), at(40f, 18f), line.width, StrokeCap.Round)
                 drawLine(cal, at(16f, 6f), at(16f, 13f), line.width, StrokeCap.Round)
@@ -92,7 +92,7 @@ fun OpeningSplash(onFinished: () -> Unit) {
                 // The checklist, row by row, then a tick into each box.
                 for (row in 0..2) {
                     val top = 11f + 10f * row
-                    val rowIn = Color.White.copy(alpha = phase(700f + 80f * row, 250f))
+                    val rowIn = Fresh.Page.copy(alpha = phase(700f + 80f * row, 250f))
                     drawRoundRect(rowIn, at(11f, top), Size(6f * u, 6f * u), CornerRadius(1.5f * u), style = line)
                     drawLine(rowIn, at(22f, top + 3f), at(38f, top + 3f), line.width, StrokeCap.Round)
                     tick(top, u, phase(1_000f + 120f * row, 220f))

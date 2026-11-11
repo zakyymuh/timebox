@@ -130,11 +130,11 @@ private fun DayPill(day: StripDay, isToday: Boolean, isSelected: Boolean, big: B
     val border = when {
         day.border == DayBorder.ToDo -> Fresh.Green.copy(alpha = 0.45f)
         isSelected && !isToday -> Fresh.Ink
-        else -> Color.White
+        else -> Fresh.Page
     }
     // Today stays lilac so it is easy to find; when watered, its date circle turns blue.
     val fill = when {
-        big -> Color.White
+        big -> Fresh.Page
         isToday -> Lilac
         watered -> WateredBlue
         else -> Fresh.Card
@@ -156,6 +156,8 @@ private fun DayPill(day: StripDay, isToday: Boolean, isSelected: Boolean, big: B
             color = when {
                 big -> Fresh.Ink
                 isToday -> Color.White
+                // The light blue stays light in dark mode, so it keeps dark words.
+                watered -> Fresh.Garden.inkSoft
                 else -> Fresh.InkSoft
             },
             maxLines = 1,
@@ -168,14 +170,18 @@ private fun DayPill(day: StripDay, isToday: Boolean, isSelected: Boolean, big: B
                     when {
                         big -> Fresh.Green
                         isToday && watered -> WateredBlue
-                        else -> Color.White
+                        else -> Fresh.Page
                     },
                 ),
         ) {
             Text(
                 day.date.dayOfMonth.toString(),
                 style = if (big) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
-                color = if (big) Color.White else Fresh.Ink,
+                color = when {
+                    big -> Color.White
+                    isToday && watered -> Fresh.Garden.ink
+                    else -> Fresh.Ink
+                },
             )
         }
     }

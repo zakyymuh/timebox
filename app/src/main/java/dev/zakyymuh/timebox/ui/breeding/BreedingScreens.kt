@@ -187,7 +187,7 @@ fun BreedingNewScreen(viewModel: BreedingNewViewModel, onBack: () -> Unit, onSav
                 onClick = { viewModel.save { born = it } },
                 enabled = form.isValid,
                 shape = CircleShape,
-                colors = ButtonDefaults.buttonColors(containerColor = Fresh.Ink, contentColor = Color.White),
+                colors = ButtonDefaults.buttonColors(containerColor = Fresh.Ink, contentColor = Fresh.Page),
                 modifier = Modifier.fillMaxWidth().height(56.dp),
             ) {
                 Text("Save cross", style = MaterialTheme.typography.labelLarge)

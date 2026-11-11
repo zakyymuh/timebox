@@ -1,5 +1,8 @@
 package dev.zakyymuh.timebox.ui.dashboard
 
+import dev.zakyymuh.timebox.ui.common.SettingsScreen
+import dev.zakyymuh.timebox.ui.common.SettingsButton
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -94,6 +97,8 @@ fun DashboardScreen(
     val density = LocalDensity.current
     // The pinned header's height, so the cards start below it and then scroll under it.
     var header by remember { mutableStateOf(0.dp) }
+    // Saved: picking light or dark recreates the activity, and Settings should stay open.
+    var settings by rememberSaveable { mutableStateOf(false) }
 
     // The header draws under the status bar itself, so the page takes no top inset here.
     Scaffold(containerColor = Fresh.Page, contentWindowInsets = WindowInsets(0, 0, 0, 0)) { insets ->
@@ -120,9 +125,13 @@ fun DashboardScreen(
             Spacer(Modifier.height(32.dp))
         }
         GreetingHeader(Modifier.onSizeChanged { header = with(density) { it.height.toDp() } - 12.dp }) {
-            Text(GREETING, style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(GREETING, style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink, modifier = Modifier.weight(1f))
+                SettingsButton(onClick = { settings = true })
+            }
             FactLine(state.fact?.text.orEmpty(), viewModel::shuffleFact)
         }
+        if (settings) SettingsScreen(onClose = { settings = false })
         }
     }
 }

@@ -1,5 +1,9 @@
 package dev.zakyymuh.motor.ui
 
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Row
+import dev.zakyymuh.timebox.ui.common.SettingsScreen
+import dev.zakyymuh.timebox.ui.common.SettingsButton
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -72,12 +76,14 @@ fun HomeScreen(
 
     // No back button on home any more; system Back still closes the app.
     BackHandler(onBack = onBack)
+    // Saved: picking light or dark recreates the activity, and Settings should stay open.
+    var settings by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(containerColor = Fresh.Page, snackbarHost = { SnackbarHost(snackbar) }) { insets ->
         Column(
             Modifier.padding(insets).padding(horizontal = 20.dp).fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
-            Greeting(vehicles.today)
+            Greeting(vehicles.today, onSettings = { settings = true })
             val allCards = cards ?: return@Column
             val allRows = rows ?: return@Column
             VehicleSection(allCards, vehicles.today, photos, onAdd = onAddVehicle, onOpen = onOpenVehicle, onEdit = onEditVehicle)
@@ -93,6 +99,7 @@ fun HomeScreen(
             Spacer(Modifier.height(24.dp))
         }
     }
+    if (settings) SettingsScreen(onClose = { settings = false })
 
     if (lastTimeOpen) {
         val forVehicle = if (choreForPicked) choreFor?.takeIf { id -> choreVehicles.any { it.id == id } } else choreVehicles.firstOrNull()?.id
@@ -116,10 +123,13 @@ private val greetingDate = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENG
 
 /** "Welcome back, Zaky", like Daily's "Hello Zaky", with today's date under it. */
 @Composable
-private fun Greeting(today: LocalDate) {
-    Column(Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 4.dp)) {
-        Text("Welcome back, $OWNER", style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink)
-        Text(today.format(greetingDate), style = Label, color = Fresh.InkSoft, modifier = Modifier.padding(top = 4.dp))
+private fun Greeting(today: LocalDate, onSettings: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Welcome back, $OWNER", style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink)
+            Text(today.format(greetingDate), style = Label, color = Fresh.InkSoft, modifier = Modifier.padding(top = 4.dp))
+        }
+        SettingsButton(onClick = onSettings)
     }
 }
 

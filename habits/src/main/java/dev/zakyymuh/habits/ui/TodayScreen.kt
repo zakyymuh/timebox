@@ -1,5 +1,8 @@
 package dev.zakyymuh.habits.ui
 
+import dev.zakyymuh.timebox.ui.common.SettingsScreen
+import dev.zakyymuh.timebox.ui.common.SettingsButton
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -76,6 +79,8 @@ fun TodayScreen(viewModel: TodayViewModel) {
     val lastDone by viewModel.lastDone.collectAsStateWithLifecycle()
     var adding by remember { mutableStateOf(false) }
     var historyOpen by remember { mutableStateOf(false) }
+    // Saved: picking light or dark recreates the activity, and Settings should stay open.
+    var settingsOpen by rememberSaveable { mutableStateOf(false) }
     // The opening animation plays each time the app comes to the front, with a fresh fact.
     var opening by remember { mutableStateOf(true) }
     var openings by remember { mutableIntStateOf(0) }
@@ -116,7 +121,7 @@ fun TodayScreen(viewModel: TodayViewModel) {
                 .fillMaxSize(),
         ) {
             Column(Modifier.padding(horizontal = 20.dp).blockTouches(locked)) {
-                Header(state, locked)
+                Header(state, locked, onSettings = { settingsOpen = true })
 
                 if (state.date != null) {
                     Spacer(Modifier.height(RowGap))
@@ -163,6 +168,8 @@ fun TodayScreen(viewModel: TodayViewModel) {
             onClose = { historyOpen = false },
         )
     }
+
+    if (settingsOpen) SettingsScreen(onClose = { settingsOpen = false })
 
     if (opening) {
         key(openings) { OpeningSplash(onFinished = { opening = false }) }
@@ -212,12 +219,13 @@ private fun dayName(date: LocalDate, today: LocalDate?): String =
     if (today != null && date == today.minusDays(1)) "Yesterday" else date.format(dayHeading)
 
 @Composable
-private fun Header(state: DayUiState, locked: Boolean) {
-    val title by animateColorAsState(if (locked) Color.White else Fresh.Ink, tween(450), label = "title")
+private fun Header(state: DayUiState, locked: Boolean, onSettings: () -> Unit) {
+    val title by animateColorAsState(if (locked) Fresh.Page else Fresh.Ink, tween(450), label = "title")
     val sub by animateColorAsState(
-        if (locked) Color.White.copy(alpha = 0.55f) else Fresh.InkSoft, tween(450), label = "sub",
+        if (locked) Fresh.Page.copy(alpha = 0.55f) else Fresh.InkSoft, tween(450), label = "sub",
     )
-    Column(Modifier.fillMaxWidth().padding(top = 10.dp)) {
+    Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Column(Modifier.weight(1f)) {
         Text(
             text = when {
                 state.date == null -> ""
@@ -238,6 +246,9 @@ private fun Header(state: DayUiState, locked: Boolean) {
             modifier = Modifier.padding(top = 4.dp),
             color = sub,
         )
+    }
+    // Hidden while a card is being worked on: nothing else is open then.
+    if (!locked) SettingsButton(onClick = onSettings)
     }
 }
 
@@ -510,7 +521,7 @@ private fun CardActions(
                 Spacer(Modifier.height(10.dp))
                 ActionButton("Cancel", Fresh.Card, Fresh.Ink) { confirming = false }
             } else {
-                ActionButton("Edit", Fresh.Ink, Color.White, onEdit)
+                ActionButton("Edit", Fresh.Ink, Fresh.Page, onEdit)
                 Spacer(Modifier.height(10.dp))
                 ActionButton("Delete", Fresh.Card, Fresh.Error) { confirming = true }
             }

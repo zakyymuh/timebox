@@ -25,7 +25,7 @@ fun AddButton(label: String, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         shape = CircleShape,
-        colors = ButtonDefaults.buttonColors(containerColor = Fresh.Ink, contentColor = Color.White),
+        colors = ButtonDefaults.buttonColors(containerColor = Fresh.Ink, contentColor = Fresh.Page),
         contentPadding = PaddingValues(horizontal = 24.dp),
         modifier = Modifier.height(56.dp),
     ) {

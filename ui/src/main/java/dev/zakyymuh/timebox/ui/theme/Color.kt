@@ -37,6 +37,21 @@ object Fresh {
         error = Color(0xFFC0453A),
     )
 
+    /** Garden at night: near-black page, light ink, the same green. */
+    val GardenDark = Palette(
+        page = Color(0xFF121411),
+        card = Color(0xFF1F221E),
+        ink = Color(0xFFE9ECE7),
+        inkSoft = Color(0xFF9CA298),
+        pastel = Color(0xFF233F2D),
+        green = Color(0xFF5DB37E),
+        greenDeep = Color(0xFFB4E3C2),
+        error = Color(0xFFE5705F),
+    )
+
+    /** True when the app is painted with its dark palette. */
+    var Dark = false; private set
+
     var Page = Garden.page; private set
     var Card = Garden.card; private set
     var Ink = Garden.ink; private set
@@ -50,7 +65,8 @@ object Fresh {
      * Repaints the app with [palette]. Call it in onCreate before setContent: nothing
      * observes these values, so a change after the first frame would only show in part.
      */
-    fun use(palette: Palette) {
+    fun use(palette: Palette, dark: Boolean = false) {
+        Dark = dark
         Page = palette.page
         Card = palette.card
         Ink = palette.ink

@@ -350,7 +350,7 @@ fun SaveButton(enabled: Boolean, onClick: () -> Unit) {
         shape = CircleShape,
         colors = ButtonDefaults.buttonColors(
             containerColor = Fresh.Ink,
-            contentColor = Color.White,
+            contentColor = Fresh.Page,
             disabledContainerColor = Fresh.Card,
             disabledContentColor = Fresh.InkSoft,
         ),

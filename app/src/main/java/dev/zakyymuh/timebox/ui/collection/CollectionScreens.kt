@@ -344,7 +344,7 @@ fun DexDetailScreen(
                         Toast.makeText(context, "Welcome home, ${e.name}! 🎉", Toast.LENGTH_SHORT).show()
                     },
                     shape = CircleShape,
-                    colors = ButtonDefaults.buttonColors(containerColor = Fresh.Ink, contentColor = Color.White),
+                    colors = ButtonDefaults.buttonColors(containerColor = Fresh.Ink, contentColor = Fresh.Page),
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                 ) {
                     Text("Got it! 🎉", style = MaterialTheme.typography.labelLarge)
@@ -450,7 +450,7 @@ fun DexEditScreen(viewModel: DexEditViewModel, onDone: () -> Unit, onDeleted: ()
                 shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Fresh.Ink,
-                    contentColor = Color.White,
+                    contentColor = Fresh.Page,
                     disabledContainerColor = Fresh.Card,
                     disabledContentColor = Fresh.InkSoft,
                 ),

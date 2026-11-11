@@ -143,7 +143,7 @@ fun ServiceListScreen(
             TopBar(title = vehicle?.name ?: "", onBack = onBack) {
                 RoundButton("✎", onClick = onEditVehicle, description = "Edit vehicle")
                 Spacer(Modifier.width(8.dp))
-                RoundButton("+", onClick = onAdd, container = Fresh.Ink, content = Color.White, description = "Log a service")
+                RoundButton("+", onClick = onAdd, container = Fresh.Ink, content = Fresh.Page, description = "Log a service")
             }
             vehicle?.plate?.takeIf { it.isNotEmpty() }?.let {
                 Text(it, style = Label, color = Fresh.InkSoft, modifier = Modifier.padding(start = 4.dp, bottom = 12.dp))
@@ -256,7 +256,7 @@ fun ServiceEditScreen(viewModel: ServiceEditViewModel, onDone: () -> Unit) {
                 shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Fresh.Ink,
-                    contentColor = Color.White,
+                    contentColor = Fresh.Page,
                     disabledContainerColor = Fresh.Card,
                     disabledContentColor = Fresh.InkSoft,
                 ),
