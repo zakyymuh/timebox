@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launch animation, last frame: a gear with eight teeth, the same greens as the motorcycle. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:pivotX="54" android:pivotY="54" android:scaleX="0.82" android:scaleY="0.82">
+        <!-- Fresh.GreenDeep teeth and rim. -->
+        <path android:fillColor="#1F4D33"
+            android:pathData="M72.94,46.15 L73.58,47.94 L79.48,48.83 L79.48,59.17 L73.58,60.06 L72.94,61.85 L72.13,63.56 L75.67,68.37 L68.37,75.67 L63.56,72.13 L61.85,72.94 L60.06,73.58 L59.17,79.48 L48.83,79.48 L47.94,73.58 L46.15,72.94 L44.44,72.13 L39.63,75.67 L32.33,68.37 L35.87,63.56 L35.06,61.85 L34.42,60.06 L28.52,59.17 L28.52,48.83 L34.42,47.94 L35.06,46.15 L35.87,44.44 L32.33,39.63 L39.63,32.33 L44.44,35.87 L46.15,35.06 L47.94,34.42 L48.83,28.52 L59.17,28.52 L60.06,34.42 L61.85,35.06 L63.56,35.87 L68.37,32.33 L75.67,39.63 L72.13,44.44 Z" />
+        <!-- Fresh.Green hub ring, and the pastel axle hole. -->
+        <path android:fillColor="#5DB37E" android:pathData="M54,42 a12,12 0 1,0 0.01,0 Z" />
+        <path android:fillColor="#CDEBD5" android:pathData="M54,48 a6,6 0 1,0 0.01,0 Z" />
+    </group>
+</vector>

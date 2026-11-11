@@ -10,8 +10,14 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import dev.zakyymuh.motor.nudge.ExpiryReminder
+import dev.zakyymuh.motor.ui.LaunchIntro
 import dev.zakyymuh.timebox.ui.theme.DailyTheme
 import dev.zakyymuh.timebox.ui.theme.Fresh
 
@@ -41,7 +47,12 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             DailyTheme {
-                MotorNav(onClose = ::finish)
+                // Saved, so the intro plays once per launch, not again after a rotation.
+                var introDone by rememberSaveable { mutableStateOf(false) }
+                Box {
+                    MotorNav(onClose = ::finish)
+                    if (!introDone) LaunchIntro(onDone = { introDone = true })
+                }
             }
         }
     }

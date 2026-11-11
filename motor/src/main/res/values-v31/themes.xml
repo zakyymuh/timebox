@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Android 12+ shows this the instant the app is tapped, before any code runs: the
+      motorcycle icon on a white page. LaunchIntro's first frame is drawn to match it,
+      then spins the motorcycle into a car and the car into a gear.
+    -->
+    <style name="Theme.Motor" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowSplashScreenBackground">#FFFFFF</item>
+    </style>
+</resources>
