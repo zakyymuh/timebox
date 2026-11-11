@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -137,7 +138,10 @@ fun BreedingNewScreen(viewModel: BreedingNewViewModel, onBack: () -> Unit, onSav
     val father by viewModel.father.collectAsStateWithLifecycle()
     // Which slot the plant list is open for: SEED, POLLEN, or none.
     var picking by rememberSaveable { mutableStateOf<String?>(null) }
+    // The saved cross, while its animation plays; then the screen moves on to it.
+    var born by rememberSaveable { mutableStateOf<Long?>(null) }
 
+    Box(Modifier.fillMaxSize()) {
     Scaffold(containerColor = Fresh.Page) { insets ->
         Column(
             Modifier.padding(insets).padding(horizontal = 20.dp).fillMaxSize().verticalScroll(rememberScrollState()),
@@ -180,7 +184,7 @@ fun BreedingNewScreen(viewModel: BreedingNewViewModel, onBack: () -> Unit, onSav
             )
             Spacer(Modifier.height(24.dp))
             Button(
-                onClick = { viewModel.save(onSaved) },
+                onClick = { viewModel.save { born = it } },
                 enabled = form.isValid,
                 shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(containerColor = Fresh.Ink, contentColor = Color.White),
@@ -231,9 +235,15 @@ fun BreedingNewScreen(viewModel: BreedingNewViewModel, onBack: () -> Unit, onSav
             }
         }
     }
+    born?.let { id -> BreedAnimation(onDone = { onSaved(id) }) }
+    }
 }
 
-/** The two parents side by side with a heart between. Each slot is tappable when [onMother]/[onFather] are given. */
+/**
+ * Both parents as one photo: the seed parent fills the left half and the pollen parent the
+ * right, touching with no gap, the outer corners rounded. A heart sits on the seam. Each
+ * half is tappable when [onMother]/[onFather] are given. Names sit under their half.
+ */
 @Composable
 private fun ParentPair(
     mother: DexEntry?,
@@ -243,46 +253,61 @@ private fun ParentPair(
     motherName: String? = null,
     fatherName: String? = null,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        ParentSlot(SEED, mother, motherName, onMother, Modifier.weight(1f))
-        Text("❤️", fontSize = 22.sp, modifier = Modifier.padding(horizontal = 8.dp))
-        ParentSlot(POLLEN, father, fatherName, onFather, Modifier.weight(1f))
+    val corner = 28.dp
+    Column {
+        Box(Modifier.fillMaxWidth().aspectRatio(1.2f), contentAlignment = Alignment.Center) {
+            Row(Modifier.matchParentSize()) {
+                ParentHalf(mother, onMother, RoundedCornerShape(topStart = corner, bottomStart = corner), Modifier.weight(1f))
+                ParentHalf(father, onFather, RoundedCornerShape(topEnd = corner, bottomEnd = corner), Modifier.weight(1f))
+            }
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(52.dp).clip(CircleShape).background(Color.White),
+            ) {
+                Text("❤️", fontSize = 22.sp)
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp)) {
+            ParentName(SEED, mother, motherName, Alignment.Start, Modifier.weight(1f))
+            Spacer(Modifier.width(36.dp))
+            ParentName(POLLEN, father, fatherName, Alignment.End, Modifier.weight(1f))
+        }
     }
 }
 
 @Composable
-private fun ParentSlot(role: String, entry: DexEntry?, fallbackName: String?, onClick: (() -> Unit)?, modifier: Modifier) {
-    val shape = RoundedCornerShape(24.dp)
-    Column(modifier) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(shape)
-                .background(Fresh.Card)
-                .border(2.dp, Color.White, shape)
-                .let { if (onClick != null) it.clickable(onClick = onClick) else it },
-        ) {
-            if (entry != null) {
-                DexPhoto(entry.photo, Modifier.matchParentSize(), side = 480, emojiSize = 40.sp)
-            } else if (onClick != null) {
-                Text("+", style = MaterialTheme.typography.headlineLarge, color = Fresh.InkSoft)
-            } else {
-                // A parent that has left the collection: only its name is kept.
-                Text("🪴", fontSize = 36.sp, modifier = Modifier.padding(8.dp))
-            }
+private fun ParentHalf(entry: DexEntry?, onClick: (() -> Unit)?, shape: RoundedCornerShape, modifier: Modifier) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .fillMaxHeight()
+            .clip(shape)
+            .background(Fresh.Card)
+            .let { if (onClick != null) it.clickable(onClick = onClick) else it },
+    ) {
+        if (entry != null) {
+            DexPhoto(entry.photo, Modifier.matchParentSize(), side = 480, emojiSize = 40.sp)
+        } else if (onClick != null) {
+            Text("+", style = MaterialTheme.typography.headlineLarge, color = Fresh.InkSoft)
+        } else {
+            // A parent that has left the collection: only its name is kept.
+            Text("🪴", fontSize = 36.sp)
         }
-        Text(role, style = Small, color = Fresh.InkSoft, modifier = Modifier.padding(start = 4.dp, top = 8.dp))
+    }
+}
+
+@Composable
+private fun ParentName(role: String, entry: DexEntry?, fallbackName: String?, align: Alignment.Horizontal, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = align) {
+        Text(role, style = Small, color = Fresh.InkSoft)
         Text(
             entry?.name ?: fallbackName ?: "Pick one",
             style = MaterialTheme.typography.titleMedium,
             color = if (entry != null || fallbackName != null) Fresh.Ink else Fresh.InkSoft,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = 4.dp),
         )
-        entry?.let { Text(Dex.label(it.number), style = Small, color = Fresh.InkSoft, modifier = Modifier.padding(start = 4.dp)) }
+        entry?.let { Text(Dex.label(it.number), style = Small, color = Fresh.InkSoft) }
     }
 }
 
