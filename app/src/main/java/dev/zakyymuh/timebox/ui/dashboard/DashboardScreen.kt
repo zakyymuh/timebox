@@ -31,6 +31,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -84,20 +91,21 @@ fun DashboardScreen(
         onPauseOrDispose { }
     }
 
-    Scaffold(
-        containerColor = Fresh.Page,
-    ) { insets ->
+    val density = LocalDensity.current
+    // The pinned header's height, so the cards start below it and then scroll under it.
+    var header by remember { mutableStateOf(0.dp) }
+
+    // The header draws under the status bar itself, so the page takes no top inset here.
+    Scaffold(containerColor = Fresh.Page, contentWindowInsets = WindowInsets(0, 0, 0, 0)) { insets ->
+        Box(Modifier.padding(insets).fillMaxSize()) {
         Column(
             modifier = Modifier
-                .padding(insets)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 20.dp)
+                .navigationBarsPadding(),
         ) {
-            Spacer(Modifier.height(20.dp))
-            Text(GREETING, style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink)
-            FactLine(state.fact?.text.orEmpty(), viewModel::shuffleFact)
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(header))
 
             state.date?.let { WeekCard(state.week, it, onOpenPlants) }
 
@@ -110,6 +118,11 @@ fun DashboardScreen(
             soil?.let { SoilWaterCard(it, onOpenSoil, Modifier.padding(top = CARD_GAP)) }
             crosses?.let { BreedingCard(it.firstOrNull(), onOpenBreeding) }
             Spacer(Modifier.height(32.dp))
+        }
+        GreetingHeader(Modifier.onSizeChanged { header = with(density) { it.height.toDp() } - 12.dp }) {
+            Text(GREETING, style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink)
+            FactLine(state.fact?.text.orEmpty(), viewModel::shuffleFact)
+        }
         }
     }
 }
