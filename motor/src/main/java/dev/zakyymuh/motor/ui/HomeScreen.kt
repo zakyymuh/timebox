@@ -23,14 +23,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.motor.data.PhotoStore
-import dev.zakyymuh.timebox.ui.common.TopBar
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import dev.zakyymuh.timebox.ui.theme.Label
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import dev.zakyymuh.timebox.ui.lastdone.FunFactCard
 import dev.zakyymuh.timebox.ui.lastdone.LastTimeSheet
 import dev.zakyymuh.timebox.ui.theme.Fresh
 
 /**
- * The first screen: a line about a chore, the dates that run out, then your vehicles.
- * Back here closes the app.
+ * The first screen: a greeting, your vehicles as big cards, a line about a chore, then
+ * the dates that run out. Back here closes the app.
  */
 @Composable
 fun HomeScreen(
@@ -41,6 +48,7 @@ fun HomeScreen(
     onBack: () -> Unit,
     onAddVehicle: () -> Unit,
     onOpenVehicle: (Long) -> Unit,
+    onEditVehicle: (Long) -> Unit,
     onAddExpiry: () -> Unit,
     onEditExpiry: (Long) -> Unit,
 ) {
@@ -62,13 +70,18 @@ fun HomeScreen(
         if (result == SnackbarResult.ActionPerformed) expiries.undoRenewal() else expiries.dismissRenewal()
     }
 
+    // No back button on home any more; system Back still closes the app.
+    BackHandler(onBack = onBack)
+
     Scaffold(containerColor = Fresh.Page, snackbarHost = { SnackbarHost(snackbar) }) { insets ->
         Column(
             Modifier.padding(insets).padding(horizontal = 20.dp).fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
-            TopBar(title = "Motor", onBack = onBack)
+            Greeting(vehicles.today)
             val allCards = cards ?: return@Column
             val allRows = rows ?: return@Column
+            VehicleSection(allCards, vehicles.today, photos, onAdd = onAddVehicle, onOpen = onOpenVehicle, onEdit = onEditVehicle)
+            Spacer(Modifier.height(22.dp))
             FunFactCard(
                 fact = lastDone.fact,
                 tracked = lastDone.events.size,
@@ -77,7 +90,6 @@ fun HomeScreen(
                 intro = "Keep track of when you last did things — cuci motor, tambah angin, a SIM for the car.",
             )
             ExpirySection(allRows, expiries.today, onAdd = onAddExpiry, onEdit = onEditExpiry, onRenew = expiries::renew)
-            VehicleSection(allCards, vehicles.today, photos, onAdd = onAddVehicle, onOpen = onOpenVehicle)
             Spacer(Modifier.height(24.dp))
         }
     }
@@ -99,3 +111,17 @@ fun HomeScreen(
         }
     }
 }
+
+private val greetingDate = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ENGLISH)
+
+/** "Welcome back, Zaky", like Daily's "Hello Zaky", with today's date under it. */
+@Composable
+private fun Greeting(today: LocalDate) {
+    Column(Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 4.dp)) {
+        Text("Welcome back, $OWNER", style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink)
+        Text(today.format(greetingDate), style = Label, color = Fresh.InkSoft, modifier = Modifier.padding(top = 4.dp))
+    }
+}
+
+/** Whose app this is. One person's phone, so a constant, as in Daily. */
+private const val OWNER = "Zaky"

@@ -91,6 +91,7 @@ fun MotorNav(onClose: () -> Unit) {
                 onBack = { entry.ifResumed(onClose) },
                 onAddVehicle = { entry.ifResumed { nav.go(vehicleEdit(0)) } },
                 onOpenVehicle = { id -> entry.ifResumed { nav.go(vehicle(id)) } },
+                onEditVehicle = { id -> entry.ifResumed { nav.go(vehicleEdit(id)) } },
                 onAddExpiry = { entry.ifResumed { nav.go(expiryEdit(0)) } },
                 onEditExpiry = { id -> entry.ifResumed { nav.go(expiryEdit(id)) } },
             )

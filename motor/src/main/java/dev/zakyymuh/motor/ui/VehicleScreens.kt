@@ -119,7 +119,7 @@ fun SectionHeader(title: String, action: String? = null, onAction: () -> Unit = 
     }
 }
 
-/** Your vehicles, each with its last service. Empty, it explains itself. */
+/** Your vehicles, one big card each, side by side. Empty, it explains itself. */
 @Composable
 fun VehicleSection(
     cards: List<VehicleCard>,
@@ -127,6 +127,7 @@ fun VehicleSection(
     photos: PhotoStore,
     onAdd: () -> Unit,
     onOpen: (Long) -> Unit,
+    onEdit: (Long) -> Unit,
 ) {
     SectionHeader("Vehicles", "+ Add", onAdd)
     if (cards.isEmpty()) {
@@ -137,24 +138,7 @@ fun VehicleSection(
         }
         return
     }
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        cards.forEach { card ->
-            SoftCard(corner = 20.dp, onClick = { onOpen(card.vehicle.id) }) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    VehiclePhoto(photos, card.vehicle.photo, card.vehicle.type, 56.dp)
-                    Spacer(Modifier.width(14.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(card.vehicle.name, style = MaterialTheme.typography.titleMedium, color = Fresh.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        if (card.vehicle.plate.isNotEmpty()) {
-                            Text(card.vehicle.plate, style = Label, color = Fresh.InkSoft)
-                        }
-                        Text(ServiceLog.summary(card.services, today), style = Small, color = Fresh.InkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    Text("›", style = MaterialTheme.typography.titleLarge, color = Fresh.InkSoft)
-                }
-            }
-        }
-    }
+    VehicleSlider(cards, today, photos, onOpen, onEdit)
 }
 
 /** The vehicle's photo, cropped square, or its emoji on a pastel tile. */
