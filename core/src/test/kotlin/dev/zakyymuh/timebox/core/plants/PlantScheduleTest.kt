@@ -56,10 +56,39 @@ class PlantScheduleTest {
     }
 
     @Test
-    fun `status is Due 0 on the due day, Due 2 two days later, Upcoming 1 the day before`() {
+    fun `status is Due 0 on the due day and Upcoming 1 the day before`() {
         assertEquals(PlantStatus.Due(0), PlantSchedule.status(monstera, emptyList(), d(8)))
-        assertEquals(PlantStatus.Due(2), PlantSchedule.status(monstera, emptyList(), d(10)))
         assertEquals(PlantStatus.Upcoming(1), PlantSchedule.status(monstera, emptyList(), today))
+    }
+
+    @Test
+    fun `a missed day is skipped, so the plant comes round one interval later`() {
+        // Due on the 8th, not watered: on the 9th it is due the 15th, not a day late.
+        assertEquals(PlantStatus.Upcoming(6), PlantSchedule.status(monstera, emptyList(), d(9)))
+        assertEquals(d(15), PlantSchedule.nextDue(monstera, emptyList(), d(9)))
+        // The 15th itself is a due day again, and two misses later it is the 29th.
+        assertEquals(PlantStatus.Due(0), PlantSchedule.status(monstera, emptyList(), d(15)))
+        assertEquals(d(29), PlantSchedule.nextDue(monstera, emptyList(), d(23)))
+    }
+
+    @Test
+    fun `an every-day plant missed yesterday is due today`() {
+        val daily = monstera.copy(recurrence = Recurrence.EveryDays(1))
+        assertEquals(PlantStatus.Due(0), PlantSchedule.status(daily, watered(d(3)), today))
+    }
+
+    @Test
+    fun `watering the day after a skip restarts from that day`() {
+        assertEquals(d(16), PlantSchedule.nextDue(monstera, watered(d(9)), d(9)))
+    }
+
+    @Test
+    fun `still moist for some days is the new due day, and the interval runs from there`() {
+        // Due the 8th; "still moist, water in 3 days" → the 11th, then the 18th if skipped.
+        val moist = monstera.copy(snoozedUntil = d(11))
+        assertEquals(PlantStatus.Upcoming(3), PlantSchedule.status(moist, emptyList(), d(8)))
+        assertEquals(PlantStatus.Due(0), PlantSchedule.status(moist, emptyList(), d(11)))
+        assertEquals(d(18), PlantSchedule.nextDue(moist, emptyList(), d(12)))
     }
 
     @Test

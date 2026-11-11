@@ -161,6 +161,14 @@ class PlantRepositoryTest {
     }
 
     @Test
+    fun `still moist for three days makes that the due day, then the interval runs on`() = runTest {
+        val id = repo.save(0, dueToday)
+        repo.snooze(id, days = 3)
+        assertEquals(d(10), nextDue())
+        assertEquals(LocalDate.of(2026, 11, 10), db.plantDao().plant(id)!!.snoozedUntil)
+    }
+
+    @Test
     fun `watering clears the snooze`() = runTest {
         val id = repo.save(0, dueToday)
         repo.snooze(id)

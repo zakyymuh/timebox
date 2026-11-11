@@ -1,9 +1,6 @@
 package dev.zakyymuh.timebox.ui.plants
 
-import dev.zakyymuh.timebox.core.soil.SampleStatus
-import dev.zakyymuh.timebox.ui.soil.StatusCard
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -24,6 +22,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,8 +36,11 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.core.plants.PlantCopy
 import dev.zakyymuh.timebox.core.plants.PlantRow
+import dev.zakyymuh.timebox.core.plants.PlantStatus
 import dev.zakyymuh.timebox.core.plants.PlantsOverview
 import dev.zakyymuh.timebox.ui.common.Pill
+import dev.zakyymuh.timebox.ui.common.AddButton
+import dev.zakyymuh.timebox.ui.common.AddButtonClearance
 import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.common.SectionTitle
 import dev.zakyymuh.timebox.ui.common.SoftCard
@@ -58,8 +63,6 @@ fun PlantsScreen(
     onAdd: () -> Unit,
     onEdit: (Long) -> Unit,
     onEncyclopedia: () -> Unit,
-    soil: SampleStatus?,
-    onSoil: () -> Unit,
 ) {
     val overview by viewModel.overview.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
@@ -80,7 +83,12 @@ fun PlantsScreen(
         }
     }
 
-    Scaffold(containerColor = Fresh.Page, snackbarHost = { SnackbarHost(snackbar) }) { insets ->
+    Scaffold(
+        containerColor = Fresh.Page,
+        snackbarHost = { SnackbarHost(snackbar) },
+        floatingActionButtonPosition = FabPosition.Center,
+        floatingActionButton = { AddButton("Add a plant", onAdd) },
+    ) { insets ->
         Column(
             modifier = Modifier
                 .padding(insets)
@@ -92,29 +100,43 @@ fun PlantsScreen(
                 RoundButton("📖", onClick = onEncyclopedia, description = "Encyclopedia")
                 Spacer(Modifier.width(8.dp))
                 RoundButton("🗓", onClick = onCalendar, description = "Calendar")
-                Spacer(Modifier.width(8.dp))
-                RoundButton("+", onClick = onAdd, container = Fresh.Ink, content = Color.White, description = "Add a plant")
             }
 
+            // Cards just watered, still playing their animation before they move down.
+            val held = remember { mutableStateMapOf<Long, PlantRow>() }
+            var moist by remember { mutableStateOf<PlantRow?>(null) }
             val o = overview ?: return@Column
             val today by viewModel.todayDate.collectAsStateWithLifecycle()
             val act = Actions(
                 water = viewModel::water,
-                snooze = viewModel::snooze,
                 edit = onEdit,
                 useInterval = viewModel::useInterval,
                 today = today,
             )
             when {
-                o.isEmpty -> Empty()
-                o.due.isNotEmpty() -> DueToday(o, act)
+                o.isEmpty && held.isEmpty() -> Empty()
+                o.due.isNotEmpty() || held.isNotEmpty() -> DueToday(
+                    o, act, held,
+                    onWater = { row ->
+                        held[row.plant.id] = row
+                        viewModel.water(row.plant.id)
+                    },
+                    onMoist = { moist = it },
+                )
                 else -> NothingDue(o, act)
             }
-            soil?.let {
-                Spacer(Modifier.height(20.dp))
-                StatusCard(it, onClick = onSoil)
+            moist?.let { row ->
+                MoistDialog(
+                    row = row,
+                    today = today,
+                    onSet = { days ->
+                        viewModel.snooze(row.plant.id, days)
+                        moist = null
+                    },
+                    onDismiss = { moist = null },
+                )
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(AddButtonClearance))
         }
     }
 }
@@ -124,7 +146,7 @@ private fun Empty() {
     SoftCard(modifier = Modifier.padding(top = 8.dp)) {
         Text("No plants yet", style = MaterialTheme.typography.titleLarge, color = Fresh.Ink)
         Text(
-            "Tap + to add one, with how often it needs water.",
+            "Tap Add a plant below, with how often it needs water.",
             style = MaterialTheme.typography.bodyMedium,
             color = Fresh.InkSoft,
             modifier = Modifier.padding(top = 6.dp),
@@ -135,59 +157,41 @@ private fun Empty() {
 /** Everything a plant card can do, passed around as one. */
 private class Actions(
     val water: (Long) -> Unit,
-    val snooze: (Long) -> Unit,
     val edit: (Long) -> Unit,
     val useInterval: (Long, Int) -> Unit,
     val today: java.time.LocalDate,
 )
 
 @Composable
-private fun DueToday(o: PlantsOverview, act: Actions) {
-    o.due.forEach { row ->
-        SoftCard(color = Fresh.Pastel, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)) {
-            PlantName(row, act.edit, color = Fresh.GreenDeep)
-            Text(
-                PlantCopy.lastWatered(row.lastWatered, act.today),
-                style = Label,
-                color = Fresh.GreenDeep.copy(alpha = 0.75f),
-                modifier = Modifier.padding(top = 4.dp),
+private fun DueToday(
+    o: PlantsOverview,
+    act: Actions,
+    held: MutableMap<Long, PlantRow>,
+    onWater: (PlantRow) -> Unit,
+    onMoist: (PlantRow) -> Unit,
+) {
+    // A watered card keeps its place (its row from just before) until it lets go.
+    val cards = (o.due.filter { it.plant.id !in held } + held.values).sortedWith(
+        compareByDescending<PlantRow> { (it.status as? PlantStatus.Due)?.daysLate ?: 0 }.thenBy { it.plant.name },
+    )
+    cards.forEach { row ->
+        key(row.plant.id) {
+            DueCard(
+                row = row,
+                watered = row.plant.id in held,
+                today = act.today,
+                onWater = { onWater(row) },
+                onMoist = { onMoist(row) },
+                onEdit = act.edit,
+                onUseInterval = act.useInterval,
+                onSettled = { held.remove(row.plant.id) },
             )
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Pill(PlantCopy.interval(row.plant.recurrence))
-                Pill(PlantCopy.whenLabel(row.status))
-            }
-            Spacer(Modifier.height(20.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f).clickable { act.water(row.plant.id) },
-                ) {
-                    RoundButton(
-                        glyph = "💧",
-                        onClick = { act.water(row.plant.id) },
-                        container = Fresh.Green,
-                        content = Color.White,
-                        size = 56.dp,
-                        description = "I watered ${row.plant.name}",
-                    )
-                    Spacer(Modifier.width(14.dp))
-                    Text("I watered it", style = MaterialTheme.typography.titleMedium, color = Fresh.GreenDeep)
-                }
-                // Checked the soil and it is still moist: not today, ask again tomorrow.
-                Pill(
-                    text = "Still moist",
-                    color = Fresh.Page,
-                    textColor = Fresh.GreenDeep,
-                    modifier = Modifier.clickable { act.snooze(row.plant.id) },
-                )
-            }
-            IntervalTip(row, act)
         }
     }
-    if (o.upcoming.isNotEmpty()) {
+    val upcoming = o.upcoming.filter { it.plant.id !in held }
+    if (upcoming.isNotEmpty()) {
         SectionTitle("Next")
-        o.upcoming.forEach { PlantLine(it, act) }
+        upcoming.forEach { PlantLine(it, act) }
     }
 }
 
@@ -227,7 +231,10 @@ private fun NothingDue(o: PlantsOverview, act: Actions) {
 
 /** "You usually water every 8 days — Use 8": learned from history, applied only on tap. */
 @Composable
-private fun IntervalTip(row: PlantRow, act: Actions) {
+private fun IntervalTip(row: PlantRow, act: Actions) = IntervalTip(row, act.useInterval)
+
+@Composable
+internal fun IntervalTip(row: PlantRow, useInterval: (Long, Int) -> Unit) {
     val days = row.suggestedInterval ?: return
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -244,13 +251,13 @@ private fun IntervalTip(row: PlantRow, act: Actions) {
             text = PlantCopy.use(days),
             color = Fresh.Green,
             textColor = Color.White,
-            modifier = Modifier.clickable { act.useInterval(row.plant.id, days) },
+            modifier = Modifier.clickable { useInterval(row.plant.id, days) },
         )
     }
 }
 
 @Composable
-private fun PlantName(row: PlantRow, onEdit: (Long) -> Unit, color: Color = Fresh.Ink) {
+internal fun PlantName(row: PlantRow, onEdit: (Long) -> Unit, color: Color = Fresh.Ink) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.clickable { onEdit(row.plant.id) },

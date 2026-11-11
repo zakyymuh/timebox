@@ -41,7 +41,8 @@ class WeekStripTest {
 
     @Test
     fun `today shows overdue plants first, then plants due today`() {
-        val late = plant(1, "Aloe", every = 7, anchor = d(2)) // due the 9th
+        // Only one-time plants can be late: a repeating one skips a missed day.
+        val late = Plant(1, "Aloe", PlantColour.MOSS, Recurrence.Once(d(9)), anchor = d(2))
         val now = plant(2, "Basil", every = 7, anchor = d(4)) // due the 11th
         assertEquals(
             listOf("Aloe" to DayMark.Due(2), "Basil" to DayMark.Due(0)),
@@ -67,12 +68,17 @@ class WeekStripTest {
     }
 
     @Test
-    fun `an overdue plant's next run counts from today`() {
-        val aloe = plant(1, "Aloe", every = 2, anchor = d(5)) // due the 7th, 4 days late
+    fun `a repeating plant that missed its days is back on the beat, not late`() {
+        val aloe = plant(1, "Aloe", every = 2, anchor = d(5)) // due the 7th and 9th, both missed
         val days = strip(listOf(aloe))
-        assertEquals(listOf("Aloe" to DayMark.Due(4)), names(days[3]))
+        assertEquals(listOf("Aloe" to DayMark.Due(0)), names(days[3]))
         assertEquals(emptyList<Pair<String, DayMark>>(), names(days[4]))
         assertEquals(listOf("Aloe" to DayMark.Coming), names(days[5]))
+        // Missed the 10th with an every-3 plant: next is the 13th, nothing today.
+        val fig = plant(2, "Fig", every = 3, anchor = d(7))
+        val figDays = strip(listOf(fig))
+        assertEquals(emptyList<Pair<String, DayMark>>(), names(figDays[3]))
+        assertEquals(listOf("Fig" to DayMark.Coming), names(figDays[5]))
     }
 
     @Test

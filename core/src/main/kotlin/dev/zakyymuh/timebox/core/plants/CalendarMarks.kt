@@ -32,7 +32,7 @@ object CalendarMarks {
         for (plant in plants) {
             waterings.filter { it.plantId == plant.id }.forEach { add(it.date, plant, MarkKind.WATERED) }
 
-            val due = PlantSchedule.nextDue(plant, waterings) ?: continue
+            val due = PlantSchedule.nextDue(plant, waterings, today) ?: continue
             // An overdue plant is drawn on today, not back on the date it was missed.
             var date = if (due < today) today else due
             when (val r = plant.recurrence) {

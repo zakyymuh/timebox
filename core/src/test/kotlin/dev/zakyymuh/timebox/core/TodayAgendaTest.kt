@@ -20,7 +20,8 @@ class TodayAgendaTest {
         Plant(id, name, PlantColour.MOSS, Recurrence.EveryDays(every), today.minusDays(daysAgo))
 
     private val basil = plant(1, "Basil", 3, 3)        // due today
-    private val fern = plant(2, "Fern", 5, 7)          // 2 days late
+    // One-time, two days late: repeating plants skip a missed day instead.
+    private val fern = Plant(2, "Fern", PlantColour.MOSS, Recurrence.Once(today.minusDays(2)), today.minusDays(7))
     private val monstera = plant(3, "Monstera", 7, 6)  // tomorrow
 
     private fun item(id: Long, position: Int, text: String, done: Boolean = false) =

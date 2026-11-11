@@ -95,12 +95,14 @@ class PlantRepository(
     }
 
     /**
-     * "Soil still moist": not due before tomorrow. Not a watering — the schedule still
-     * counts from the last real one. Returns the previous snooze, for Undo.
+     * "Soil still moist, I'll water in [days] days": that day becomes the plant's next due
+     * day, and a repeating plant's interval runs on from it. Not a watering. The 6pm
+     * notification's button uses the default, tomorrow. Returns the previous snooze, for Undo.
      */
-    suspend fun snooze(plantId: Long): LocalDate? {
+    suspend fun snooze(plantId: Long, days: Int = 1): LocalDate? {
+        require(days in MOIST_DAYS) { "still-moist days out of range: $days" }
         val previous = dao.plant(plantId)?.snoozedUntil
-        dao.setSnooze(plantId, todayDate().plusDays(1))
+        dao.setSnooze(plantId, todayDate().plusDays(days.toLong()))
         return previous
     }
 
@@ -113,4 +115,9 @@ class PlantRepository(
     }
 
     suspend fun removeWatering(wateringId: Long) = dao.deleteWatering(wateringId)
+
+    companion object {
+        /** How far "Still moist" can push the next watering. */
+        val MOIST_DAYS = 1..30
+    }
 }

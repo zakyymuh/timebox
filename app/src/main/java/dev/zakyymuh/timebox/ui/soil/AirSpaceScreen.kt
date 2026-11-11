@@ -16,6 +16,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import dev.zakyymuh.timebox.ui.common.RoundButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -81,24 +84,28 @@ class AirSpaceViewModel(private val repo: SoilRepository) : ViewModel() {
         viewModelScope.launch { repo.save(form) }
     }
 
-    fun delete(id: Long) {
-        viewModelScope.launch { repo.delete(id) }
-    }
 }
 
-/** The air-filled porosity calculator, the re-check reminder, how to test, and past results. */
+/** Every check, newest first, to read back. Nothing here can be removed. */
+class SoilHistoryViewModel(repo: SoilRepository) : ViewModel() {
+    val tests: StateFlow<List<AirTest>?> = repo.testsFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+}
+
+/** The air-filled porosity calculator, the re-check reminder and how to test. 📋 opens past checks. */
 @Composable
-fun AirSpaceScreen(viewModel: AirSpaceViewModel, onBack: () -> Unit) {
+fun AirSpaceScreen(viewModel: AirSpaceViewModel, onBack: () -> Unit, onHistory: () -> Unit) {
     val form by viewModel.form.collectAsStateWithLifecycle()
-    val tests by viewModel.tests.collectAsStateWithLifecycle()
     val status by viewModel.status.collectAsStateWithLifecycle()
 
     Scaffold(containerColor = Fresh.Page) { insets ->
         Column(
             Modifier.padding(insets).padding(horizontal = 20.dp).fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
-            TopBar(title = "Soil air space", onBack = onBack)
-            status?.let { StatusCard(it, onClick = null) }
+            TopBar(title = "Soil air space", onBack = onBack) {
+                RoundButton("📋", onClick = onHistory, description = "Check history")
+            }
+            status?.let { SoilWaterCard(it, onClick = null) }
 
             SectionTitle("Calculate")
             Field(form.mix, "Mix name, e.g. Mix A (optional)", number = false) {
@@ -144,28 +151,7 @@ fun AirSpaceScreen(viewModel: AirSpaceViewModel, onBack: () -> Unit) {
                 }
             }
 
-            if (tests.isNotEmpty()) {
-                SectionTitle("Past tests")
-                tests.forEach { TestRow(it) { viewModel.delete(it.id) } }
-            }
             Spacer(Modifier.height(32.dp))
-        }
-    }
-}
-
-/** The reminder: pastel and urgent when due, plain otherwise. Tappable on the plants page. */
-@Composable
-fun StatusCard(status: SampleStatus, onClick: (() -> Unit)?) {
-    val due = status is SampleStatus.Due
-    SoftCard(color = if (due) Fresh.Pastel else Fresh.Card, corner = 20.dp, onClick = onClick) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("🧪", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Soil air space", style = MaterialTheme.typography.titleMedium, color = if (due) Fresh.GreenDeep else Fresh.Ink)
-                Text(SampleCheck.label(status), style = Label, color = if (due) Fresh.GreenDeep else Fresh.InkSoft)
-            }
-            if (onClick != null) Text("→", style = MaterialTheme.typography.titleMedium, color = Fresh.InkSoft)
         }
     }
 }
@@ -203,7 +189,7 @@ private fun Problem(form: AirTestForm) {
 }
 
 @Composable
-private fun TestRow(test: AirTest, onDelete: () -> Unit) {
+private fun TestRow(test: AirTest) {
     SoftCard(corner = 20.dp, modifier = Modifier.padding(bottom = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -219,12 +205,28 @@ private fun TestRow(test: AirTest, onDelete: () -> Unit) {
                     color = Fresh.InkSoft,
                 )
             }
-            Text(
-                "×",
-                style = MaterialTheme.typography.titleMedium,
-                color = Fresh.InkSoft,
-                modifier = Modifier.clickable(onClick = onDelete).padding(horizontal = 8.dp, vertical = 2.dp),
-            )
+        }
+    }
+}
+
+/** Past checks, newest first, read only. */
+@Composable
+fun SoilHistoryScreen(viewModel: SoilHistoryViewModel, onBack: () -> Unit) {
+    val tests by viewModel.tests.collectAsStateWithLifecycle()
+    Scaffold(containerColor = Fresh.Page) { insets ->
+        Column(Modifier.padding(insets).padding(horizontal = 20.dp).fillMaxSize()) {
+            TopBar(title = "Check history", onBack = onBack)
+            val list = tests ?: return@Column
+            if (list.isEmpty()) {
+                Text("No checks yet", style = MaterialTheme.typography.headlineSmall, color = Fresh.InkSoft.copy(alpha = 0.75f))
+                Spacer(Modifier.height(8.dp))
+                Text("Save a test and it shows here.", style = MaterialTheme.typography.bodyMedium, color = Fresh.InkSoft.copy(alpha = 0.6f))
+                return@Column
+            }
+            LazyColumn {
+                items(list, key = { it.id }) { TestRow(it) }
+                item { Spacer(Modifier.height(32.dp)) }
+            }
         }
     }
 }

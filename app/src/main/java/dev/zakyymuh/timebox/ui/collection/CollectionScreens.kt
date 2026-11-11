@@ -1,5 +1,6 @@
 package dev.zakyymuh.timebox.ui.collection
 
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,6 +18,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +31,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -43,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,7 +59,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.core.collection.Dex
 import dev.zakyymuh.timebox.core.collection.DexEntry
 import dev.zakyymuh.timebox.core.collection.DexForm
+import dev.zakyymuh.timebox.core.collection.DexShot
+import dev.zakyymuh.timebox.core.collection.DexSort
 import dev.zakyymuh.timebox.core.plants.Encyclopedia
+import dev.zakyymuh.timebox.ui.common.AddButton
+import dev.zakyymuh.timebox.ui.common.AddButtonClearance
 import dev.zakyymuh.timebox.ui.common.Pill
 import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.common.SoftCard
@@ -74,51 +87,96 @@ fun CollectionScreen(
     onAdd: (owned: Boolean) -> Unit,
 ) {
     val entries by viewModel.entries.collectAsStateWithLifecycle()
-    var wishlist by rememberSaveable { mutableStateOf(false) }
+    // Page 0 is the collection, page 1 the wishlist; swipe or tap a tab to move.
+    val pager = rememberPagerState { 2 }
+    val wishlist = pager.currentPage == 1
+    val scope = rememberCoroutineScope()
+    var sort by rememberSaveable { mutableStateOf(DexSort.Date) }
     val all = entries
 
-    Scaffold(containerColor = Fresh.Page) { insets ->
-        Column(Modifier.padding(insets).padding(horizontal = 20.dp).fillMaxSize()) {
-            TopBar(title = "My plants", onBack = onBack) {
-                RoundButton(
-                    glyph = "+",
-                    onClick = { onAdd(!wishlist) },
-                    container = Fresh.Ink,
-                    content = Color.White,
-                    description = if (wishlist) "Add a wish" else "Add a plant",
-                )
+    Scaffold(
+        containerColor = Fresh.Page,
+        floatingActionButtonPosition = FabPosition.Center,
+        floatingActionButton = { AddButton(if (wishlist) "Add a wish" else "Add a plant") { onAdd(!wishlist) } },
+    ) { insets ->
+        Column(Modifier.padding(insets).fillMaxSize()) {
+            Column(Modifier.padding(horizontal = 20.dp)) {
+                TopBar(title = "My plants", onBack = onBack) {
+                    if (all != null) {
+                        // Price is only kept for wishes, so the collection sorts by date or name.
+                        val sorts = if (wishlist) DexSort.entries else listOf(DexSort.Date, DexSort.Name)
+                        SortMenu(sort = if (sort in sorts) sort else DexSort.Date, sorts = sorts) { sort = it }
+                    }
+                }
             }
             if (all == null) return@Column
             val owned = all.filter { it.owned }
             val wished = all.filterNot { it.owned }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Choice("Collection · ${owned.size}", selected = !wishlist) { wishlist = false }
-                Choice("Wishlist · ${wished.size}", selected = wishlist) { wishlist = true }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 20.dp)) {
+                Choice("Collection · ${owned.size}", selected = !wishlist) { scope.launch { pager.animateScrollToPage(0) } }
+                Choice("Wishlist · ${wished.size}", selected = wishlist) { scope.launch { pager.animateScrollToPage(1) } }
             }
             Spacer(Modifier.height(16.dp))
 
-            val shown = if (wishlist) wished else owned
-            if (shown.isEmpty()) {
-                Text(
-                    if (wishlist) "Plants you dream of go here." else "Every plant you own, with its photo and number.",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = Fresh.InkSoft.copy(alpha = 0.75f),
+            HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) { page ->
+                val isWish = page == 1
+                val pageSort = if (!isWish && sort == DexSort.Price) DexSort.Date else sort
+                DexGrid(pageSort.apply(if (isWish) wished else owned), isWish, onOpen)
+            }
+        }
+    }
+}
+
+/** One page of the collection screen: the grid, or a hint when it is empty. */
+@Composable
+private fun DexGrid(shown: List<DexEntry>, wishlist: Boolean, onOpen: (Long) -> Unit) {
+    Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+        if (shown.isEmpty()) {
+            Text(
+                if (wishlist) "Plants you dream of go here." else "Every plant you own, with its photo and number.",
+                style = MaterialTheme.typography.headlineSmall,
+                color = Fresh.InkSoft.copy(alpha = 0.75f),
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                if (wishlist) "Tap Add a wish below to wish for one." else "Tap Add a plant below to add your first.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Fresh.InkSoft.copy(alpha = 0.6f),
+            )
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = AddButtonClearance),
+            ) {
+                items(shown, key = { it.id }) { DexCard(it) { onOpen(it.id) } }
+            }
+        }
+    }
+}
+
+/** "↕ Newest": opens the choice of order. */
+@Composable
+private fun SortMenu(sort: DexSort, sorts: List<DexSort>, onPick: (DexSort) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        Pill("↕  ${sort.label}", color = Fresh.Card, modifier = Modifier.clip(CircleShape).clickable { open = true })
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = Fresh.Page) {
+            sorts.forEach { option ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            option.label,
+                            color = Fresh.Ink,
+                            fontWeight = if (option == sort) FontWeight.Bold else FontWeight.Normal,
+                        )
+                    },
+                    onClick = {
+                        open = false
+                        onPick(option)
+                    },
                 )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    if (wishlist) "Tap + to wish for one." else "Tap + to add your first.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Fresh.InkSoft.copy(alpha = 0.6f),
-                )
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp),
-                ) {
-                    items(shown, key = { it.id }) { DexCard(it) { onOpen(it.id) } }
-                }
             }
         }
     }
@@ -159,7 +217,7 @@ private fun DexCard(entry: DexEntry, onClick: () -> Unit) {
     }
 }
 
-/** One plant: big photo (tap to change), number, when you got it, notes, and its encyclopedia page. */
+/** One plant: its photo diary (swipe; 📷 adds one with a note), number, when you got it, notes, and its encyclopedia page. */
 @Composable
 fun DexDetailScreen(
     viewModel: DexDetailViewModel,
@@ -168,11 +226,40 @@ fun DexDetailScreen(
     onOpenEntry: (String) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val shots by viewModel.shots.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val pick = rememberPhotoPicker { uri ->
-        viewModel.changePhoto(uri) { ok ->
-            if (!ok) Toast.makeText(context, "Couldn't read that photo", Toast.LENGTH_SHORT).show()
-        }
+    // The picked photos wait here while their note is asked for.
+    var picked by remember { mutableStateOf<List<Uri>?>(null) }
+    var editing by remember { mutableStateOf<DexShot?>(null) }
+    val pick = rememberPhotosPicker { uris -> picked = uris }
+    picked?.let { uris ->
+        PhotoNoteDialog(
+            title = if (uris.size > 1) "Add a note · ${uris.size} photos" else "Add a note",
+            hint = if (uris.size > 1) "It goes on every one; tap a photo later to change its own." else null,
+            confirm = if (uris.size > 1) "Save ${uris.size} photos" else "Save photo",
+            onSave = { note ->
+                picked = null
+                viewModel.addPhotos(uris, note) { failed ->
+                    if (failed > 0) {
+                        val text = if (failed == uris.size) "Couldn't read that photo" else "Couldn't read $failed of the photos"
+                        Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+            onDismiss = { picked = null },
+        )
+    }
+    editing?.let { shot ->
+        PhotoNoteDialog(
+            initial = shot.note,
+            title = if (shot.note.isBlank()) "Add a note" else "Change the note",
+            confirm = "Save",
+            onSave = { note ->
+                editing = null
+                viewModel.setNote(shot.id, note)
+            },
+            onDismiss = { editing = null },
+        )
     }
 
     // Deleted from the edit screen: nothing left to show here.
@@ -190,22 +277,7 @@ fun DexDetailScreen(
             }
             if (e == null) return@Column
 
-            Box {
-                DexPhoto(
-                    e.photo,
-                    Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(28.dp)).clickable(onClick = pick),
-                    wished = !e.owned,
-                    side = 1080,
-                    emojiSize = 72.sp,
-                )
-                RoundButton(
-                    glyph = "📷",
-                    onClick = pick,
-                    container = Fresh.Page,
-                    description = "Change photo",
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
-                )
-            }
+            PhotoDiary(shots ?: emptyList(), wished = !e.owned, onAdd = pick, onEditNote = { editing = it })
 
             Text(e.name, style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink, modifier = Modifier.padding(top = 18.dp))
             if (e.species.isNotBlank()) {
@@ -263,9 +335,9 @@ fun DexDetailScreen(
     }
 }
 
-/** Add or edit: photo, name, kind, the day you got it, and notes. */
+/** Add or edit: photo, name, kind, the day you got it, and notes. A delete goes [onDeleted]: back to the list. */
 @Composable
-fun DexEditScreen(viewModel: DexEditViewModel, onDone: () -> Unit) {
+fun DexEditScreen(viewModel: DexEditViewModel, onDone: () -> Unit, onDeleted: () -> Unit) {
     val form by viewModel.form.collectAsStateWithLifecycle()
     val owned by viewModel.owned.collectAsStateWithLifecycle()
     val photo by viewModel.photo.collectAsStateWithLifecycle()
@@ -379,9 +451,9 @@ fun DexEditScreen(viewModel: DexEditViewModel, onDone: () -> Unit) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text("Remove ${form.name.trim()}?") },
-            text = { Text("Its photo and notes go too. This can't be undone.") },
+            text = { Text("Its photos and notes go too. This can't be undone.") },
             confirmButton = {
-                TextButton(onClick = { confirmDelete = false; viewModel.delete(onDone) }) { Text("Remove") }
+                TextButton(onClick = { confirmDelete = false; viewModel.delete(onDeleted) }) { Text("Remove") }
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
         )

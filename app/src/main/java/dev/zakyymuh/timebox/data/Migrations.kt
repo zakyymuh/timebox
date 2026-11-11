@@ -107,5 +107,51 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
     }
 }
 
+/**
+ * Version 9 → 10: each plant keeps a diary of photos with a short note, instead of one
+ * photo that a new one replaced. The photo a plant already had becomes its first entry,
+ * dated the day it was got (or added, for a wish), with no note.
+ */
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `dex_photo` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`dexId` INTEGER NOT NULL, `file` TEXT NOT NULL, `note` TEXT NOT NULL, `takenOn` TEXT NOT NULL, " +
+                "`createdAt` INTEGER NOT NULL, " +
+                "FOREIGN KEY(`dexId`) REFERENCES `dex`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_dex_photo_dexId` ON `dex_photo` (`dexId`)")
+        db.execSQL(
+            "INSERT INTO dex_photo (dexId, file, note, takenOn, createdAt) " +
+                "SELECT id, photo, '', COALESCE(acquired, date(createdAt / 1000, 'unixepoch')), createdAt " +
+                "FROM dex WHERE photo IS NOT NULL",
+        )
+    }
+}
+
+/** Version 10 → 11: crosses of two collection plants. Only creates a table. */
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `breeding` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`code` TEXT NOT NULL, `name` TEXT NOT NULL, `date` TEXT NOT NULL, `motherId` INTEGER, " +
+                "`fatherId` INTEGER, `motherName` TEXT NOT NULL, `fatherName` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, " +
+                "FOREIGN KEY(`motherId`) REFERENCES `dex`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL , " +
+                "FOREIGN KEY(`fatherId`) REFERENCES `dex`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        )
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_breeding_code` ON `breeding` (`code`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_breeding_motherId` ON `breeding` (`motherId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_breeding_fatherId` ON `breeding` (`fatherId`)")
+    }
+}
+
+/** Version 11 → 12: a cross can be marked a success or a failure, and removed (hidden). */
+val MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `breeding` ADD COLUMN `outcome` TEXT NOT NULL DEFAULT 'Waiting'")
+        db.execSQL("ALTER TABLE `breeding` ADD COLUMN `removedAt` INTEGER")
+    }
+}
+
 /** Every migration, in order, for the app and its tests. */
-val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)

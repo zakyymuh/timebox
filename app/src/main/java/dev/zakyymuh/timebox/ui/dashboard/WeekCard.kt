@@ -55,6 +55,9 @@ private val dayHeading = DateTimeFormatter.ofPattern("EEEE d MMMM")
 private val RING = 5.dp
 private val GAP = 4.dp
 
+/** How much wider than the others today's pill is when a plant needs water today. */
+private const val BIG = 1.3f
+
 /**
  * The plant schedule as a week: seven day pills with today in the middle, all inside
  * the card. Tapping a pill lists that day's plants underneath;
@@ -65,10 +68,11 @@ fun WeekCard(week: List<StripDay>, today: LocalDate, onOpen: () -> Unit) {
     var selected by remember(today) { mutableStateOf(today) }
     SoftCard(
         color = Fresh.Page,
+        corner = CARD_CORNER,
         onClick = onOpen,
         modifier = Modifier.shadow(
             elevation = 10.dp,
-            shape = RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(CARD_CORNER),
             ambientColor = Fresh.Ink.copy(alpha = 0.08f),
             spotColor = Fresh.Ink.copy(alpha = 0.08f),
         ),
@@ -85,15 +89,23 @@ fun WeekCard(week: List<StripDay>, today: LocalDate, onOpen: () -> Unit) {
 }
 
 /**
- * All seven pills fit inside the card, a small gap apart.
+ * All seven pills fit inside the card, a small gap apart. When a plant needs water today,
+ * today's pill is a little bigger and the others share what is left.
  */
 @Composable
 private fun DayPills(week: List<StripDay>, today: LocalDate, selected: LocalDate, onSelect: (LocalDate) -> Unit) {
+    val bigToday = week.any { it.date == today && it.isDueToday }
     BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        val pill = (maxWidth - GAP * (week.size - 1)) / week.size.coerceAtLeast(1)
-        Row(horizontalArrangement = Arrangement.spacedBy(GAP), modifier = Modifier.fillMaxWidth()) {
+        val shares = week.size + if (bigToday) BIG - 1f else 0f
+        val pill = (maxWidth - GAP * (week.size - 1)) / shares.coerceAtLeast(1f)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(GAP),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
             week.forEach { day ->
-                DayPill(day, isToday = day.date == today, isSelected = day.date == selected, width = pill) {
+                val big = bigToday && day.date == today
+                DayPill(day, isToday = day.date == today, isSelected = day.date == selected, big = big, width = if (big) pill * BIG else pill) {
                     onSelect(day.date)
                 }
             }
@@ -101,14 +113,18 @@ private fun DayPills(week: List<StripDay>, today: LocalDate, selected: LocalDate
     }
 }
 
+/** Today, with a plant still to water. */
+private val StripDay.isDueToday: Boolean get() = border == DayBorder.ToDo
+
 /**
  * Day name on top, the date in a white circle at the bottom. The circle sits [RING] in
  * from the sides and the bottom, so it shares a centre with the pill's round end and the
  * ring around it is even. A watered day is light blue; a day with a plant still to do has
- * a light green border. A selected day's border is thicker.
+ * a light green border. A selected day's border is thicker. Today with a plant to water
+ * is [big] and inverted: a white pill with the date in a green circle.
  */
 @Composable
-private fun DayPill(day: StripDay, isToday: Boolean, isSelected: Boolean, width: Dp, onClick: () -> Unit) {
+private fun DayPill(day: StripDay, isToday: Boolean, isSelected: Boolean, big: Boolean, width: Dp, onClick: () -> Unit) {
     val shape = RoundedCornerShape(percent = 50)
     val watered = day.border == DayBorder.Watered
     val border = when {
@@ -118,6 +134,7 @@ private fun DayPill(day: StripDay, isToday: Boolean, isSelected: Boolean, width:
     }
     // Today stays lilac so it is easy to find; when watered, its date circle turns blue.
     val fill = when {
+        big -> Color.White
         isToday -> Lilac
         watered -> WateredBlue
         else -> Fresh.Card
@@ -126,20 +143,40 @@ private fun DayPill(day: StripDay, isToday: Boolean, isSelected: Boolean, width:
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .width(width)
+            .let { if (big) it.shadow(6.dp, shape, ambientColor = Fresh.Green, spotColor = Fresh.Green) else it }
             .clip(shape)
             .background(fill)
             .border(if (isSelected) 3.5.dp else 2.dp, border, shape)
             .clickable(role = Role.Tab, onClickLabel = day.date.format(dayHeading), onClick = onClick)
             .padding(top = 14.dp, bottom = RING),
     ) {
-        Text(day.date.format(dayName), style = Label, color = if (isToday) Color.White else Fresh.InkSoft, maxLines = 1)
+        Text(
+            day.date.format(dayName),
+            style = Label,
+            color = when {
+                big -> Fresh.Ink
+                isToday -> Color.White
+                else -> Fresh.InkSoft
+            },
+            maxLines = 1,
+        )
         Spacer(Modifier.height(10.dp))
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier.size(width - RING * 2).clip(CircleShape)
-                .background(if (isToday && watered) WateredBlue else Color.White),
+                .background(
+                    when {
+                        big -> Fresh.Green
+                        isToday && watered -> WateredBlue
+                        else -> Color.White
+                    },
+                ),
         ) {
-            Text(day.date.dayOfMonth.toString(), style = MaterialTheme.typography.titleMedium, color = Fresh.Ink)
+            Text(
+                day.date.dayOfMonth.toString(),
+                style = if (big) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
+                color = if (big) Color.White else Fresh.Ink,
+            )
         }
     }
 }

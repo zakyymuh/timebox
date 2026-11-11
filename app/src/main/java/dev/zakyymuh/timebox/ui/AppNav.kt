@@ -27,8 +27,16 @@ import dev.zakyymuh.timebox.ui.collection.DexDetailViewModel
 import dev.zakyymuh.timebox.ui.collection.DexEditScreen
 import dev.zakyymuh.timebox.ui.collection.DexEditViewModel
 import dev.zakyymuh.timebox.ui.dashboard.DashboardScreen
+import dev.zakyymuh.timebox.ui.breeding.BreedingDetailScreen
+import dev.zakyymuh.timebox.ui.breeding.BreedingDetailViewModel
+import dev.zakyymuh.timebox.ui.breeding.BreedingListScreen
+import dev.zakyymuh.timebox.ui.breeding.BreedingListViewModel
+import dev.zakyymuh.timebox.ui.breeding.BreedingNewScreen
+import dev.zakyymuh.timebox.ui.breeding.BreedingNewViewModel
 import dev.zakyymuh.timebox.ui.soil.AirSpaceScreen
 import dev.zakyymuh.timebox.ui.soil.AirSpaceViewModel
+import dev.zakyymuh.timebox.ui.soil.SoilHistoryScreen
+import dev.zakyymuh.timebox.ui.soil.SoilHistoryViewModel
 import dev.zakyymuh.timebox.ui.soil.SoilStatusViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.ui.dashboard.DashboardViewModel
@@ -84,11 +92,72 @@ fun AppNav(start: String?) {
                     }
                 },
             )
+            val soilVm: SoilStatusViewModel = viewModel(
+                factory = viewModelFactory { initializer { SoilStatusViewModel(ServiceLocator.soilRepository(context)) } },
+            )
+            val soil by soilVm.status.collectAsStateWithLifecycle()
+            val breedingVm: BreedingListViewModel = viewModel(
+                factory = viewModelFactory { initializer { BreedingListViewModel(ServiceLocator.breedingRepository(context)) } },
+            )
+            val crosses by breedingVm.crosses.collectAsStateWithLifecycle()
             DashboardScreen(
                 viewModel = vm,
+                soil = soil,
+                onOpenSoil = { entry.ifResumed { nav.go(Destinations.SOIL) } },
+                crosses = crosses,
+                onOpenBreeding = { entry.ifResumed { nav.go(Destinations.BREEDING) } },
                 onOpenPlants = { entry.ifResumed { nav.go(Destinations.PLANTS) } },
                 onOpenCollection = { entry.ifResumed { nav.go(Destinations.COLLECTION) } },
                 onOpenHistory = { entry.ifResumed { nav.go(Destinations.HISTORY) } },
+            )
+        }
+
+        composable(Destinations.BREEDING) { entry ->
+            val vm: BreedingListViewModel = viewModel(
+                factory = viewModelFactory { initializer { BreedingListViewModel(ServiceLocator.breedingRepository(context)) } },
+            )
+            BreedingListScreen(
+                viewModel = vm,
+                onBack = { entry.ifResumed { nav.popBackStack() } },
+                onOpen = { id -> entry.ifResumed { nav.go(Destinations.cross(id)) } },
+                onAdd = { entry.ifResumed { nav.go(Destinations.BREEDING_NEW) } },
+            )
+        }
+
+        composable(Destinations.BREEDING_NEW) { entry ->
+            val vm: BreedingNewViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer { BreedingNewViewModel(ServiceLocator.breedingRepository(context), ServiceLocator.dexRepository(context)) }
+                },
+            )
+            BreedingNewScreen(
+                viewModel = vm,
+                onBack = { entry.ifResumed { nav.popBackStack() } },
+                // Show the new cross, with the list underneath for Back.
+                onSaved = { id ->
+                    entry.ifResumed {
+                        nav.navigate(Destinations.cross(id)) { popUpTo(Destinations.BREEDING) }
+                    }
+                },
+            )
+        }
+
+        composable(
+            route = Destinations.CROSS,
+            arguments = listOf(navArgument("id") { type = NavType.LongType }),
+        ) { entry ->
+            val id = entry.arguments?.getLong("id") ?: 0L
+            val vm: BreedingDetailViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer {
+                        BreedingDetailViewModel(ServiceLocator.breedingRepository(context), ServiceLocator.dexRepository(context), id)
+                    }
+                },
+            )
+            BreedingDetailScreen(
+                viewModel = vm,
+                onBack = { entry.ifResumed { nav.popBackStack() } },
+                onOpenPlant = { plant -> entry.ifResumed { nav.go(Destinations.dex(plant)) } },
             )
         }
 
@@ -112,10 +181,6 @@ fun AppNav(start: String?) {
             val vm: PlantsViewModel = viewModel(
                 factory = viewModelFactory { initializer { PlantsViewModel(ServiceLocator.plantRepository(context)) } },
             )
-            val soilVm: SoilStatusViewModel = viewModel(
-                factory = viewModelFactory { initializer { SoilStatusViewModel(ServiceLocator.soilRepository(context)) } },
-            )
-            val soil by soilVm.status.collectAsStateWithLifecycle()
             PlantsScreen(
                 viewModel = vm,
                 onBack = { entry.ifResumed { nav.popBackStack() } },
@@ -123,8 +188,6 @@ fun AppNav(start: String?) {
                 onAdd = { entry.ifResumed { nav.go(Destinations.edit(0)) } },
                 onEdit = { id -> entry.ifResumed { nav.go(Destinations.edit(id)) } },
                 onEncyclopedia = { entry.ifResumed { nav.go(Destinations.ENCYCLOPEDIA) } },
-                soil = soil,
-                onSoil = { entry.ifResumed { nav.go(Destinations.SOIL) } },
             )
         }
 
@@ -132,7 +195,18 @@ fun AppNav(start: String?) {
             val vm: AirSpaceViewModel = viewModel(
                 factory = viewModelFactory { initializer { AirSpaceViewModel(ServiceLocator.soilRepository(context)) } },
             )
-            AirSpaceScreen(viewModel = vm, onBack = { entry.ifResumed { nav.popBackStack() } })
+            AirSpaceScreen(
+                viewModel = vm,
+                onBack = { entry.ifResumed { nav.popBackStack() } },
+                onHistory = { entry.ifResumed { nav.go(Destinations.SOIL_HISTORY) } },
+            )
+        }
+
+        composable(Destinations.SOIL_HISTORY) { entry ->
+            val vm: SoilHistoryViewModel = viewModel(
+                factory = viewModelFactory { initializer { SoilHistoryViewModel(ServiceLocator.soilRepository(context)) } },
+            )
+            SoilHistoryScreen(viewModel = vm, onBack = { entry.ifResumed { nav.popBackStack() } })
         }
 
         composable(Destinations.COLLECTION) { entry ->
@@ -183,7 +257,17 @@ fun AppNav(start: String?) {
                     }
                 },
             )
-            DexEditScreen(viewModel = vm, onDone = { entry.ifResumed { nav.popBackStack() } })
+            DexEditScreen(
+                viewModel = vm,
+                onDone = { entry.ifResumed { nav.popBackStack() } },
+                // Straight to the list: the plant's page is gone, and popping to it first left
+                // it blank (it could not close itself while still coming back into view).
+                onDeleted = {
+                    entry.ifResumed {
+                        if (!nav.popBackStack(Destinations.COLLECTION, inclusive = false)) nav.go(Destinations.COLLECTION)
+                    }
+                },
+            )
         }
 
         composable(Destinations.ENCYCLOPEDIA) { entry ->

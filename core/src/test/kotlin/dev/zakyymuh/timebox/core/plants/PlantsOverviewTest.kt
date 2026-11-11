@@ -14,9 +14,9 @@ class PlantsOverviewTest {
     private fun plant(id: Long, name: String, every: Int, anchor: LocalDate) =
         Plant(id, name, PlantColour.MOSS, Recurrence.EveryDays(every), anchor)
 
-    // Basil due today, Fern 2 days late, Monstera tomorrow, Snake plant in 4 days.
+    // Basil due today, Fern (one-time) 2 days late, Monstera tomorrow, Snake plant in 4 days.
     private val basil = plant(1, "Basil", 3, today.minusDays(3))
-    private val fern = plant(2, "Fern", 5, today.minusDays(7))
+    private val fern = Plant(2, "Fern", PlantColour.MOSS, Recurrence.Once(today.minusDays(2)), today.minusDays(7))
     private val monstera = plant(3, "Monstera", 7, today.minusDays(6))
     private val snake = plant(4, "Snake plant", 14, today.minusDays(10))
 

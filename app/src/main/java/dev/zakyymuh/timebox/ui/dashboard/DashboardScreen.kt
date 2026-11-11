@@ -31,6 +31,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,24 +50,36 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.ui.collection.DexPhoto
 import dev.zakyymuh.timebox.ui.theme.Fresh
 import dev.zakyymuh.timebox.ui.theme.Label
-import dev.zakyymuh.timebox.core.plants.WateringMonth
+import dev.zakyymuh.timebox.core.collection.Breeding
+import dev.zakyymuh.timebox.core.collection.Cross
+import dev.zakyymuh.timebox.ui.soil.SoilWaterCard
+import dev.zakyymuh.timebox.core.soil.SampleStatus
 import dev.zakyymuh.timebox.ui.common.SoftCard
 import dev.zakyymuh.timebox.ui.plants.PlantDot
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-private val heading = DateTimeFormatter.ofPattern("EEEE d MMMM")
 private const val GREETING = "Hello, Zaky 👋"
+
+/** One padding, corner and gap for every dashboard card, so their edges line up. */
+internal val CARD_PADDING = 20.dp
+internal val CARD_CORNER = 32.dp
+internal val CARD_GAP = 14.dp
 private val ICON = 56.dp
 private val SMALL_ICON = 40.dp
 
 /**
- * The front door: a greeting, the plant schedule as a week, two tiles (the collection and
- * a random thing that happened, which opens the history), and a plant fact.
+ * The front door: a greeting with a plant fact, the plant schedule as a week, two tiles
+ * (the collection and a random thing that happened, which opens the history), the soil
+ * air-space check, and breeding.
  */
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel,
+    soil: SampleStatus?,
+    onOpenSoil: () -> Unit,
+    crosses: List<Cross>?,
+    onOpenBreeding: () -> Unit,
     onOpenPlants: () -> Unit,
     onOpenCollection: () -> Unit,
     onOpenHistory: () -> Unit,
@@ -72,37 +91,38 @@ fun DashboardScreen(
         onPauseOrDispose { }
     }
 
-    Scaffold(
-        containerColor = Fresh.Page,
-    ) { insets ->
+    val density = LocalDensity.current
+    // The pinned header's height, so the cards start below it and then scroll under it.
+    var header by remember { mutableStateOf(0.dp) }
+
+    // The header draws under the status bar itself, so the page takes no top inset here.
+    Scaffold(containerColor = Fresh.Page, contentWindowInsets = WindowInsets(0, 0, 0, 0)) { insets ->
+        Box(Modifier.padding(insets).fillMaxSize()) {
         Column(
             modifier = Modifier
-                .padding(insets)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 20.dp)
+                .navigationBarsPadding(),
         ) {
-            Spacer(Modifier.height(20.dp))
-            Text(GREETING, style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink)
-            Text(
-                text = state.date?.format(heading) ?: "",
-                style = Label,
-                color = Fresh.InkSoft,
-                modifier = Modifier.padding(top = 4.dp, bottom = 24.dp),
-            )
+            Spacer(Modifier.height(header))
 
             state.date?.let { WeekCard(state.week, it, onOpenPlants) }
 
-            Row(Modifier.padding(top = 14.dp)) {
+            Row(Modifier.padding(top = CARD_GAP)) {
                 CollectionTile(state.cover, state.owned, onOpenCollection, Modifier.weight(1f))
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(CARD_GAP))
                 EventTile(state.event, onOpenHistory, Modifier.weight(1f))
             }
 
-            state.date?.let { date -> state.month?.let { MonthCard(it, date, onOpenHistory) } }
-
-            state.fact?.let { FactLine(it.text, viewModel::shuffleFact) }
+            soil?.let { SoilWaterCard(it, onOpenSoil, Modifier.padding(top = CARD_GAP)) }
+            crosses?.let { BreedingCard(it.firstOrNull(), onOpenBreeding) }
             Spacer(Modifier.height(32.dp))
+        }
+        GreetingHeader(Modifier.onSizeChanged { header = with(density) { it.height.toDp() } - 12.dp }) {
+            Text(GREETING, style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink)
+            FactLine(state.fact?.text.orEmpty(), viewModel::shuffleFact)
+        }
         }
     }
 }
@@ -124,7 +144,7 @@ private fun Tile(
     backdrop: @Composable BoxScope.() -> Unit = {},
     icon: @Composable () -> Unit,
 ) {
-    val shape = RoundedCornerShape(32.dp)
+    val shape = RoundedCornerShape(CARD_CORNER)
     Box(
         modifier = modifier
             .aspectRatio(1f)
@@ -135,7 +155,7 @@ private fun Tile(
             .semantics(mergeDescendants = true) { contentDescription = description },
     ) {
         backdrop()
-        Column(Modifier.matchParentSize().padding(18.dp)) {
+        Column(Modifier.matchParentSize().padding(CARD_PADDING)) {
         icon()
         Spacer(Modifier.weight(1f))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -200,66 +220,43 @@ private fun EventTile(event: String?, onOpen: () -> Unit, modifier: Modifier) {
     }
 }
 
-/** This month's watering: how many so far, against last month, and per plant. Opens the history. */
+/** The way into breeding: full width, a heart, and a line about the latest cross. */
 @Composable
-private fun MonthCard(month: WateringMonth, today: LocalDate, onOpen: () -> Unit) {
+private fun BreedingCard(latest: Cross?, onOpen: () -> Unit) {
     SoftCard(
         color = Fresh.Page,
-        corner = 32.dp,
+        corner = CARD_CORNER,
         onClick = onOpen,
         modifier = Modifier
-            .padding(top = 14.dp)
-            .shadow(10.dp, RoundedCornerShape(32.dp), ambientColor = Fresh.Ink.copy(alpha = 0.08f), spotColor = Fresh.Ink.copy(alpha = 0.08f)),
+            .padding(top = CARD_GAP)
+            .shadow(10.dp, RoundedCornerShape(CARD_CORNER), ambientColor = Fresh.Ink.copy(alpha = 0.08f), spotColor = Fresh.Ink.copy(alpha = 0.08f)),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(6.dp).background(Fresh.Green, CircleShape))
-            Spacer(Modifier.width(8.dp))
-            Text("💧 This month", style = Label, color = Fresh.InkSoft)
-        }
-        Spacer(Modifier.height(6.dp))
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(
-                WateringMonth.headline(month),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = Fresh.Ink,
-                modifier = Modifier.weight(1f),
-            )
-            Text(WateringMonth.compare(month, today), style = Label, color = Fresh.InkSoft)
-        }
-        if (month.perPlant.isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
-            month.perPlant.forEach { (plant, count) ->
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 3.dp)) {
-                    PlantDot(plant.colour, size = 10.dp)
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        plant.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Fresh.Ink,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text("×$count", style = Label, color = Fresh.InkSoft)
-                }
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(SMALL_ICON).clip(CircleShape).background(Color(0xFFFFE3EA)),
+            ) {
+                Text("❤️", fontSize = 18.sp)
             }
+            Spacer(Modifier.width(12.dp))
+            Text("Breeding", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Fresh.Ink, modifier = Modifier.weight(1f))
+            Text("→", style = MaterialTheme.typography.titleMedium, color = Fresh.InkSoft)
         }
+        Spacer(Modifier.height(10.dp))
+        Text(Breeding.teaser(latest), style = MaterialTheme.typography.bodyMedium, color = Fresh.InkSoft, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
-/** A plant fact, small and quiet. A tap shows another. */
+/** A plant fact under the greeting. A tap shows another. */
 @Composable
 private fun FactLine(text: String, onShuffle: () -> Unit) {
     Text(
         text,
-        style = Small,
+        style = MaterialTheme.typography.bodyMedium,
         color = Fresh.InkSoft,
         modifier = Modifier
-            .padding(top = 18.dp)
+            .padding(top = 4.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClickLabel = "Show another fact", onClick = onShuffle)
-            .padding(horizontal = 4.dp, vertical = 6.dp),
+            .clickable(onClickLabel = "Show another fact", onClick = onShuffle),
     )
 }

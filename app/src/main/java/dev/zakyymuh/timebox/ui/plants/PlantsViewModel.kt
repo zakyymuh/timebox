@@ -40,11 +40,11 @@ class PlantsViewModel(private val repo: PlantRepository) : ViewModel() {
         }
     }
 
-    /** "Soil still moist": not due before tomorrow. */
-    fun snooze(plantId: Long) {
+    /** "Soil still moist": due again in [days] days, and the schedule runs on from there. */
+    fun snooze(plantId: Long, days: Int = 1) {
         viewModelScope.launch {
             val name = repo.plant(plantId)?.name ?: return@launch
-            val previous = repo.snooze(plantId)
+            val previous = repo.snooze(plantId, days)
             _undo.emit(PlantUndo.Checked(plantId, name, previous))
         }
     }

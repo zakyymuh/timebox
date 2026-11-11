@@ -37,7 +37,7 @@ data class PlantsOverview(val due: List<PlantRow>, val upcoming: List<PlantRow>)
                 PlantRow(
                     plant = p,
                     status = PlantSchedule.status(p, waterings, today),
-                    nextDue = PlantSchedule.nextDue(p, waterings),
+                    nextDue = PlantSchedule.nextDue(p, waterings, today),
                     lastWatered = lastWatered(p, waterings),
                     suggestedInterval = IntervalAdvice.suggest(p, waterings),
                 )
