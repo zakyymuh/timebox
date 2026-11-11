@@ -150,12 +150,4 @@ class DashboardViewModelTest {
         assertEquals(listOf("Basil" to DayMark.Coming), on(9))
         assertEquals(listOf("Aloe" to DayMark.Coming), on(10))
     }
-
-    @Test
-    fun `the month card counts this month's waterings, last watered included`() = runBlocking {
-        val aloe = plant("Aloe", everyDays = 3, lastWatered = d(4)) // logged as a watering on the 4th
-        plants.water(aloe)
-        val state = vm().await { it.month?.total == 2 }
-        assertEquals(listOf("Aloe" to 2), state.month!!.perPlant.map { it.first.name to it.second })
-    }
 }

@@ -84,8 +84,14 @@ fun AppNav(start: String?) {
                     }
                 },
             )
+            val soilVm: SoilStatusViewModel = viewModel(
+                factory = viewModelFactory { initializer { SoilStatusViewModel(ServiceLocator.soilRepository(context)) } },
+            )
+            val soil by soilVm.status.collectAsStateWithLifecycle()
             DashboardScreen(
                 viewModel = vm,
+                soil = soil,
+                onOpenSoil = { entry.ifResumed { nav.go(Destinations.SOIL) } },
                 onOpenPlants = { entry.ifResumed { nav.go(Destinations.PLANTS) } },
                 onOpenCollection = { entry.ifResumed { nav.go(Destinations.COLLECTION) } },
                 onOpenHistory = { entry.ifResumed { nav.go(Destinations.HISTORY) } },
@@ -112,10 +118,6 @@ fun AppNav(start: String?) {
             val vm: PlantsViewModel = viewModel(
                 factory = viewModelFactory { initializer { PlantsViewModel(ServiceLocator.plantRepository(context)) } },
             )
-            val soilVm: SoilStatusViewModel = viewModel(
-                factory = viewModelFactory { initializer { SoilStatusViewModel(ServiceLocator.soilRepository(context)) } },
-            )
-            val soil by soilVm.status.collectAsStateWithLifecycle()
             PlantsScreen(
                 viewModel = vm,
                 onBack = { entry.ifResumed { nav.popBackStack() } },
@@ -123,8 +125,6 @@ fun AppNav(start: String?) {
                 onAdd = { entry.ifResumed { nav.go(Destinations.edit(0)) } },
                 onEdit = { id -> entry.ifResumed { nav.go(Destinations.edit(id)) } },
                 onEncyclopedia = { entry.ifResumed { nav.go(Destinations.ENCYCLOPEDIA) } },
-                soil = soil,
-                onSoil = { entry.ifResumed { nav.go(Destinations.SOIL) } },
             )
         }
 

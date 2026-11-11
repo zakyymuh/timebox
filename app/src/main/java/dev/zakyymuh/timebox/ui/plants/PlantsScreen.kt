@@ -1,7 +1,5 @@
 package dev.zakyymuh.timebox.ui.plants
 
-import dev.zakyymuh.timebox.core.soil.SampleStatus
-import dev.zakyymuh.timebox.ui.soil.StatusCard
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -61,8 +59,6 @@ fun PlantsScreen(
     onAdd: () -> Unit,
     onEdit: (Long) -> Unit,
     onEncyclopedia: () -> Unit,
-    soil: SampleStatus?,
-    onSoil: () -> Unit,
 ) {
     val overview by viewModel.overview.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
@@ -115,10 +111,6 @@ fun PlantsScreen(
                 o.isEmpty -> Empty()
                 o.due.isNotEmpty() -> DueToday(o, act)
                 else -> NothingDue(o, act)
-            }
-            soil?.let {
-                Spacer(Modifier.height(20.dp))
-                StatusCard(it, onClick = onSoil)
             }
             Spacer(Modifier.height(AddButtonClearance))
         }
