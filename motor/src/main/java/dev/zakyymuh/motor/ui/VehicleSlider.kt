@@ -123,7 +123,7 @@ fun VehicleSlider(
 
 /**
  * The vehicle edge to edge: its photo with a dark wash top and bottom so white text
- * reads on any picture, or its drawing on pastel green.
+ * reads on any picture, or its drawing on chrome.
  */
 @Composable
 private fun HeroCard(card: VehicleCard, today: LocalDate, photos: PhotoStore, onOpen: () -> Unit, onEdit: () -> Unit) {
@@ -141,7 +141,7 @@ private fun HeroCard(card: VehicleCard, today: LocalDate, photos: PhotoStore, on
             .fillMaxWidth()
             .height(CardHeight)
             .clip(RoundedCornerShape(28.dp))
-            .background(if (onPhoto) Fresh.Ink else Fresh.Pastel)
+            .let { if (onPhoto) it.background(Fresh.Ink) else it.background(Chrome) }
             .clickable(onClick = onOpen),
     ) {
         if (image != null) {

@@ -325,7 +325,7 @@ fun VehicleEditScreen(viewModel: VehicleEditViewModel, onDone: () -> Unit, onDel
     }
 }
 
-/** A round toggle; pastel green when selected. */
+/** A round toggle; pastel when selected. */
 @Composable
 fun Chip(text: String, selected: Boolean, onClick: () -> Unit) {
     Text(

@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import dev.zakyymuh.motor.nudge.ExpiryReminder
 import dev.zakyymuh.motor.ui.LaunchIntro
+import dev.zakyymuh.motor.ui.SoulRed
 import dev.zakyymuh.timebox.ui.theme.DailyTheme
 import dev.zakyymuh.timebox.ui.theme.Fresh
 
@@ -27,6 +28,8 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* either way, carry on */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // First of all: every colour below and in the screens is read from this palette.
+        Fresh.use(SoulRed)
         super.onCreate(savedInstanceState)
         // Always light, like papacti: dark bar icons on the white page.
         enableEdgeToEdge(

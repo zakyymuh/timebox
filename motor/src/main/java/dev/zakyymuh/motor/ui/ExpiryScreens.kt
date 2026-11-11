@@ -103,7 +103,7 @@ class ExpiryListViewModel(private val repo: ExpiryRepository, vehicles: VehicleR
 }
 
 /**
- * Every date something runs out, soonest first. The 30 days before turn it pastel green
+ * Every date something runs out, soonest first. The 30 days before turn it pastel
  * and offer "Renewed"; once it has passed, the line turns red.
  */
 @Composable

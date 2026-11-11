@@ -35,7 +35,7 @@ import dev.zakyymuh.timebox.ui.theme.Fresh
  * the next.
  *
  * The first frame is drawn to match the system splash exactly: Android 12+ shows the
- * adaptive icon at 240dp inside a 160dp circle, so the drawings here use those sizes,
+ * adaptive icon at 240dp inside a 160dp chrome circle, so the drawings here use those sizes,
  * and the hand-off from the splash to this screen cannot be seen.
  */
 
@@ -107,7 +107,7 @@ fun LaunchIntro(onDone: () -> Unit) {
             .background(Fresh.Page)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDone),
     ) {
-        Box(Modifier.size(160.dp).background(Fresh.Pastel, CircleShape))
+        Box(Modifier.size(160.dp).background(Chrome, CircleShape))
         Image(
             painter = painterResource(frame.drawing),
             contentDescription = null,
