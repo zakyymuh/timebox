@@ -239,4 +239,19 @@ class MigrationTest {
         current.noteDao().insert(NoteEntity(text = "Repotted", date = day, createdAt = Instant.EPOCH))
         assertEquals(listOf("Repotted"), current.noteDao().notesFlow().first().map { it.text })
     }
+
+    @Test
+    fun `the upgrade to 10 starts each plant's photo diary with the photo it had`() = runTest {
+        createVersion7(
+            "INSERT INTO dex (id, number, name, species, owned, photo, acquired, note, createdAt, priceLow, priceHigh) " +
+                "VALUES (7, 2, 'Kikko', '', 1, 'kikko.jpg', '2026-11-05', '', 0, NULL, NULL)",
+        )
+        val current = openCurrent()
+        val shot = current.dexDao().photos(7).single()
+        assertEquals("kikko.jpg", shot.file)
+        assertEquals("", shot.note)
+        assertEquals(LocalDate.of(2026, 11, 5), shot.takenOn)
+        val astrophytum = current.dexDao().entries().first { it.name == "Astrophytum" }
+        assertEquals(emptyList<Any>(), current.dexDao().photos(astrophytum.id)) // it had no photo
+    }
 }

@@ -2,12 +2,14 @@ package dev.zakyymuh.timebox.data
 
 import androidx.room.Dao
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Update
 import dev.zakyymuh.timebox.core.collection.DexEntry
+import dev.zakyymuh.timebox.core.collection.DexShot
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import java.time.LocalDate
@@ -35,6 +37,28 @@ data class DexEntity(
     fun toModel() = DexEntry(id, number, name, species, owned, photo, acquired, note, priceLow, priceHigh)
 }
 
+/**
+ * One photo in a plant's diary (v10). The plant's [DexEntity.photo] is a copy of the newest
+ * one's [file], so the grid and dashboard need no join. Rows go with their plant.
+ */
+@Entity(
+    tableName = "dex_photo",
+    foreignKeys = [
+        ForeignKey(entity = DexEntity::class, parentColumns = ["id"], childColumns = ["dexId"], onDelete = ForeignKey.CASCADE),
+    ],
+    indices = [Index("dexId")],
+)
+data class DexPhotoEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val dexId: Long,
+    val file: String,
+    val note: String,
+    val takenOn: LocalDate,
+    val createdAt: Instant,
+) {
+    fun toModel() = DexShot(id, file, note, takenOn)
+}
+
 @Dao
 interface DexDao {
     @Query("SELECT * FROM dex ORDER BY number")
@@ -57,4 +81,14 @@ interface DexDao {
 
     @Query("DELETE FROM dex WHERE id = :id")
     suspend fun delete(id: Long)
+
+    /** Newest first. */
+    @Query("SELECT * FROM dex_photo WHERE dexId = :dexId ORDER BY createdAt DESC, id DESC")
+    fun photosFlow(dexId: Long): Flow<List<DexPhotoEntity>>
+
+    @Query("SELECT * FROM dex_photo WHERE dexId = :dexId ORDER BY createdAt DESC, id DESC")
+    suspend fun photos(dexId: Long): List<DexPhotoEntity>
+
+    @Insert
+    suspend fun insertPhoto(photo: DexPhotoEntity): Long
 }

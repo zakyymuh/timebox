@@ -4,6 +4,7 @@ import androidx.room.Room
 import dev.zakyymuh.timebox.core.collection.DexForm
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -73,19 +74,60 @@ class DexRepositoryTest {
     }
 
     @Test
-    fun `a new photo replaces the old file`() = runTest {
-        val id = repo.add(DexForm("Greenovia"), owned = true, photo = "old.jpg")
-        repo.setPhoto(id, "new.jpg")
-        assertEquals("new.jpg", repo.entry(id)?.photo)
-        assertEquals(listOf("old.jpg"), deleted)
+    fun `a plant added with a photo starts its diary with it, dated today`() = runTest {
+        val id = repo.add(DexForm("Greenovia"), owned = true, photo = "g.jpg")
+        val shot = repo.photosFlow(id).first().single()
+        assertEquals("g.jpg", shot.file)
+        assertEquals("", shot.note)
+        assertEquals(today, shot.takenOn)
     }
 
     @Test
-    fun `deleting an entry deletes its photo`() = runTest {
+    fun `a plant added without a photo has an empty diary`() = runTest {
+        val id = repo.add(DexForm("Greenovia"), owned = true, photo = null)
+        assertEquals(emptyList<Any>(), repo.photosFlow(id).first())
+    }
+
+    @Test
+    fun `a new photo keeps the old one and becomes the cover`() = runTest {
+        val id = repo.add(DexForm("Greenovia"), owned = true, photo = "old.jpg")
+        repo.addPhoto(id, "new.jpg", "first new leaf!")
+        assertEquals("new.jpg", repo.entry(id)?.photo)
+        assertEquals(emptyList<String>(), deleted)
+        val shots = repo.photosFlow(id).first()
+        assertEquals(listOf("new.jpg", "old.jpg"), shots.map { it.file }) // newest first
+        assertEquals("first new leaf!", shots.first().note)
+    }
+
+    @Test
+    fun `a photo note is tidied before it is kept`() = runTest {
+        val id = repo.add(DexForm("Greenovia"), owned = true, photo = null)
+        repo.addPhoto(id, "a.jpg", "  so   tall  ")
+        assertEquals("so tall", repo.photosFlow(id).first().single().note)
+    }
+
+    @Test
+    fun `a photo for a plant that is gone is thrown away`() = runTest {
+        repo.addPhoto(99, "stray.jpg", "")
+        assertEquals(listOf("stray.jpg"), deleted)
+    }
+
+    @Test
+    fun `each plant keeps only its own photos`() = runTest {
+        val a = repo.add(DexForm("Greenovia"), owned = true, photo = "a.jpg")
+        val b = repo.add(DexForm("Kikko"), owned = true, photo = "b.jpg")
+        assertEquals(listOf("a.jpg"), repo.photosFlow(a).first().map { it.file })
+        assertEquals(listOf("b.jpg"), repo.photosFlow(b).first().map { it.file })
+    }
+
+    @Test
+    fun `deleting an entry deletes every one of its photos`() = runTest {
         val id = repo.add(DexForm("Greenovia"), owned = true, photo = "g.jpg")
+        repo.addPhoto(id, "g2.jpg", "")
         repo.delete(id)
         assertEquals(null, repo.entry(id))
-        assertEquals(listOf("g.jpg"), deleted)
+        assertEquals(setOf("g.jpg", "g2.jpg"), deleted.toSet())
+        assertEquals(emptyList<Any>(), repo.photosFlow(id).first())
     }
 
     @Test

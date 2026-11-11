@@ -3,6 +3,8 @@ package dev.zakyymuh.timebox.data
 import dev.zakyymuh.timebox.core.collection.Dex
 import dev.zakyymuh.timebox.core.collection.DexEntry
 import dev.zakyymuh.timebox.core.collection.DexForm
+import dev.zakyymuh.timebox.core.collection.DexPhotos
+import dev.zakyymuh.timebox.core.collection.DexShot
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
@@ -30,10 +32,13 @@ class DexRepository(
 
     suspend fun entry(id: Long): DexEntry? = dao.entry(id)?.toModel()
 
-    /** Adds to the collection ([owned]) or the wishlist. Returns the new id. */
+    /** A plant's photo diary, newest first. */
+    fun photosFlow(id: Long): Flow<List<DexShot>> = dao.photosFlow(id).map { it.map(DexPhotoEntity::toModel) }
+
+    /** Adds to the collection ([owned]) or the wishlist; a [photo] starts its diary. Returns the new id. */
     suspend fun add(form: DexForm, owned: Boolean, photo: String?, acquired: LocalDate? = null): Long {
         require(form.isValid) { "invalid dex form" }
-        return numbering.withLock {
+        val id = numbering.withLock {
             dao.insert(
                 DexEntity(
                     number = Dex.nextNumber(dao.numbers()),
@@ -49,6 +54,8 @@ class DexRepository(
                 ),
             )
         }
+        if (photo != null) insertPhoto(id, photo, "")
+        return id
     }
 
     /** Changes the words, and for a collected plant the date it was got. Number and photo stay. */
@@ -67,11 +74,17 @@ class DexRepository(
         )
     }
 
-    /** Puts a new photo on [id]; the old file is deleted so photos never pile up. */
-    suspend fun setPhoto(id: Long, photo: String) {
+    /** Adds a photo to [id]'s diary and makes it the cover. Older photos stay. */
+    suspend fun addPhoto(id: Long, photo: String, note: String) {
         val existing = dao.entry(id) ?: return photos.delete(photo)
+        insertPhoto(id, photo, note)
         dao.update(existing.copy(photo = photo))
-        existing.photo?.takeIf { it != photo }?.let(photos::delete)
+    }
+
+    private suspend fun insertPhoto(id: Long, photo: String, note: String) {
+        dao.insertPhoto(
+            DexPhotoEntity(dexId = id, file = photo, note = DexPhotos.note(note), takenOn = todayDate(), createdAt = clock.instant()),
+        )
     }
 
     /** A wished plant comes home: into the collection, same number, dated today. */
@@ -84,7 +97,8 @@ class DexRepository(
 
     suspend fun delete(id: Long) {
         val existing = dao.entry(id) ?: return
+        val files = dao.photos(id).map { it.file } + listOfNotNull(existing.photo)
         dao.delete(id)
-        existing.photo?.let(photos::delete)
+        files.distinct().forEach(photos::delete)
     }
 }

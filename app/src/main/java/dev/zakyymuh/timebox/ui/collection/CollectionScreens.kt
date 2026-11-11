@@ -1,5 +1,6 @@
 package dev.zakyymuh.timebox.ui.collection
 
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -159,7 +160,7 @@ private fun DexCard(entry: DexEntry, onClick: () -> Unit) {
     }
 }
 
-/** One plant: big photo (tap to change), number, when you got it, notes, and its encyclopedia page. */
+/** One plant: its photo diary (swipe; 📷 adds one with a note), number, when you got it, notes, and its encyclopedia page. */
 @Composable
 fun DexDetailScreen(
     viewModel: DexDetailViewModel,
@@ -168,11 +169,21 @@ fun DexDetailScreen(
     onOpenEntry: (String) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val shots by viewModel.shots.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val pick = rememberPhotoPicker { uri ->
-        viewModel.changePhoto(uri) { ok ->
-            if (!ok) Toast.makeText(context, "Couldn't read that photo", Toast.LENGTH_SHORT).show()
-        }
+    // The picked photo waits here while its note is asked for.
+    var picked by rememberSaveable { mutableStateOf<Uri?>(null) }
+    val pick = rememberPhotoPicker { uri -> picked = uri }
+    picked?.let { uri ->
+        PhotoNoteDialog(
+            onSave = { note ->
+                picked = null
+                viewModel.addPhoto(uri, note) { ok ->
+                    if (!ok) Toast.makeText(context, "Couldn't read that photo", Toast.LENGTH_SHORT).show()
+                }
+            },
+            onDismiss = { picked = null },
+        )
     }
 
     // Deleted from the edit screen: nothing left to show here.
@@ -190,22 +201,7 @@ fun DexDetailScreen(
             }
             if (e == null) return@Column
 
-            Box {
-                DexPhoto(
-                    e.photo,
-                    Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(28.dp)).clickable(onClick = pick),
-                    wished = !e.owned,
-                    side = 1080,
-                    emojiSize = 72.sp,
-                )
-                RoundButton(
-                    glyph = "📷",
-                    onClick = pick,
-                    container = Fresh.Page,
-                    description = "Change photo",
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
-                )
-            }
+            PhotoDiary(shots ?: emptyList(), wished = !e.owned, onAdd = pick)
 
             Text(e.name, style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink, modifier = Modifier.padding(top = 18.dp))
             if (e.species.isNotBlank()) {
@@ -379,7 +375,7 @@ fun DexEditScreen(viewModel: DexEditViewModel, onDone: () -> Unit) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text("Remove ${form.name.trim()}?") },
-            text = { Text("Its photo and notes go too. This can't be undone.") },
+            text = { Text("Its photos and notes go too. This can't be undone.") },
             confirmButton = {
                 TextButton(onClick = { confirmDelete = false; viewModel.delete(onDone) }) { Text("Remove") }
             },

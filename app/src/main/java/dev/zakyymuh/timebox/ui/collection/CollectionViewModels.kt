@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.zakyymuh.timebox.core.collection.DexEntry
 import dev.zakyymuh.timebox.core.collection.DexForm
+import dev.zakyymuh.timebox.core.collection.DexShot
 import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PhotoStore
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,15 +36,19 @@ class DexDetailViewModel(
         .map { list -> DexDetailState(loaded = true, entry = list.firstOrNull { it.id == id }) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DexDetailState())
 
+    /** The photo diary, newest first. Null until loaded. */
+    val shots: StateFlow<List<DexShot>?> = repo.photosFlow(id)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     fun gotIt() {
         viewModelScope.launch { repo.gotIt(id) }
     }
 
-    /** Imports the picked photo; [onResult] gets false if it could not be read. */
-    fun changePhoto(uri: Uri, onResult: (Boolean) -> Unit) {
+    /** Imports the picked photo into the diary with [note]; [onResult] gets false if it could not be read. */
+    fun addPhoto(uri: Uri, note: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
             val name = photos.import(uri)
-            if (name != null) repo.setPhoto(id, name)
+            if (name != null) repo.addPhoto(id, name, note)
             onResult(name != null)
         }
     }
@@ -99,7 +104,7 @@ class DexEditViewModel(
         _acquired.value = date
     }
 
-    /** A new entry holds its photo until Save; an existing one changes straight away. */
+    /** A new entry holds its photo until Save; an existing one adds it to the diary straight away. */
     fun changePhoto(uri: Uri, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
             val name = photos.import(uri)
@@ -107,7 +112,7 @@ class DexEditViewModel(
                 if (isNew) {
                     _photo.value?.let(photos::delete)
                 } else {
-                    repo.setPhoto(id, name)
+                    repo.addPhoto(id, name, "")
                 }
                 _photo.value = name
             }
