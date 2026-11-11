@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dev.zakyymuh.timebox.core.collection.Breeding
 import dev.zakyymuh.timebox.core.collection.BreedingForm
 import dev.zakyymuh.timebox.core.collection.Cross
+import dev.zakyymuh.timebox.core.collection.CrossOutcome
 import dev.zakyymuh.timebox.core.collection.DexEntry
 import dev.zakyymuh.timebox.data.BreedingRepository
 import dev.zakyymuh.timebox.data.DexRepository
@@ -90,7 +91,7 @@ data class CrossDetail(val cross: Cross, val mother: DexEntry?, val father: DexE
 /** [detail] is null before loading ([loaded] false), or for a cross that does not exist. */
 data class CrossState(val loaded: Boolean = false, val detail: CrossDetail? = null)
 
-class BreedingDetailViewModel(repo: BreedingRepository, dex: DexRepository, id: Long) : ViewModel() {
+class BreedingDetailViewModel(private val repo: BreedingRepository, dex: DexRepository, private val id: Long) : ViewModel() {
     val state: StateFlow<CrossState> = combine(repo.crossesFlow(), dex.entriesFlow()) { crosses, entries ->
         val cross = crosses.firstOrNull { it.id == id }
         CrossState(
@@ -100,4 +101,13 @@ class BreedingDetailViewModel(repo: BreedingRepository, dex: DexRepository, id: 
             },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CrossState())
+
+    fun setOutcome(outcome: CrossOutcome) {
+        viewModelScope.launch { repo.setOutcome(id, outcome) }
+    }
+
+    /** Once removed the cross is gone from the list, which sends the screen back. */
+    fun remove() {
+        viewModelScope.launch { repo.remove(id) }
+    }
 }

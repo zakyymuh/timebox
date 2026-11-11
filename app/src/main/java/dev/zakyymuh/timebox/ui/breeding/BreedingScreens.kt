@@ -21,7 +21,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
@@ -49,12 +51,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.core.collection.Breeding
 import dev.zakyymuh.timebox.core.collection.BreedingForm
 import dev.zakyymuh.timebox.core.collection.Cross
+import dev.zakyymuh.timebox.core.collection.CrossOutcome
 import dev.zakyymuh.timebox.core.collection.Dex
 import dev.zakyymuh.timebox.core.collection.DexEntry
 import dev.zakyymuh.timebox.ui.collection.DexPhoto
 import dev.zakyymuh.timebox.ui.common.AddButton
 import dev.zakyymuh.timebox.ui.common.AddButtonClearance
 import dev.zakyymuh.timebox.ui.common.DateField
+import dev.zakyymuh.timebox.ui.common.Pill
+import dev.zakyymuh.timebox.ui.plants.Choice
 import dev.zakyymuh.timebox.ui.common.SoftCard
 import dev.zakyymuh.timebox.ui.common.TopBar
 import dev.zakyymuh.timebox.ui.common.softFieldColors
@@ -105,8 +110,19 @@ private fun CrossRow(cross: Cross, onClick: () -> Unit) {
                 Text(cross.name, style = MaterialTheme.typography.titleMedium, color = Fresh.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text("${cross.code} · ${Breeding.date(cross.date)}", style = Label, color = Fresh.InkSoft)
             }
-            Text("→", style = MaterialTheme.typography.titleMedium, color = Fresh.InkSoft)
+            Spacer(Modifier.width(8.dp))
+            OutcomePill(cross.outcome)
         }
+    }
+}
+
+/** Waiting is plain; a success is green, a failure red. */
+@Composable
+private fun OutcomePill(outcome: CrossOutcome) {
+    when (outcome) {
+        CrossOutcome.Waiting -> Pill(outcome.label, color = Fresh.Page, textColor = Fresh.InkSoft)
+        CrossOutcome.Success -> Pill("✓ ${outcome.label}", color = Fresh.Pastel, textColor = Fresh.GreenDeep)
+        CrossOutcome.Failed -> Pill("✕ ${outcome.label}", color = Fresh.Error.copy(alpha = 0.12f), textColor = Fresh.Error)
     }
 }
 
@@ -270,10 +286,15 @@ private fun ParentSlot(role: String, entry: DexEntry?, fallbackName: String?, on
     }
 }
 
-/** One cross: its code big, its name and date, and both parents' photos. A parent opens its page. */
+/**
+ * One cross: its code big, its name and date, whether it took, and both parents' photos.
+ * A parent opens its page. Remove asks first.
+ */
 @Composable
 fun BreedingDetailScreen(viewModel: BreedingDetailViewModel, onBack: () -> Unit, onOpenPlant: (Long) -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var confirmRemove by rememberSaveable { mutableStateOf(false) }
+    // Removed (or never there): nothing left to show.
     LaunchedEffect(state) { if (state.loaded && state.detail == null) onBack() }
 
     Scaffold(containerColor = Fresh.Page) { insets ->
@@ -281,7 +302,11 @@ fun BreedingDetailScreen(viewModel: BreedingDetailViewModel, onBack: () -> Unit,
             Modifier.padding(insets).padding(horizontal = 20.dp).fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
             val d = state.detail
-            TopBar(title = "Cross", onBack = onBack)
+            TopBar(title = "Cross", onBack = onBack) {
+                if (d != null) {
+                    Pill("Remove", color = Fresh.Card, textColor = Fresh.Error, modifier = Modifier.clip(CircleShape).clickable { confirmRemove = true })
+                }
+            }
             if (d == null) return@Column
             SoftCard(color = Fresh.Pastel, corner = 28.dp) {
                 Text("ID", style = Label, color = Fresh.GreenDeep.copy(alpha = 0.75f))
@@ -289,6 +314,13 @@ fun BreedingDetailScreen(viewModel: BreedingDetailViewModel, onBack: () -> Unit,
                 Spacer(Modifier.height(4.dp))
                 Text(d.cross.name, style = MaterialTheme.typography.titleLarge, color = Fresh.GreenDeep)
                 Text("Crossed on ${Breeding.date(d.cross.date)}", style = Label, color = Fresh.GreenDeep.copy(alpha = 0.75f))
+            }
+            Spacer(Modifier.height(16.dp))
+            Text("Did it take?", style = Label, color = Fresh.InkSoft, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CrossOutcome.entries.forEach { outcome ->
+                    Choice(outcome.label, selected = d.cross.outcome == outcome) { viewModel.setOutcome(outcome) }
+                }
             }
             Spacer(Modifier.height(20.dp))
             ParentPair(
@@ -310,5 +342,19 @@ fun BreedingDetailScreen(viewModel: BreedingDetailViewModel, onBack: () -> Unit,
             }
             Spacer(Modifier.height(32.dp))
         }
+    }
+
+    val shown = state.detail
+    if (confirmRemove && shown != null) {
+        AlertDialog(
+            onDismissRequest = { confirmRemove = false },
+            containerColor = Fresh.Page,
+            title = { Text("Remove ${shown.cross.code}?") },
+            text = { Text("${shown.cross.name} leaves your breeding list. Its code is not given to another cross.") },
+            confirmButton = {
+                TextButton(onClick = { confirmRemove = false; viewModel.remove() }) { Text("Remove", color = Fresh.Error) }
+            },
+            dismissButton = { TextButton(onClick = { confirmRemove = false }) { Text("Cancel") } },
+        )
     }
 }

@@ -18,7 +18,21 @@ data class Cross(
     val fatherId: Long?,
     val motherName: String,
     val fatherName: String,
+    val outcome: CrossOutcome = CrossOutcome.Waiting,
 )
+
+/** Whether a cross took. Every cross starts [Waiting]; the owner marks it later. */
+enum class CrossOutcome(val label: String) {
+    Waiting("Waiting"),
+    Success("Success"),
+    Failed("Failed"),
+    ;
+
+    companion object {
+        /** Stored by [name]; anything unknown reads as [Waiting]. */
+        fun from(stored: String): CrossOutcome = entries.firstOrNull { it.name == stored } ?: Waiting
+    }
+}
 
 /** What the new-cross screen holds. */
 data class BreedingForm(

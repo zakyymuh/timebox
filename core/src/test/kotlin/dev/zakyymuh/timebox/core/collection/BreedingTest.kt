@@ -43,4 +43,14 @@ class BreedingTest {
             "Latest: Kikko × Aloe · 11 Nov 2026",
             Breeding.teaser(Cross(1, "1126001", "Kikko × Aloe", nov, 1, 2, "Kikko", "Aloe")),
         )
+
+    @Test fun `a new cross is waiting, and each outcome has a label`() {
+        assertEquals(CrossOutcome.Waiting, Cross(1, "1126001", "A × B", nov, 1, 2, "A", "B").outcome)
+        assertEquals(listOf("Waiting", "Success", "Failed"), CrossOutcome.entries.map { it.label })
+    }
+
+    @Test fun `an unknown stored outcome reads as waiting`() {
+        assertEquals(CrossOutcome.Success, CrossOutcome.from("Success"))
+        assertEquals(CrossOutcome.Waiting, CrossOutcome.from("Banana"))
+    }
 }

@@ -2,6 +2,7 @@ package dev.zakyymuh.timebox.data
 
 import androidx.room.Room
 import dev.zakyymuh.timebox.core.collection.BreedingForm
+import dev.zakyymuh.timebox.core.collection.CrossOutcome
 import dev.zakyymuh.timebox.core.collection.DexForm
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -91,5 +92,26 @@ class BreedingRepositoryTest {
         assertNull(cross.motherId)
         assertEquals("Kikko", cross.motherName)
         assertEquals(aloe, cross.fatherId)
+    }
+
+    @Test
+    fun `a cross starts waiting and can be marked a success or a failure`() = runTest {
+        val id = repo.add(form(), nov)!!
+        assertEquals(CrossOutcome.Waiting, repo.cross(id)?.outcome)
+        repo.setOutcome(id, CrossOutcome.Success)
+        assertEquals(CrossOutcome.Success, repo.cross(id)?.outcome)
+        repo.setOutcome(id, CrossOutcome.Failed)
+        assertEquals(CrossOutcome.Failed, repo.crossesFlow().first().single().outcome)
+    }
+
+    @Test
+    fun `a removed cross leaves the list and its code is never given again`() = runTest {
+        repo.add(form("First"), nov)
+        val second = repo.add(form("Second"), nov)!!
+        repo.remove(second)
+        assertNull(repo.cross(second))
+        assertEquals(listOf("First"), repo.crossesFlow().first().map { it.name })
+        val third = repo.add(form("Third"), nov)!!
+        assertEquals("1126003", repo.cross(third)?.code)
     }
 }

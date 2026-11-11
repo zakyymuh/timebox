@@ -268,4 +268,30 @@ class MigrationTest {
         )
         assertEquals(listOf("1126001"), current.breedingDao().crossesFlow().first().map { it.code })
     }
+
+    @Test
+    fun `the upgrade to 12 keeps crosses, waiting and not removed`() = runTest {
+        createVersion1()
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(name)
+                .callback(object : SupportSQLiteOpenHelper.Callback(11) {
+                    override fun onCreate(db: SupportSQLiteDatabase) = error("the v1 file must already exist")
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {
+                        ALL_MIGRATIONS.filter { it.endVersion <= 11 }.forEach { it.migrate(db) }
+                    }
+                })
+                .build(),
+        )
+        helper.writableDatabase.apply {
+            execSQL("INSERT INTO dex (id, number, name, species, owned, photo, acquired, note, createdAt, priceLow, priceHigh) VALUES (1, 1, 'Kikko', '', 1, NULL, '$day', '', 0, NULL, NULL)")
+            execSQL("INSERT INTO breeding (code, name, date, motherId, fatherId, motherName, fatherName, createdAt) VALUES ('1126001', 'Kikko × Gone', '$day', 1, NULL, 'Kikko', 'Gone', 0)")
+        }
+        helper.close()
+
+        val current = openCurrent()
+        val cross = current.breedingDao().crossesFlow().first().single().toModel()
+        assertEquals("1126001", cross.code)
+        assertEquals(dev.zakyymuh.timebox.core.collection.CrossOutcome.Waiting, cross.outcome)
+    }
 }
