@@ -49,10 +49,11 @@ private val PhotoShape = RoundedCornerShape(28.dp)
 
 /**
  * A plant's photos, newest first: swipe through the big photo. Each note sits in a bubble
- * at the top, popping in the first time its photo is shown. The camera adds a photo.
+ * at the top, popping in the first time its photo is shown. Tap a photo to change its
+ * note; the camera adds a photo.
  */
 @Composable
-fun PhotoDiary(shots: List<DexShot>, wished: Boolean, onAdd: () -> Unit) {
+fun PhotoDiary(shots: List<DexShot>, wished: Boolean, onAdd: () -> Unit, onEditNote: (DexShot) -> Unit) {
     val pager = rememberPagerState { shots.size }
     // Ids whose bubble already popped, so swiping back does not pop it again.
     val popped = remember { mutableSetOf<Long>() }
@@ -73,7 +74,7 @@ fun PhotoDiary(shots: List<DexShot>, wished: Boolean, onAdd: () -> Unit) {
             } else {
                 HorizontalPager(state = pager, key = { shots[it].id }, pageSpacing = 12.dp) { page ->
                     val shot = shots[page]
-                    Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(PhotoShape)) {
+                    Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(PhotoShape).clickable { onEditNote(shot) }) {
                         DexPhoto(shot.file, Modifier.matchParentSize(), wished = wished, side = 1080, emojiSize = 72.sp)
                         if (shot.note.isNotBlank()) {
                             NoteBubble(
@@ -146,14 +147,20 @@ private fun Dots(count: Int, selected: Int, modifier: Modifier) {
     }
 }
 
-/** Asks for the short note to go with a just-picked photo. The note is optional. */
+/** Asks for a photo's short note: for a just-picked photo, or to change one ([initial]). Optional. */
 @Composable
-fun PhotoNoteDialog(onSave: (String) -> Unit, onDismiss: () -> Unit) {
-    var note by rememberSaveable { mutableStateOf("") }
+fun PhotoNoteDialog(
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit,
+    initial: String = "",
+    title: String = "Add a note",
+    confirm: String = "Save photo",
+) {
+    var note by rememberSaveable { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Fresh.Page,
-        title = { Text("Add a note") },
+        title = { Text(title) },
         text = {
             Column {
                 TextField(
@@ -173,7 +180,7 @@ fun PhotoNoteDialog(onSave: (String) -> Unit, onDismiss: () -> Unit) {
                 )
             }
         },
-        confirmButton = { TextButton(onClick = { onSave(note) }) { Text("Save photo") } },
+        confirmButton = { TextButton(onClick = { onSave(note) }) { Text(confirm) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }

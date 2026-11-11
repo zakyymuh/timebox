@@ -81,6 +81,9 @@ class DexRepository(
         dao.update(existing.copy(photo = photo))
     }
 
+    /** Changes the note on one photo; the photo and its place stay. */
+    suspend fun setPhotoNote(photoId: Long, note: String) = dao.setPhotoNote(photoId, DexPhotos.note(note))
+
     private suspend fun insertPhoto(id: Long, photo: String, note: String) {
         dao.insertPhoto(
             DexPhotoEntity(dexId = id, file = photo, note = DexPhotos.note(note), takenOn = todayDate(), createdAt = clock.instant()),

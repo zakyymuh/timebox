@@ -107,6 +107,18 @@ class DexRepositoryTest {
     }
 
     @Test
+    fun `a photo's note can be changed later, tidied, and only that photo changes`() = runTest {
+        val id = repo.add(DexForm("Greenovia"), owned = true, photo = "a.jpg")
+        repo.addPhoto(id, "b.jpg", "tall")
+        val (b, a) = repo.photosFlow(id).first()
+        repo.setPhotoNote(a.id, "  first   pot ")
+        val shots = repo.photosFlow(id).first()
+        assertEquals(listOf("tall", "first pot"), shots.map { it.note })
+        assertEquals(listOf(b.id, a.id), shots.map { it.id }) // order and files unchanged
+        assertEquals(listOf("b.jpg", "a.jpg"), shots.map { it.file })
+    }
+
+    @Test
     fun `a photo for a plant that is gone is thrown away`() = runTest {
         repo.addPhoto(99, "stray.jpg", "")
         assertEquals(listOf("stray.jpg"), deleted)

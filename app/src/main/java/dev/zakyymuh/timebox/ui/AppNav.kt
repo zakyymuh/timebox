@@ -183,7 +183,17 @@ fun AppNav(start: String?) {
                     }
                 },
             )
-            DexEditScreen(viewModel = vm, onDone = { entry.ifResumed { nav.popBackStack() } })
+            DexEditScreen(
+                viewModel = vm,
+                onDone = { entry.ifResumed { nav.popBackStack() } },
+                // Straight to the list: the plant's page is gone, and popping to it first left
+                // it blank (it could not close itself while still coming back into view).
+                onDeleted = {
+                    entry.ifResumed {
+                        if (!nav.popBackStack(Destinations.COLLECTION, inclusive = false)) nav.go(Destinations.COLLECTION)
+                    }
+                },
+            )
         }
 
         composable(Destinations.ENCYCLOPEDIA) { entry ->

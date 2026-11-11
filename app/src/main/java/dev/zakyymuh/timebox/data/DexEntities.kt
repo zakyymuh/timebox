@@ -91,4 +91,7 @@ interface DexDao {
 
     @Insert
     suspend fun insertPhoto(photo: DexPhotoEntity): Long
+
+    @Query("UPDATE dex_photo SET note = :note WHERE id = :photoId")
+    suspend fun setPhotoNote(photoId: Long, note: String)
 }

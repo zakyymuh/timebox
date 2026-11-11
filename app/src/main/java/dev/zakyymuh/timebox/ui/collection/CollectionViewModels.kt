@@ -44,6 +44,10 @@ class DexDetailViewModel(
         viewModelScope.launch { repo.gotIt(id) }
     }
 
+    fun setNote(photoId: Long, note: String) {
+        viewModelScope.launch { repo.setPhotoNote(photoId, note) }
+    }
+
     /** Imports the picked photo into the diary with [note]; [onResult] gets false if it could not be read. */
     fun addPhoto(uri: Uri, note: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {

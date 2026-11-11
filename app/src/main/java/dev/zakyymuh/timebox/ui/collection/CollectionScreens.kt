@@ -27,6 +27,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -44,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,6 +55,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.core.collection.Dex
 import dev.zakyymuh.timebox.core.collection.DexEntry
 import dev.zakyymuh.timebox.core.collection.DexForm
+import dev.zakyymuh.timebox.core.collection.DexShot
+import dev.zakyymuh.timebox.core.collection.DexSort
 import dev.zakyymuh.timebox.core.plants.Encyclopedia
 import dev.zakyymuh.timebox.ui.common.Pill
 import dev.zakyymuh.timebox.ui.common.RoundButton
@@ -76,18 +82,31 @@ fun CollectionScreen(
 ) {
     val entries by viewModel.entries.collectAsStateWithLifecycle()
     var wishlist by rememberSaveable { mutableStateOf(false) }
+    var sort by rememberSaveable { mutableStateOf(DexSort.Date) }
     val all = entries
 
-    Scaffold(containerColor = Fresh.Page) { insets ->
+    Scaffold(
+        containerColor = Fresh.Page,
+        floatingActionButtonPosition = FabPosition.Center,
+        floatingActionButton = {
+            Button(
+                onClick = { onAdd(!wishlist) },
+                shape = CircleShape,
+                colors = ButtonDefaults.buttonColors(containerColor = Fresh.Ink, contentColor = Color.White),
+                contentPadding = PaddingValues(horizontal = 24.dp),
+                modifier = Modifier.height(56.dp),
+            ) {
+                Text(if (wishlist) "+  Add a wish" else "+  Add a plant", style = MaterialTheme.typography.labelLarge)
+            }
+        },
+    ) { insets ->
         Column(Modifier.padding(insets).padding(horizontal = 20.dp).fillMaxSize()) {
             TopBar(title = "My plants", onBack = onBack) {
-                RoundButton(
-                    glyph = "+",
-                    onClick = { onAdd(!wishlist) },
-                    container = Fresh.Ink,
-                    content = Color.White,
-                    description = if (wishlist) "Add a wish" else "Add a plant",
-                )
+                if (all != null) {
+                    // Price is only kept for wishes, so the collection sorts by date or name.
+                    val sorts = if (wishlist) DexSort.entries else listOf(DexSort.Date, DexSort.Name)
+                    SortMenu(sort = if (sort in sorts) sort else DexSort.Date, sorts = sorts) { sort = it }
+                }
             }
             if (all == null) return@Column
             val owned = all.filter { it.owned }
@@ -98,7 +117,8 @@ fun CollectionScreen(
             }
             Spacer(Modifier.height(16.dp))
 
-            val shown = if (wishlist) wished else owned
+            val shownSort = if (!wishlist && sort == DexSort.Price) DexSort.Date else sort
+            val shown = shownSort.apply(if (wishlist) wished else owned)
             if (shown.isEmpty()) {
                 Text(
                     if (wishlist) "Plants you dream of go here." else "Every plant you own, with its photo and number.",
@@ -107,7 +127,7 @@ fun CollectionScreen(
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    if (wishlist) "Tap + to wish for one." else "Tap + to add your first.",
+                    if (wishlist) "Tap Add a wish below to wish for one." else "Tap Add a plant below to add your first.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Fresh.InkSoft.copy(alpha = 0.6f),
                 )
@@ -116,10 +136,36 @@ fun CollectionScreen(
                     columns = GridCells.Fixed(2),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp),
+                    contentPadding = PaddingValues(bottom = 104.dp), // clear of the add button
                 ) {
                     items(shown, key = { it.id }) { DexCard(it) { onOpen(it.id) } }
                 }
+            }
+        }
+    }
+}
+
+/** "↕ Newest": opens the choice of order. */
+@Composable
+private fun SortMenu(sort: DexSort, sorts: List<DexSort>, onPick: (DexSort) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        Pill("↕  ${sort.label}", color = Fresh.Card, modifier = Modifier.clip(CircleShape).clickable { open = true })
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = Fresh.Page) {
+            sorts.forEach { option ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            option.label,
+                            color = Fresh.Ink,
+                            fontWeight = if (option == sort) FontWeight.Bold else FontWeight.Normal,
+                        )
+                    },
+                    onClick = {
+                        open = false
+                        onPick(option)
+                    },
+                )
             }
         }
     }
@@ -173,6 +219,7 @@ fun DexDetailScreen(
     val context = LocalContext.current
     // The picked photo waits here while its note is asked for.
     var picked by rememberSaveable { mutableStateOf<Uri?>(null) }
+    var editing by remember { mutableStateOf<DexShot?>(null) }
     val pick = rememberPhotoPicker { uri -> picked = uri }
     picked?.let { uri ->
         PhotoNoteDialog(
@@ -183,6 +230,18 @@ fun DexDetailScreen(
                 }
             },
             onDismiss = { picked = null },
+        )
+    }
+    editing?.let { shot ->
+        PhotoNoteDialog(
+            initial = shot.note,
+            title = if (shot.note.isBlank()) "Add a note" else "Change the note",
+            confirm = "Save",
+            onSave = { note ->
+                editing = null
+                viewModel.setNote(shot.id, note)
+            },
+            onDismiss = { editing = null },
         )
     }
 
@@ -201,7 +260,7 @@ fun DexDetailScreen(
             }
             if (e == null) return@Column
 
-            PhotoDiary(shots ?: emptyList(), wished = !e.owned, onAdd = pick)
+            PhotoDiary(shots ?: emptyList(), wished = !e.owned, onAdd = pick, onEditNote = { editing = it })
 
             Text(e.name, style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink, modifier = Modifier.padding(top = 18.dp))
             if (e.species.isNotBlank()) {
@@ -259,9 +318,9 @@ fun DexDetailScreen(
     }
 }
 
-/** Add or edit: photo, name, kind, the day you got it, and notes. */
+/** Add or edit: photo, name, kind, the day you got it, and notes. A delete goes [onDeleted]: back to the list. */
 @Composable
-fun DexEditScreen(viewModel: DexEditViewModel, onDone: () -> Unit) {
+fun DexEditScreen(viewModel: DexEditViewModel, onDone: () -> Unit, onDeleted: () -> Unit) {
     val form by viewModel.form.collectAsStateWithLifecycle()
     val owned by viewModel.owned.collectAsStateWithLifecycle()
     val photo by viewModel.photo.collectAsStateWithLifecycle()
@@ -377,7 +436,7 @@ fun DexEditScreen(viewModel: DexEditViewModel, onDone: () -> Unit) {
             title = { Text("Remove ${form.name.trim()}?") },
             text = { Text("Its photos and notes go too. This can't be undone.") },
             confirmButton = {
-                TextButton(onClick = { confirmDelete = false; viewModel.delete(onDone) }) { Text("Remove") }
+                TextButton(onClick = { confirmDelete = false; viewModel.delete(onDeleted) }) { Text("Remove") }
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
         )
