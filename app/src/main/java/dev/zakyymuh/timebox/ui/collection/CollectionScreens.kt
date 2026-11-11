@@ -58,6 +58,8 @@ import dev.zakyymuh.timebox.core.collection.DexForm
 import dev.zakyymuh.timebox.core.collection.DexShot
 import dev.zakyymuh.timebox.core.collection.DexSort
 import dev.zakyymuh.timebox.core.plants.Encyclopedia
+import dev.zakyymuh.timebox.ui.common.AddButton
+import dev.zakyymuh.timebox.ui.common.AddButtonClearance
 import dev.zakyymuh.timebox.ui.common.Pill
 import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.common.SoftCard
@@ -88,17 +90,7 @@ fun CollectionScreen(
     Scaffold(
         containerColor = Fresh.Page,
         floatingActionButtonPosition = FabPosition.Center,
-        floatingActionButton = {
-            Button(
-                onClick = { onAdd(!wishlist) },
-                shape = CircleShape,
-                colors = ButtonDefaults.buttonColors(containerColor = Fresh.Ink, contentColor = Color.White),
-                contentPadding = PaddingValues(horizontal = 24.dp),
-                modifier = Modifier.height(56.dp),
-            ) {
-                Text(if (wishlist) "+  Add a wish" else "+  Add a plant", style = MaterialTheme.typography.labelLarge)
-            }
-        },
+        floatingActionButton = { AddButton(if (wishlist) "Add a wish" else "Add a plant") { onAdd(!wishlist) } },
     ) { insets ->
         Column(Modifier.padding(insets).padding(horizontal = 20.dp).fillMaxSize()) {
             TopBar(title = "My plants", onBack = onBack) {
@@ -136,7 +128,7 @@ fun CollectionScreen(
                     columns = GridCells.Fixed(2),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 104.dp), // clear of the add button
+                    contentPadding = PaddingValues(bottom = AddButtonClearance),
                 ) {
                     items(shown, key = { it.id }) { DexCard(it) { onOpen(it.id) } }
                 }

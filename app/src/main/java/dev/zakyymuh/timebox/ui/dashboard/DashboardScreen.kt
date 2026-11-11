@@ -49,14 +49,19 @@ import dev.zakyymuh.timebox.ui.plants.PlantDot
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-private val heading = DateTimeFormatter.ofPattern("EEEE d MMMM")
 private const val GREETING = "Hello, Zaky 👋"
+
+/** One padding, corner and gap for every dashboard card, so their edges line up. */
+internal val CARD_PADDING = 20.dp
+internal val CARD_CORNER = 32.dp
+internal val CARD_GAP = 14.dp
 private val ICON = 56.dp
 private val SMALL_ICON = 40.dp
 
 /**
- * The front door: a greeting, the plant schedule as a week, two tiles (the collection and
- * a random thing that happened, which opens the history), and a plant fact.
+ * The front door: a greeting with a plant fact, the plant schedule as a week, two tiles
+ * (the collection and a random thing that happened, which opens the history), and this
+ * month's watering.
  */
 @Composable
 fun DashboardScreen(
@@ -84,24 +89,18 @@ fun DashboardScreen(
         ) {
             Spacer(Modifier.height(20.dp))
             Text(GREETING, style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink)
-            Text(
-                text = state.date?.format(heading) ?: "",
-                style = Label,
-                color = Fresh.InkSoft,
-                modifier = Modifier.padding(top = 4.dp, bottom = 24.dp),
-            )
+            FactLine(state.fact?.text.orEmpty(), viewModel::shuffleFact)
+            Spacer(Modifier.height(20.dp))
 
             state.date?.let { WeekCard(state.week, it, onOpenPlants) }
 
-            Row(Modifier.padding(top = 14.dp)) {
+            Row(Modifier.padding(top = CARD_GAP)) {
                 CollectionTile(state.cover, state.owned, onOpenCollection, Modifier.weight(1f))
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(CARD_GAP))
                 EventTile(state.event, onOpenHistory, Modifier.weight(1f))
             }
 
             state.date?.let { date -> state.month?.let { MonthCard(it, date, onOpenHistory) } }
-
-            state.fact?.let { FactLine(it.text, viewModel::shuffleFact) }
             Spacer(Modifier.height(32.dp))
         }
     }
@@ -124,7 +123,7 @@ private fun Tile(
     backdrop: @Composable BoxScope.() -> Unit = {},
     icon: @Composable () -> Unit,
 ) {
-    val shape = RoundedCornerShape(32.dp)
+    val shape = RoundedCornerShape(CARD_CORNER)
     Box(
         modifier = modifier
             .aspectRatio(1f)
@@ -135,7 +134,7 @@ private fun Tile(
             .semantics(mergeDescendants = true) { contentDescription = description },
     ) {
         backdrop()
-        Column(Modifier.matchParentSize().padding(18.dp)) {
+        Column(Modifier.matchParentSize().padding(CARD_PADDING)) {
         icon()
         Spacer(Modifier.weight(1f))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -205,11 +204,11 @@ private fun EventTile(event: String?, onOpen: () -> Unit, modifier: Modifier) {
 private fun MonthCard(month: WateringMonth, today: LocalDate, onOpen: () -> Unit) {
     SoftCard(
         color = Fresh.Page,
-        corner = 32.dp,
+        corner = CARD_CORNER,
         onClick = onOpen,
         modifier = Modifier
-            .padding(top = 14.dp)
-            .shadow(10.dp, RoundedCornerShape(32.dp), ambientColor = Fresh.Ink.copy(alpha = 0.08f), spotColor = Fresh.Ink.copy(alpha = 0.08f)),
+            .padding(top = CARD_GAP)
+            .shadow(10.dp, RoundedCornerShape(CARD_CORNER), ambientColor = Fresh.Ink.copy(alpha = 0.08f), spotColor = Fresh.Ink.copy(alpha = 0.08f)),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(6.dp).background(Fresh.Green, CircleShape))
@@ -248,18 +247,16 @@ private fun MonthCard(month: WateringMonth, today: LocalDate, onOpen: () -> Unit
     }
 }
 
-/** A plant fact, small and quiet. A tap shows another. */
+/** A plant fact under the greeting. A tap shows another. */
 @Composable
 private fun FactLine(text: String, onShuffle: () -> Unit) {
     Text(
         text,
-        style = Small,
+        style = MaterialTheme.typography.bodyMedium,
         color = Fresh.InkSoft,
         modifier = Modifier
-            .padding(top = 18.dp)
+            .padding(top = 4.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClickLabel = "Show another fact", onClick = onShuffle)
-            .padding(horizontal = 4.dp, vertical = 6.dp),
+            .clickable(onClickLabel = "Show another fact", onClick = onShuffle),
     )
 }

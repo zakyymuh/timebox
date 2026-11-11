@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -36,6 +37,8 @@ import dev.zakyymuh.timebox.core.plants.PlantCopy
 import dev.zakyymuh.timebox.core.plants.PlantRow
 import dev.zakyymuh.timebox.core.plants.PlantsOverview
 import dev.zakyymuh.timebox.ui.common.Pill
+import dev.zakyymuh.timebox.ui.common.AddButton
+import dev.zakyymuh.timebox.ui.common.AddButtonClearance
 import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.common.SectionTitle
 import dev.zakyymuh.timebox.ui.common.SoftCard
@@ -80,7 +83,12 @@ fun PlantsScreen(
         }
     }
 
-    Scaffold(containerColor = Fresh.Page, snackbarHost = { SnackbarHost(snackbar) }) { insets ->
+    Scaffold(
+        containerColor = Fresh.Page,
+        snackbarHost = { SnackbarHost(snackbar) },
+        floatingActionButtonPosition = FabPosition.Center,
+        floatingActionButton = { AddButton("Add a plant", onAdd) },
+    ) { insets ->
         Column(
             modifier = Modifier
                 .padding(insets)
@@ -92,8 +100,6 @@ fun PlantsScreen(
                 RoundButton("📖", onClick = onEncyclopedia, description = "Encyclopedia")
                 Spacer(Modifier.width(8.dp))
                 RoundButton("🗓", onClick = onCalendar, description = "Calendar")
-                Spacer(Modifier.width(8.dp))
-                RoundButton("+", onClick = onAdd, container = Fresh.Ink, content = Color.White, description = "Add a plant")
             }
 
             val o = overview ?: return@Column
@@ -114,7 +120,7 @@ fun PlantsScreen(
                 Spacer(Modifier.height(20.dp))
                 StatusCard(it, onClick = onSoil)
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(AddButtonClearance))
         }
     }
 }
@@ -124,7 +130,7 @@ private fun Empty() {
     SoftCard(modifier = Modifier.padding(top = 8.dp)) {
         Text("No plants yet", style = MaterialTheme.typography.titleLarge, color = Fresh.Ink)
         Text(
-            "Tap + to add one, with how often it needs water.",
+            "Tap Add a plant below, with how often it needs water.",
             style = MaterialTheme.typography.bodyMedium,
             color = Fresh.InkSoft,
             modifier = Modifier.padding(top = 6.dp),

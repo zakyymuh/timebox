@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -37,7 +38,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.remember
 import dev.zakyymuh.timebox.data.NoteRepository
 import dev.zakyymuh.timebox.ui.common.DateField
-import dev.zakyymuh.timebox.ui.common.RoundButton
+import dev.zakyymuh.timebox.ui.common.AddButton
+import dev.zakyymuh.timebox.ui.common.AddButtonClearance
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -51,11 +53,13 @@ fun HistoryScreen(viewModel: HistoryViewModel, onBack: () -> Unit) {
     var text by rememberSaveable { mutableStateOf(state.query) }
     var adding by rememberSaveable { mutableStateOf(false) }
 
-    Scaffold(containerColor = Fresh.Page) { insets ->
+    Scaffold(
+        containerColor = Fresh.Page,
+        floatingActionButtonPosition = FabPosition.Center,
+        floatingActionButton = { AddButton("Add an event") { adding = true } },
+    ) { insets ->
         Column(Modifier.padding(insets).fillMaxSize().padding(horizontal = 20.dp)) {
-            TopBar(title = "History", onBack = onBack) {
-                RoundButton(glyph = "+", onClick = { adding = true }, size = 40.dp, description = "Add an event")
-            }
+            TopBar(title = "History", onBack = onBack)
             TextField(
                 value = text,
                 onValueChange = { text = it; viewModel.search(it) },
@@ -85,7 +89,7 @@ fun HistoryScreen(viewModel: HistoryViewModel, onBack: () -> Unit) {
                     val showDate = group.events.map { it.date }.distinct().size > 1
                     items(group.events) { EventRow(it, showDate) }
                 }
-                item { Spacer(Modifier.height(32.dp)) }
+                item { Spacer(Modifier.height(AddButtonClearance)) }
             }
         }
     }
