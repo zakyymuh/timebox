@@ -45,7 +45,7 @@ import dev.zakyymuh.timebox.ui.theme.Fresh
 import dev.zakyymuh.timebox.ui.theme.Label
 import dev.zakyymuh.timebox.core.collection.Breeding
 import dev.zakyymuh.timebox.core.collection.Cross
-import dev.zakyymuh.timebox.core.soil.SampleCheck
+import dev.zakyymuh.timebox.ui.soil.SoilWaterCard
 import dev.zakyymuh.timebox.core.soil.SampleStatus
 import dev.zakyymuh.timebox.ui.common.SoftCard
 import dev.zakyymuh.timebox.ui.plants.PlantDot
@@ -107,7 +107,7 @@ fun DashboardScreen(
                 EventTile(state.event, onOpenHistory, Modifier.weight(1f))
             }
 
-            soil?.let { SoilCard(it, onOpenSoil) }
+            soil?.let { SoilWaterCard(it, onOpenSoil, Modifier.padding(top = CARD_GAP)) }
             crosses?.let { BreedingCard(it.firstOrNull(), onOpenBreeding) }
             Spacer(Modifier.height(32.dp))
         }
@@ -204,30 +204,6 @@ private fun EventTile(event: String?, onOpen: () -> Unit, modifier: Modifier) {
         ) {
             Text("🕘", fontSize = 18.sp)
         }
-    }
-}
-
-/** The soil air-space check: when the sample is next due. Green when it is due now. Opens the test. */
-@Composable
-private fun SoilCard(status: SampleStatus, onOpen: () -> Unit) {
-    val due = status is SampleStatus.Due
-    val ink = if (due) Fresh.GreenDeep else Fresh.Ink
-    SoftCard(
-        color = if (due) Fresh.Pastel else Fresh.Page,
-        corner = CARD_CORNER,
-        onClick = onOpen,
-        modifier = Modifier
-            .padding(top = CARD_GAP)
-            .shadow(10.dp, RoundedCornerShape(CARD_CORNER), ambientColor = Fresh.Ink.copy(alpha = 0.08f), spotColor = Fresh.Ink.copy(alpha = 0.08f)),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(6.dp).background(Fresh.Green, CircleShape))
-            Spacer(Modifier.width(8.dp))
-            Text("🧪 Soil air space", style = Label, color = if (due) Fresh.GreenDeep else Fresh.InkSoft, modifier = Modifier.weight(1f))
-            Text("→", style = MaterialTheme.typography.titleMedium, color = Fresh.InkSoft)
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(SampleCheck.label(status), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ink)
     }
 }
 

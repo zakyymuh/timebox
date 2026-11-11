@@ -35,6 +35,8 @@ import dev.zakyymuh.timebox.ui.breeding.BreedingNewScreen
 import dev.zakyymuh.timebox.ui.breeding.BreedingNewViewModel
 import dev.zakyymuh.timebox.ui.soil.AirSpaceScreen
 import dev.zakyymuh.timebox.ui.soil.AirSpaceViewModel
+import dev.zakyymuh.timebox.ui.soil.SoilHistoryScreen
+import dev.zakyymuh.timebox.ui.soil.SoilHistoryViewModel
 import dev.zakyymuh.timebox.ui.soil.SoilStatusViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.ui.dashboard.DashboardViewModel
@@ -193,7 +195,18 @@ fun AppNav(start: String?) {
             val vm: AirSpaceViewModel = viewModel(
                 factory = viewModelFactory { initializer { AirSpaceViewModel(ServiceLocator.soilRepository(context)) } },
             )
-            AirSpaceScreen(viewModel = vm, onBack = { entry.ifResumed { nav.popBackStack() } })
+            AirSpaceScreen(
+                viewModel = vm,
+                onBack = { entry.ifResumed { nav.popBackStack() } },
+                onHistory = { entry.ifResumed { nav.go(Destinations.SOIL_HISTORY) } },
+            )
+        }
+
+        composable(Destinations.SOIL_HISTORY) { entry ->
+            val vm: SoilHistoryViewModel = viewModel(
+                factory = viewModelFactory { initializer { SoilHistoryViewModel(ServiceLocator.soilRepository(context)) } },
+            )
+            SoilHistoryScreen(viewModel = vm, onBack = { entry.ifResumed { nav.popBackStack() } })
         }
 
         composable(Destinations.COLLECTION) { entry ->

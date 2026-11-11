@@ -12,6 +12,7 @@ object Destinations {
     const val ENCYCLOPEDIA = "encyclopedia"
     const val ENTRY = "encyclopedia/{id}"
     const val SOIL = "soil"
+    const val SOIL_HISTORY = "soil/history"
     const val COLLECTION = "collection"
     const val HISTORY = "history"
     const val DEX = "collection/{id}"
