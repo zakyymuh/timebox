@@ -44,6 +44,9 @@ data class DayUiState(
     val templates: List<DayList> = emptyList(),
     val draft: Draft = Draft(),
     val hasEarlier: Boolean = false,
+    /** The nearest earlier day with anything on it, and how it went, for the 📅 card. */
+    val earlier: LocalDate? = null,
+    val earlierSummary: DaySummary? = null,
     val hasLater: Boolean = false,
 ) {
     val isEmpty: Boolean get() = items.isEmpty()
@@ -69,7 +72,11 @@ class TodayViewModel(
      */
     private val noteEdits = MutableStateFlow<String?>(null)
 
-    private data class Neighbours(val earlier: LocalDate? = null, val later: LocalDate? = null)
+    private data class Neighbours(
+        val earlier: LocalDate? = null,
+        val later: LocalDate? = null,
+        val earlierSummary: DaySummary? = null,
+    )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val day = viewing.flatMapLatest { repo.dayFlow(it) }
@@ -89,6 +96,8 @@ class TodayViewModel(
                 templates = recent,
                 draft = currentDraft,
                 hasEarlier = near.earlier != null,
+                earlier = near.earlier,
+                earlierSummary = near.earlierSummary,
                 hasLater = near.later != null,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DayUiState())
@@ -125,9 +134,11 @@ class TodayViewModel(
 
     private fun refreshNeighbours() = viewModelScope.launch {
         val at = viewing.value
+        val earlier = repo.previousDayWithItems(at)
         neighbours.value = Neighbours(
-            earlier = repo.previousDayWithItems(at),
+            earlier = earlier,
             later = DayAccess.nextStep(at, repo.nextDayWithItems(at), repo.todayDate()),
+            earlierSummary = earlier?.let { DaySummaries.summarise(repo.dayNow(it)) },
         )
     }
 

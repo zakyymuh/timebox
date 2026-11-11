@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Daily: a white tick in a green circle on pastel green. The launcher crops it to its own shape. -->
+<!-- Daily: a checklist with green ticks on near-black. The launcher crops it to its own shape (a circle on most). -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/ic_launcher_background" />
     <foreground android:drawable="@drawable/ic_launcher_foreground" />

@@ -87,7 +87,7 @@ fun TaskCards(
     editable: Boolean,
     onStart: (Long) -> Unit,
     onDone: (Long) -> Unit,
-    /** Holding a card for a second and a quarter: open its Edit / Delete popup. */
+    /** Holding a card for half a second: open its Edit / Delete popup. */
     onHold: (TodoItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -130,7 +130,8 @@ fun TaskCards(
             // While one card is in hand the others all but vanish into the dark, and go deaf.
             val sidelined = working != null && !item.isWorking
             val fade by animateFloatAsState(if (sidelined) 0.12f else 1f, tween(450), label = "fade")
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            // Top-aligned, so the gap above the cards matches the gap above the small cards.
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                 TaskCard(
                     item = item,
                     index = page,
@@ -186,7 +187,7 @@ fun Modifier.blockTouches(on: Boolean): Modifier =
         }
     }
 
-private const val HOLD_MILLIS = 1_250L
+private const val HOLD_MILLIS = 500L
 
 /**
  * Calls [onHold] once a finger has stayed down for [millis]. Lifting sooner, or the pager

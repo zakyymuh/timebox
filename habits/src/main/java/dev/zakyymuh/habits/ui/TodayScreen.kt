@@ -1,11 +1,12 @@
 package dev.zakyymuh.habits.ui
 
 import androidx.compose.foundation.background
-import dev.zakyymuh.timebox.ui.lastdone.FunFactCard
-import dev.zakyymuh.timebox.ui.lastdone.LastTimeSheet
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.zakyymuh.timebox.core.TodoItem
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
@@ -34,7 +35,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -53,7 +53,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.FabPosition
-import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.theme.Fresh
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
@@ -76,7 +75,15 @@ fun TodayScreen(viewModel: TodayViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val lastDone by viewModel.lastDone.collectAsStateWithLifecycle()
     var adding by remember { mutableStateOf(false) }
-    var lastTimeOpen by remember { mutableStateOf(false) }
+    var historyOpen by remember { mutableStateOf(false) }
+    // The opening animation plays each time the app comes to the front, with a fresh fact.
+    var opening by remember { mutableStateOf(true) }
+    var openings by remember { mutableIntStateOf(0) }
+    LifecycleEventEffect(Lifecycle.Event.ON_START) {
+        opening = true
+        openings++
+        viewModel.shuffleFact()
+    }
     // The card held down for its Edit / Delete popup, and the card being edited.
     var acting by remember { mutableStateOf<TodoItem?>(null) }
     var editing by remember { mutableStateOf<TodoItem?>(null) }
@@ -90,6 +97,7 @@ fun TodayScreen(viewModel: TodayViewModel) {
     val factFade by animateFloatAsState(if (locked) 0.2f else 1f, tween(450), label = "fact")
     BackHandler(enabled = locked) { /* stay here until Done */ }
 
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = page,
@@ -108,23 +116,23 @@ fun TodayScreen(viewModel: TodayViewModel) {
                 .fillMaxSize(),
         ) {
             Column(Modifier.padding(horizontal = 20.dp).blockTouches(locked)) {
-                Header(state, viewModel, locked)
+                Header(state, locked)
 
-                Spacer(Modifier.height(20.dp))
-
-                // Only on today: the record of a past day is about that day, not about now.
-                if (state.isToday && state.date != null) {
-                    Box(Modifier.alpha(factFade)) {
-                        FunFactCard(
-                            fact = lastDone.fact,
-                            tracked = lastDone.events.size,
-                            onShuffle = viewModel::shuffleFact,
-                            onOpen = { lastTimeOpen = true },
-                        )
-                    }
-                    Spacer(Modifier.height(16.dp))
+                if (state.date != null) {
+                    Spacer(Modifier.height(RowGap))
+                    TopTiles(
+                        isToday = state.isToday,
+                        earlierLabel = state.earlier?.let { dayName(it, state.date.takeIf { state.isToday }) },
+                        earlierValue = state.earlierSummary?.let { "${it.done} of ${it.total} done" },
+                        fact = lastDone.fact,
+                        onCalendar = { if (state.isToday) viewModel.goEarlier() else viewModel.jumpToToday() },
+                        onHistory = { historyOpen = true },
+                        modifier = Modifier.alpha(factFade),
+                    )
                 }
             }
+            // The same gap again between the small cards and the task cards.
+            Spacer(Modifier.height(RowGap))
 
             if (state.isEmpty) {
                 EmptyDay(state, viewModel, Modifier.weight(1f))
@@ -146,6 +154,19 @@ fun TodayScreen(viewModel: TodayViewModel) {
 
             if (!state.editable) Box(Modifier.padding(horizontal = 20.dp)) { ReadOnlyFooter() }
         }
+    }
+
+    if (historyOpen) {
+        HistoryScreen(
+            ui = lastDone,
+            onLog = viewModel::markDone,
+            onClose = { historyOpen = false },
+        )
+    }
+
+    if (opening) {
+        key(openings) { OpeningSplash(onFinished = { opening = false }) }
+    }
     }
 
     acting?.let { item ->
@@ -171,15 +192,6 @@ fun TodayScreen(viewModel: TodayViewModel) {
         )
     }
 
-    if (lastTimeOpen) {
-        LastTimeSheet(
-            ui = lastDone,
-            onDidIt = viewModel::markDone,
-            onUndo = viewModel::undoLastMark,
-            onDismiss = { lastTimeOpen = false },
-        )
-    }
-
     if (adding && state.editable && inHand < 0) {
         IdeaDialog(
             draft = state.draft,
@@ -192,66 +204,41 @@ fun TodayScreen(viewModel: TodayViewModel) {
     }
 }
 
+/** The gap between the rows at the top: greeting, small cards, task cards. */
+private val RowGap = 20.dp
+
+/** "Yesterday" for the day before [today], else the day's short date. */
+private fun dayName(date: LocalDate, today: LocalDate?): String =
+    if (today != null && date == today.minusDays(1)) "Yesterday" else date.format(dayHeading)
+
 @Composable
-private fun Header(state: DayUiState, viewModel: TodayViewModel, locked: Boolean) {
+private fun Header(state: DayUiState, locked: Boolean) {
     val title by animateColorAsState(if (locked) Color.White else Fresh.Ink, tween(450), label = "title")
     val sub by animateColorAsState(
         if (locked) Color.White.copy(alpha = 0.55f) else Fresh.InkSoft, tween(450), label = "sub",
     )
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
-        verticalAlignment = Alignment.Bottom,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = if (state.isToday) "Today" else "Record",
-                style = MaterialTheme.typography.headlineLarge,
-                color = title,
-            )
-            Text(
-                text = when {
-                    state.date == null -> ""
-                    state.summary.isEmpty -> state.date.format(fullHeading)
-                    else -> "${state.date.format(dayHeading)}  ·  ${state.summary.done} of ${state.summary.total} done"
-                },
-                style = Label,
-                modifier = Modifier.padding(top = 4.dp),
-                color = sub,
-            )
-        }
-
-        // Stepping back through the record, and a way straight home again.
-        StepButton("‹", enabled = state.hasEarlier, locked = locked, onClick = viewModel::goEarlier)
-        Spacer(Modifier.width(6.dp))
-        StepButton("›", enabled = state.hasLater, locked = locked, onClick = viewModel::goLater)
-    }
-
-    if (!state.isToday) {
+    Column(Modifier.fillMaxWidth().padding(top = 10.dp)) {
         Text(
-            text = "Jump to Today",
-            style = Small,
-            color = Fresh.Green,
-            modifier = Modifier
-                .padding(top = 8.dp)
-                .clickable { viewModel.jumpToToday() },
+            text = when {
+                state.date == null -> ""
+                state.isToday -> "Hello Zaky"
+                state.date == LocalDate.now().minusDays(1) -> "Yesterday"
+                else -> state.date.format(fullHeading)
+            },
+            style = MaterialTheme.typography.headlineLarge,
+            color = title,
+        )
+        Text(
+            text = when {
+                state.date == null -> ""
+                state.summary.isEmpty -> state.date.format(fullHeading)
+                else -> "${state.date.format(dayHeading)}  ·  ${state.summary.done} of ${state.summary.total} done"
+            },
+            style = Label,
+            modifier = Modifier.padding(top = 4.dp),
+            color = sub,
         )
     }
-}
-
-@Composable
-private fun StepButton(glyph: String, enabled: Boolean, locked: Boolean, onClick: () -> Unit) {
-    RoundButton(
-        glyph = glyph,
-        onClick = { if (enabled) onClick() },
-        size = 40.dp,
-        modifier = Modifier.alpha(
-            when {
-                locked -> 0.15f
-                enabled -> 1f
-                else -> 0.3f
-            },
-        ),
-    )
 }
 
 @Composable
@@ -472,7 +459,7 @@ private fun EditDialog(
 }
 
 /**
- * What holding a card for a second and a quarter opens: Edit or Delete. Delete asks once more, so a
+ * What holding a card for half a second opens: Edit or Delete. Delete asks once more, so a
  * long press by accident cannot lose a card. A tap outside closes it.
  */
 @Composable
