@@ -50,7 +50,7 @@ private val PhotoShape = RoundedCornerShape(28.dp)
 /**
  * A plant's photos, newest first: swipe through the big photo. Each note sits in a bubble
  * at the top, popping in the first time its photo is shown. Tap a photo to change its
- * note; the camera adds a photo.
+ * note or delete it; the camera adds a photo.
  */
 @Composable
 fun PhotoDiary(shots: List<DexShot>, wished: Boolean, onAdd: () -> Unit, onEditNote: (DexShot) -> Unit) {
@@ -156,6 +156,8 @@ fun PhotoNoteDialog(
     title: String = "Add a note",
     confirm: String = "Save photo",
     hint: String? = null,
+    /** Shown as "Delete photo" under the note, for a photo already in the diary. */
+    onDelete: (() -> Unit)? = null,
 ) {
     var note by rememberSaveable { mutableStateOf(initial) }
     AlertDialog(
@@ -182,6 +184,11 @@ fun PhotoNoteDialog(
                     color = Fresh.InkSoft,
                     modifier = Modifier.padding(start = 4.dp, top = 6.dp),
                 )
+                onDelete?.let {
+                    TextButton(onClick = it, modifier = Modifier.padding(top = 10.dp)) {
+                        Text("Delete photo", color = MaterialTheme.colorScheme.error)
+                    }
+                }
             }
         },
         confirmButton = { TextButton(onClick = { onSave(note) }) { Text(confirm) } },

@@ -84,6 +84,19 @@ class DexRepository(
     /** Changes the note on one photo; the photo and its place stay. */
     suspend fun setPhotoNote(photoId: Long, note: String) = dao.setPhotoNote(photoId, DexPhotos.note(note))
 
+    /**
+     * Removes one photo from its plant's diary, and its file from the phone unless something
+     * still uses it. When it was the cover, the newest photo left takes over, or none.
+     */
+    suspend fun deletePhoto(photoId: Long) {
+        val shot = dao.photo(photoId) ?: return
+        dao.deletePhoto(photoId)
+        val left = dao.photos(shot.dexId)
+        val entry = dao.entry(shot.dexId)
+        if (entry != null && entry.photo == shot.file) dao.update(entry.copy(photo = left.firstOrNull()?.file))
+        if (left.none { it.file == shot.file }) photos.delete(shot.file)
+    }
+
     /** Adds [files] in the order picked, each with [note]; the last one becomes the cover. */
     suspend fun addPhotos(id: Long, files: List<String>, note: String) {
         val existing = dao.entry(id) ?: return files.forEach(photos::delete)

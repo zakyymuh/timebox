@@ -48,6 +48,10 @@ class DexDetailViewModel(
         viewModelScope.launch { repo.setPhotoNote(photoId, note) }
     }
 
+    fun deletePhoto(photoId: Long) {
+        viewModelScope.launch { repo.deletePhoto(photoId) }
+    }
+
     /**
      * Imports the picked photos, in order, into the diary, each with [note]. [onResult] gets
      * how many could not be read (0 when all went in).

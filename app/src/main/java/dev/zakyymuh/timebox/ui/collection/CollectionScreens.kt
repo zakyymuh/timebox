@@ -231,6 +231,7 @@ fun DexDetailScreen(
     // The picked photos wait here while their note is asked for.
     var picked by remember { mutableStateOf<List<Uri>?>(null) }
     var editing by remember { mutableStateOf<DexShot?>(null) }
+    var deleting by remember { mutableStateOf<DexShot?>(null) }
     val pick = rememberPhotosPicker { uris -> picked = uris }
     picked?.let { uris ->
         PhotoNoteDialog(
@@ -259,6 +260,25 @@ fun DexDetailScreen(
                 viewModel.setNote(shot.id, note)
             },
             onDismiss = { editing = null },
+            onDelete = {
+                editing = null
+                deleting = shot
+            },
+        )
+    }
+    deleting?.let { shot ->
+        AlertDialog(
+            onDismissRequest = { deleting = null },
+            containerColor = Fresh.Page,
+            title = { Text("Delete this photo?") },
+            text = { Text("It's removed from your phone too. This can't be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    deleting = null
+                    viewModel.deletePhoto(shot.id)
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } },
         )
     }
 

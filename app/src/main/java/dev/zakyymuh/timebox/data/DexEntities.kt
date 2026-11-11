@@ -94,4 +94,10 @@ interface DexDao {
 
     @Query("UPDATE dex_photo SET note = :note WHERE id = :photoId")
     suspend fun setPhotoNote(photoId: Long, note: String)
+
+    @Query("SELECT * FROM dex_photo WHERE id = :photoId")
+    suspend fun photo(photoId: Long): DexPhotoEntity?
+
+    @Query("DELETE FROM dex_photo WHERE id = :photoId")
+    suspend fun deletePhoto(photoId: Long)
 }

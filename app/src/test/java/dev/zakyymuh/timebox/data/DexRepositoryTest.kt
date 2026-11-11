@@ -129,6 +129,36 @@ class DexRepositoryTest {
     }
 
     @Test
+    fun `deleting the cover photo removes its file, and the newest one left becomes the cover`() = runTest {
+        val id = repo.add(DexForm("Greenovia"), owned = true, photo = "old.jpg")
+        repo.addPhotos(id, listOf("a.jpg", "b.jpg"), "")
+        val cover = repo.photosFlow(id).first().first()
+        repo.deletePhoto(cover.id)
+        assertEquals(listOf("a.jpg", "old.jpg"), repo.photosFlow(id).first().map { it.file })
+        assertEquals("a.jpg", repo.entry(id)?.photo)
+        assertEquals(listOf("b.jpg"), deleted)
+    }
+
+    @Test
+    fun `deleting an older photo keeps the cover`() = runTest {
+        val id = repo.add(DexForm("Greenovia"), owned = true, photo = "old.jpg")
+        repo.addPhoto(id, "new.jpg", "")
+        val old = repo.photosFlow(id).first().last()
+        repo.deletePhoto(old.id)
+        assertEquals("new.jpg", repo.entry(id)?.photo)
+        assertEquals(listOf("old.jpg"), deleted)
+    }
+
+    @Test
+    fun `deleting the last photo leaves the plant without one`() = runTest {
+        val id = repo.add(DexForm("Greenovia"), owned = true, photo = "only.jpg")
+        repo.deletePhoto(repo.photosFlow(id).first().single().id)
+        assertEquals(null, repo.entry(id)?.photo)
+        assertTrue(repo.photosFlow(id).first().isEmpty())
+        assertEquals(listOf("only.jpg"), deleted)
+    }
+
+    @Test
     fun `several photos for a plant that is gone are all thrown away`() = runTest {
         repo.addPhotos(99, listOf("x.jpg", "y.jpg"), "")
         assertEquals(listOf("x.jpg", "y.jpg"), deleted)
