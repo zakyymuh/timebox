@@ -1,5 +1,12 @@
 package dev.zakyymuh.timebox.ui.dashboard
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
 import dev.zakyymuh.timebox.ui.common.SettingsScreen
 import dev.zakyymuh.timebox.ui.common.SettingsButton
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -64,6 +71,24 @@ import java.time.format.DateTimeFormatter
 
 private const val GREETING = "Hello, Zaky 👋"
 
+/** The week, the two tiles, soil and breeding: the cards that come in one by one. */
+private const val CARDS = 5
+private const val REVEAL_STEP_MS = 140L
+
+/** Hidden until [order] < [shown], then fades in and rises a little into place. */
+@Composable
+private fun Modifier.reveal(order: Int, shown: Int): Modifier {
+    val p by animateFloatAsState(
+        if (order < shown) 1f else 0f,
+        tween(420, easing = FastOutSlowInEasing),
+        label = "reveal",
+    )
+    return graphicsLayer {
+        alpha = p
+        translationY = (1f - p) * 28.dp.toPx()
+    }
+}
+
 /** One padding, corner and gap for every dashboard card, so their edges line up. */
 internal val CARD_PADDING = 20.dp
 internal val CARD_CORNER = 32.dp
@@ -94,9 +119,17 @@ fun DashboardScreen(
         onPauseOrDispose { }
     }
 
-    val density = LocalDensity.current
-    // The pinned header's height, so the cards start below it and then scroll under it.
-    var header by remember { mutableStateOf(0.dp) }
+    // How many cards have come in. Once the data is there they arrive one by one, top
+    // first; saved, so coming back to the dashboard doesn't play it again.
+    var shown by rememberSaveable { mutableIntStateOf(0) }
+    val ready = state.date != null
+    LaunchedEffect(ready) {
+        if (!ready) return@LaunchedEffect
+        while (shown < CARDS) {
+            delay(REVEAL_STEP_MS)
+            shown++
+        }
+    }
     // Saved: picking light or dark recreates the activity, and Settings should stay open.
     var settings by rememberSaveable { mutableStateOf(false) }
 
@@ -107,29 +140,30 @@ fun DashboardScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
                 .navigationBarsPadding(),
         ) {
-            Spacer(Modifier.height(header))
-
-            state.date?.let { WeekCard(state.week, it, onOpenPlants) }
-
-            Row(Modifier.padding(top = CARD_GAP)) {
-                CollectionTile(state.cover, state.owned, onOpenCollection, Modifier.weight(1f))
-                Spacer(Modifier.width(CARD_GAP))
-                EventTile(state.event, onOpenHistory, Modifier.weight(1f))
+            // Part of the page: it scrolls away with everything else.
+            GreetingHeader {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(GREETING, style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink, modifier = Modifier.weight(1f))
+                    SettingsButton(onClick = { settings = true })
+                }
+                FactLine(state.fact?.text.orEmpty(), viewModel::shuffleFact)
             }
 
-            soil?.let { SoilWaterCard(it, onOpenSoil, Modifier.padding(top = CARD_GAP)) }
-            crosses?.let { BreedingCard(it.firstOrNull(), onOpenBreeding) }
-            Spacer(Modifier.height(32.dp))
-        }
-        GreetingHeader(Modifier.onSizeChanged { header = with(density) { it.height.toDp() } - 12.dp }) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(GREETING, style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink, modifier = Modifier.weight(1f))
-                SettingsButton(onClick = { settings = true })
+            Column(Modifier.padding(horizontal = 20.dp)) {
+                state.date?.let { Box(Modifier.reveal(0, shown)) { WeekCard(state.week, it, onOpenPlants) } }
+
+                Row(Modifier.padding(top = CARD_GAP)) {
+                    CollectionTile(state.cover, state.owned, onOpenCollection, Modifier.weight(1f).reveal(1, shown))
+                    Spacer(Modifier.width(CARD_GAP))
+                    EventTile(state.event, onOpenHistory, Modifier.weight(1f).reveal(2, shown))
+                }
+
+                soil?.let { SoilWaterCard(it, onOpenSoil, Modifier.padding(top = CARD_GAP).reveal(3, shown)) }
+                crosses?.let { Box(Modifier.reveal(4, shown)) { BreedingCard(it.firstOrNull(), onOpenBreeding) } }
+                Spacer(Modifier.height(32.dp))
             }
-            FactLine(state.fact?.text.orEmpty(), viewModel::shuffleFact)
         }
         if (settings) SettingsScreen(onClose = { settings = false })
         }

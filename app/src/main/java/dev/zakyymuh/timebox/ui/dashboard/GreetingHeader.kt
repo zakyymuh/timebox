@@ -1,5 +1,9 @@
 package dev.zakyymuh.timebox.ui.dashboard
 
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -28,29 +32,34 @@ import dev.zakyymuh.timebox.ui.theme.Fresh
 private val WashTop: Color get() = if (Fresh.Dark) Color(0xFF1D1827) else Color(0xFFF3ECFD)
 private val WashBottom: Color get() = if (Fresh.Dark) Color(0xFF151C24) else Color(0xFFF1F8FF)
 
-/** Below the header the page fades in over this much, so cards scroll softly under it. */
-private val FADE = 28.dp
-
 /**
- * The dashboard's header, pinned at the top from under the status bar: soft blurred light
- * (lilac, mint, blue) over a pale wash, fading into the page at its bottom edge.
+ * The top of the dashboard, from under the status bar: soft blurred light (lilac, mint,
+ * blue) gathered at the very top, thinning out until it is the page itself by the
+ * header's bottom edge, so there is no line between it and the cards. It is part of the
+ * page and scrolls away with it.
  */
 @Composable
 fun GreetingHeader(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier.fillMaxWidth()) {
+    Box(modifier.fillMaxWidth()) {
         Box(
             Modifier
-                .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(WashTop, WashBottom))),
+                .matchParentSize()
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    // Strong at the top, gone at the bottom: the page shows through.
+                    drawRect(
+                        Brush.verticalGradient(0f to Color.Black, 0.35f to Color.Black, 1f to Color.Transparent),
+                        blendMode = BlendMode.DstIn,
+                    )
+                },
         ) {
+            Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(WashTop, WashBottom))))
             Glow(Modifier.matchParentSize())
-            Column(Modifier.statusBarsPadding().padding(horizontal = 20.dp).padding(top = 20.dp, bottom = 14.dp), content = content)
         }
-        Spacer(
-            Modifier
-                .fillMaxWidth()
-                .height(FADE)
-                .background(Brush.verticalGradient(listOf(WashBottom, Fresh.Page.copy(alpha = 0f)))),
+        Column(
+            Modifier.statusBarsPadding().padding(horizontal = 20.dp).padding(top = 20.dp, bottom = 24.dp),
+            content = content,
         )
     }
 }
@@ -60,9 +69,10 @@ private fun Glow(modifier: Modifier) {
     BoxWithConstraints(modifier.clipToBounds().blur(36.dp, BlurredEdgeTreatment.Rectangle)) {
         // Dimmer at night, so the light stays soft on the dark page.
         val glow = if (Fresh.Dark) 0.35f else 1f
-        Blob(Lilac.copy(alpha = glow), 180.dp, x = maxWidth * 0.55f, y = (-40).dp)
-        Blob(Color(0xFFB8F0E6).copy(alpha = glow), 150.dp, x = (-30).dp, y = 30.dp)
-        Blob(Color(0xFF9FD3FF).copy(alpha = glow), 130.dp, x = maxWidth * 0.3f, y = 70.dp)
+        // Gathered up high, under the status bar, so the light comes from the top.
+        Blob(Lilac.copy(alpha = glow), 200.dp, x = maxWidth * 0.55f, y = (-80).dp)
+        Blob(Color(0xFFB8F0E6).copy(alpha = glow), 170.dp, x = (-40).dp, y = (-30).dp)
+        Blob(Color(0xFF9FD3FF).copy(alpha = glow), 140.dp, x = maxWidth * 0.3f, y = 10.dp)
     }
 }
 
