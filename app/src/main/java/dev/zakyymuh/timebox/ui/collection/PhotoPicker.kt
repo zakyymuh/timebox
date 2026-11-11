@@ -29,20 +29,32 @@ import dev.zakyymuh.timebox.ui.theme.Fresh
 /**
  * Returns a function that asks "camera or gallery?" and hands the chosen picture to
  * [onPicked]. Neither path needs a permission: the camera app writes into our FileProvider
- * file, and the system photo picker grants just the one photo.
+ * file, and the system photo picker grants just the photos picked.
+ */
+@Composable
+fun rememberPhotoPicker(onPicked: (Uri) -> Unit): () -> Unit =
+    rememberPhotosPicker(max = 1) { onPicked(it.first()) }
+
+/**
+ * Like [rememberPhotoPicker], but the gallery lets up to [max] photos be picked at once,
+ * handed over in the order picked. The camera still takes one.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun rememberPhotoPicker(onPicked: (Uri) -> Unit): () -> Unit {
+fun rememberPhotosPicker(max: Int = MAX_AT_ONCE, onPicked: (List<Uri>) -> Unit): () -> Unit {
     val context = LocalContext.current
     var asking by remember { mutableStateOf(false) }
     var shot by rememberSaveable { mutableStateOf<Uri?>(null) }
 
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
-        if (ok) shot?.let(onPicked)
+        if (ok) shot?.let { onPicked(listOf(it)) }
     }
-    val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        uri?.let(onPicked)
+    val one = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        uri?.let { onPicked(listOf(it)) }
+    }
+    // The multiple picker needs a limit of at least 2.
+    val many = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(max.coerceAtLeast(2))) { uris ->
+        if (uris.isNotEmpty()) onPicked(uris)
     }
 
     if (asking) {
@@ -58,15 +70,19 @@ fun rememberPhotoPicker(onPicked: (Uri) -> Unit): () -> Unit {
                         Toast.makeText(context, "No camera app found", Toast.LENGTH_SHORT).show()
                     }
                 }
-                Option("🖼   Choose from gallery") {
+                Option(if (max > 1) "🖼   Choose from gallery (up to $max)" else "🖼   Choose from gallery") {
                     asking = false
-                    gallery.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    val request = PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    if (max > 1) many.launch(request) else one.launch(request)
                 }
             }
         }
     }
     return { asking = true }
 }
+
+/** How many photos the gallery hands over in one go. */
+const val MAX_AT_ONCE = 10
 
 @Composable
 private fun Option(label: String, onClick: () -> Unit) {

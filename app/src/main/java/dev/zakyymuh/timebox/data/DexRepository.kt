@@ -84,6 +84,14 @@ class DexRepository(
     /** Changes the note on one photo; the photo and its place stay. */
     suspend fun setPhotoNote(photoId: Long, note: String) = dao.setPhotoNote(photoId, DexPhotos.note(note))
 
+    /** Adds [files] in the order picked, each with [note]; the last one becomes the cover. */
+    suspend fun addPhotos(id: Long, files: List<String>, note: String) {
+        val existing = dao.entry(id) ?: return files.forEach(photos::delete)
+        if (files.isEmpty()) return
+        files.forEach { insertPhoto(id, it, note) }
+        dao.update(existing.copy(photo = files.last()))
+    }
+
     private suspend fun insertPhoto(id: Long, photo: String, note: String) {
         dao.insertPhoto(
             DexPhotoEntity(dexId = id, file = photo, note = DexPhotos.note(note), takenOn = todayDate(), createdAt = clock.instant()),

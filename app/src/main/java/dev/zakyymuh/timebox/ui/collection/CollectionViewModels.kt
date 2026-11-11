@@ -48,12 +48,15 @@ class DexDetailViewModel(
         viewModelScope.launch { repo.setPhotoNote(photoId, note) }
     }
 
-    /** Imports the picked photo into the diary with [note]; [onResult] gets false if it could not be read. */
-    fun addPhoto(uri: Uri, note: String, onResult: (Boolean) -> Unit) {
+    /**
+     * Imports the picked photos, in order, into the diary, each with [note]. [onResult] gets
+     * how many could not be read (0 when all went in).
+     */
+    fun addPhotos(uris: List<Uri>, note: String, onResult: (failed: Int) -> Unit) {
         viewModelScope.launch {
-            val name = photos.import(uri)
-            if (name != null) repo.addPhoto(id, name, note)
-            onResult(name != null)
+            val names = uris.mapNotNull { photos.import(it) }
+            repo.addPhotos(id, names, note)
+            onResult(uris.size - names.size)
         }
     }
 }

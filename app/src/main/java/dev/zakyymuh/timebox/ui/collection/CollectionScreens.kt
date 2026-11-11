@@ -209,16 +209,22 @@ fun DexDetailScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val shots by viewModel.shots.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    // The picked photo waits here while its note is asked for.
-    var picked by rememberSaveable { mutableStateOf<Uri?>(null) }
+    // The picked photos wait here while their note is asked for.
+    var picked by remember { mutableStateOf<List<Uri>?>(null) }
     var editing by remember { mutableStateOf<DexShot?>(null) }
-    val pick = rememberPhotoPicker { uri -> picked = uri }
-    picked?.let { uri ->
+    val pick = rememberPhotosPicker { uris -> picked = uris }
+    picked?.let { uris ->
         PhotoNoteDialog(
+            title = if (uris.size > 1) "Add a note · ${uris.size} photos" else "Add a note",
+            hint = if (uris.size > 1) "It goes on every one; tap a photo later to change its own." else null,
+            confirm = if (uris.size > 1) "Save ${uris.size} photos" else "Save photo",
             onSave = { note ->
                 picked = null
-                viewModel.addPhoto(uri, note) { ok ->
-                    if (!ok) Toast.makeText(context, "Couldn't read that photo", Toast.LENGTH_SHORT).show()
+                viewModel.addPhotos(uris, note) { failed ->
+                    if (failed > 0) {
+                        val text = if (failed == uris.size) "Couldn't read that photo" else "Couldn't read $failed of the photos"
+                        Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+                    }
                 }
             },
             onDismiss = { picked = null },

@@ -119,6 +119,22 @@ class DexRepositoryTest {
     }
 
     @Test
+    fun `several photos at once all join the diary, the last picked becomes the cover`() = runTest {
+        val id = repo.add(DexForm("Greenovia"), owned = true, photo = "old.jpg")
+        repo.addPhotos(id, listOf("a.jpg", "b.jpg", "c.jpg"), " repotted ")
+        assertEquals("c.jpg", repo.entry(id)?.photo)
+        val shots = repo.photosFlow(id).first()
+        assertEquals(listOf("c.jpg", "b.jpg", "a.jpg", "old.jpg"), shots.map { it.file })
+        assertEquals(listOf("repotted", "repotted", "repotted", ""), shots.map { it.note })
+    }
+
+    @Test
+    fun `several photos for a plant that is gone are all thrown away`() = runTest {
+        repo.addPhotos(99, listOf("x.jpg", "y.jpg"), "")
+        assertEquals(listOf("x.jpg", "y.jpg"), deleted)
+    }
+
+    @Test
     fun `a photo for a plant that is gone is thrown away`() = runTest {
         repo.addPhoto(99, "stray.jpg", "")
         assertEquals(listOf("stray.jpg"), deleted)

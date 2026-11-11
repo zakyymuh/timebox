@@ -155,6 +155,7 @@ fun PhotoNoteDialog(
     initial: String = "",
     title: String = "Add a note",
     confirm: String = "Save photo",
+    hint: String? = null,
 ) {
     var note by rememberSaveable { mutableStateOf(initial) }
     AlertDialog(
@@ -172,6 +173,9 @@ fun PhotoNoteDialog(
                     colors = softFieldColors(),
                     modifier = Modifier.fillMaxWidth(),
                 )
+                hint?.let {
+                    Text(it, style = Small, color = Fresh.InkSoft, modifier = Modifier.padding(start = 4.dp, top = 6.dp))
+                }
                 Text(
                     "${note.length}/${DexPhotos.MAX_NOTE} · optional",
                     style = Small,
