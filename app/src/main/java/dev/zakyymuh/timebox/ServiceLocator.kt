@@ -3,6 +3,7 @@ package dev.zakyymuh.timebox
 import android.content.Context
 import androidx.room.Room
 import dev.zakyymuh.timebox.data.ALL_MIGRATIONS
+import dev.zakyymuh.timebox.data.BreedingRepository
 import dev.zakyymuh.timebox.data.NoteRepository
 import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PhotoStore
@@ -53,6 +54,15 @@ object ServiceLocator {
         }
 
     private var noteRepository: NoteRepository? = null
+
+    @Volatile
+    private var breedingRepository: BreedingRepository? = null
+
+    fun breedingRepository(context: Context): BreedingRepository =
+        breedingRepository ?: synchronized(this) {
+            breedingRepository ?: BreedingRepository(database(context).breedingDao(), database(context).dexDao(), clock)
+                .also { breedingRepository = it }
+        }
 
     fun noteRepository(context: Context): NoteRepository =
         noteRepository ?: synchronized(this) {

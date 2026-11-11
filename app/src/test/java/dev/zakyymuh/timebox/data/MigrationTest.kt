@@ -254,4 +254,18 @@ class MigrationTest {
         val astrophytum = current.dexDao().entries().first { it.name == "Astrophytum" }
         assertEquals(emptyList<Any>(), current.dexDao().photos(astrophytum.id)) // it had no photo
     }
+
+    @Test
+    fun `the upgrade to 11 adds an empty breeding table that works`() = runTest {
+        createVersion7()
+        val current = openCurrent()
+        val parent = current.dexDao().entries().single().id
+        current.breedingDao().insert(
+            BreedingEntity(
+                code = "1126001", name = "A × A2", date = day, motherId = parent, fatherId = null,
+                motherName = "Astrophytum", fatherName = "Gone", createdAt = Instant.EPOCH,
+            ),
+        )
+        assertEquals(listOf("1126001"), current.breedingDao().crossesFlow().first().map { it.code })
+    }
 }

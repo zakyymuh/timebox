@@ -27,6 +27,12 @@ import dev.zakyymuh.timebox.ui.collection.DexDetailViewModel
 import dev.zakyymuh.timebox.ui.collection.DexEditScreen
 import dev.zakyymuh.timebox.ui.collection.DexEditViewModel
 import dev.zakyymuh.timebox.ui.dashboard.DashboardScreen
+import dev.zakyymuh.timebox.ui.breeding.BreedingDetailScreen
+import dev.zakyymuh.timebox.ui.breeding.BreedingDetailViewModel
+import dev.zakyymuh.timebox.ui.breeding.BreedingListScreen
+import dev.zakyymuh.timebox.ui.breeding.BreedingListViewModel
+import dev.zakyymuh.timebox.ui.breeding.BreedingNewScreen
+import dev.zakyymuh.timebox.ui.breeding.BreedingNewViewModel
 import dev.zakyymuh.timebox.ui.soil.AirSpaceScreen
 import dev.zakyymuh.timebox.ui.soil.AirSpaceViewModel
 import dev.zakyymuh.timebox.ui.soil.SoilStatusViewModel
@@ -88,13 +94,68 @@ fun AppNav(start: String?) {
                 factory = viewModelFactory { initializer { SoilStatusViewModel(ServiceLocator.soilRepository(context)) } },
             )
             val soil by soilVm.status.collectAsStateWithLifecycle()
+            val breedingVm: BreedingListViewModel = viewModel(
+                factory = viewModelFactory { initializer { BreedingListViewModel(ServiceLocator.breedingRepository(context)) } },
+            )
+            val crosses by breedingVm.crosses.collectAsStateWithLifecycle()
             DashboardScreen(
                 viewModel = vm,
                 soil = soil,
                 onOpenSoil = { entry.ifResumed { nav.go(Destinations.SOIL) } },
+                crosses = crosses,
+                onOpenBreeding = { entry.ifResumed { nav.go(Destinations.BREEDING) } },
                 onOpenPlants = { entry.ifResumed { nav.go(Destinations.PLANTS) } },
                 onOpenCollection = { entry.ifResumed { nav.go(Destinations.COLLECTION) } },
                 onOpenHistory = { entry.ifResumed { nav.go(Destinations.HISTORY) } },
+            )
+        }
+
+        composable(Destinations.BREEDING) { entry ->
+            val vm: BreedingListViewModel = viewModel(
+                factory = viewModelFactory { initializer { BreedingListViewModel(ServiceLocator.breedingRepository(context)) } },
+            )
+            BreedingListScreen(
+                viewModel = vm,
+                onBack = { entry.ifResumed { nav.popBackStack() } },
+                onOpen = { id -> entry.ifResumed { nav.go(Destinations.cross(id)) } },
+                onAdd = { entry.ifResumed { nav.go(Destinations.BREEDING_NEW) } },
+            )
+        }
+
+        composable(Destinations.BREEDING_NEW) { entry ->
+            val vm: BreedingNewViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer { BreedingNewViewModel(ServiceLocator.breedingRepository(context), ServiceLocator.dexRepository(context)) }
+                },
+            )
+            BreedingNewScreen(
+                viewModel = vm,
+                onBack = { entry.ifResumed { nav.popBackStack() } },
+                // Show the new cross, with the list underneath for Back.
+                onSaved = { id ->
+                    entry.ifResumed {
+                        nav.navigate(Destinations.cross(id)) { popUpTo(Destinations.BREEDING) }
+                    }
+                },
+            )
+        }
+
+        composable(
+            route = Destinations.CROSS,
+            arguments = listOf(navArgument("id") { type = NavType.LongType }),
+        ) { entry ->
+            val id = entry.arguments?.getLong("id") ?: 0L
+            val vm: BreedingDetailViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer {
+                        BreedingDetailViewModel(ServiceLocator.breedingRepository(context), ServiceLocator.dexRepository(context), id)
+                    }
+                },
+            )
+            BreedingDetailScreen(
+                viewModel = vm,
+                onBack = { entry.ifResumed { nav.popBackStack() } },
+                onOpenPlant = { plant -> entry.ifResumed { nav.go(Destinations.dex(plant)) } },
             )
         }
 

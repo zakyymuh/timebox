@@ -16,6 +16,12 @@ object Destinations {
     const val HISTORY = "history"
     const val DEX = "collection/{id}"
     const val DEX_EDIT = "collection/edit/{id}/{owned}"
+    const val BREEDING = "breeding"
+    const val BREEDING_NEW = "breeding/new"
+    const val CROSS = "breeding/cross/{id}"
+
+    /** Route to one cross. */
+    fun cross(id: Long): String = "breeding/cross/$id"
 
     /** Route to one plant in the collection or wishlist. */
     fun dex(id: Long): String = "collection/$id"

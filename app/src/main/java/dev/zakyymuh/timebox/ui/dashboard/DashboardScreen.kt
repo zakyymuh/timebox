@@ -43,6 +43,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.zakyymuh.timebox.ui.collection.DexPhoto
 import dev.zakyymuh.timebox.ui.theme.Fresh
 import dev.zakyymuh.timebox.ui.theme.Label
+import dev.zakyymuh.timebox.core.collection.Breeding
+import dev.zakyymuh.timebox.core.collection.Cross
 import dev.zakyymuh.timebox.core.soil.SampleCheck
 import dev.zakyymuh.timebox.core.soil.SampleStatus
 import dev.zakyymuh.timebox.ui.common.SoftCard
@@ -61,14 +63,16 @@ private val SMALL_ICON = 40.dp
 
 /**
  * The front door: a greeting with a plant fact, the plant schedule as a week, two tiles
- * (the collection and a random thing that happened, which opens the history), and the
- * soil air-space check.
+ * (the collection and a random thing that happened, which opens the history), the soil
+ * air-space check, and breeding.
  */
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel,
     soil: SampleStatus?,
     onOpenSoil: () -> Unit,
+    crosses: List<Cross>?,
+    onOpenBreeding: () -> Unit,
     onOpenPlants: () -> Unit,
     onOpenCollection: () -> Unit,
     onOpenHistory: () -> Unit,
@@ -104,6 +108,7 @@ fun DashboardScreen(
             }
 
             soil?.let { SoilCard(it, onOpenSoil) }
+            crosses?.let { BreedingCard(it.firstOrNull(), onOpenBreeding) }
             Spacer(Modifier.height(32.dp))
         }
     }
@@ -223,6 +228,33 @@ private fun SoilCard(status: SampleStatus, onOpen: () -> Unit) {
         }
         Spacer(Modifier.height(6.dp))
         Text(SampleCheck.label(status), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ink)
+    }
+}
+
+/** The way into breeding: full width, a heart, and a line about the latest cross. */
+@Composable
+private fun BreedingCard(latest: Cross?, onOpen: () -> Unit) {
+    SoftCard(
+        color = Fresh.Page,
+        corner = CARD_CORNER,
+        onClick = onOpen,
+        modifier = Modifier
+            .padding(top = CARD_GAP)
+            .shadow(10.dp, RoundedCornerShape(CARD_CORNER), ambientColor = Fresh.Ink.copy(alpha = 0.08f), spotColor = Fresh.Ink.copy(alpha = 0.08f)),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(SMALL_ICON).clip(CircleShape).background(Color(0xFFFFE3EA)),
+            ) {
+                Text("❤️", fontSize = 18.sp)
+            }
+            Spacer(Modifier.width(12.dp))
+            Text("Breeding", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Fresh.Ink, modifier = Modifier.weight(1f))
+            Text("→", style = MaterialTheme.typography.titleMedium, color = Fresh.InkSoft)
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(Breeding.teaser(latest), style = MaterialTheme.typography.bodyMedium, color = Fresh.InkSoft, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
