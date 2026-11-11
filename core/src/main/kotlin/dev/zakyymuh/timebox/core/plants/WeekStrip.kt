@@ -62,7 +62,7 @@ object WeekStrip {
      * today, so its next run counts from today, as it will once it is tapped.
      */
     private fun coming(plant: Plant, waterings: List<Watering>, today: LocalDate): Set<LocalDate> {
-        val next = PlantSchedule.nextDue(plant, waterings) ?: return emptySet()
+        val next = PlantSchedule.nextDue(plant, waterings, today) ?: return emptySet()
         val end = today.plusDays(SIDE.toLong())
         val every = (plant.recurrence as? Recurrence.EveryDays)?.days?.toLong()
         if (every == null) return if (next.isAfter(today) && !next.isAfter(end)) setOf(next) else emptySet()

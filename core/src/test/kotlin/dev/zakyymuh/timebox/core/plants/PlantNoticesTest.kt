@@ -18,7 +18,8 @@ class PlantNoticesTest {
     @Test
     fun `one notice per plant due, late ones first`() {
         val basil = every(1, "Basil", 3, today.minusDays(3)) // due today
-        val aloe = every(2, "Aloe", 3, today.minusDays(5)) // 2 days late
+        // A one-time plant still waiting, two days after its day.
+        val aloe = Plant(2, "Aloe", PlantColour.MOSS, Recurrence.Once(today.minusDays(2)), anchor = today.minusDays(5))
         val fern = every(3, "Fern", 3, today) // not due
         assertEquals(
             listOf(2L to "Aloe needs water · 2 days late", 1L to "Basil needs water"),
