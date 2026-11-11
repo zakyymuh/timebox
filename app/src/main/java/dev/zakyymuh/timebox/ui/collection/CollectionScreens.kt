@@ -18,6 +18,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -83,7 +87,10 @@ fun CollectionScreen(
     onAdd: (owned: Boolean) -> Unit,
 ) {
     val entries by viewModel.entries.collectAsStateWithLifecycle()
-    var wishlist by rememberSaveable { mutableStateOf(false) }
+    // Page 0 is the collection, page 1 the wishlist; swipe or tap a tab to move.
+    val pager = rememberPagerState { 2 }
+    val wishlist = pager.currentPage == 1
+    val scope = rememberCoroutineScope()
     var sort by rememberSaveable { mutableStateOf(DexSort.Date) }
     val all = entries
 
@@ -92,46 +99,58 @@ fun CollectionScreen(
         floatingActionButtonPosition = FabPosition.Center,
         floatingActionButton = { AddButton(if (wishlist) "Add a wish" else "Add a plant") { onAdd(!wishlist) } },
     ) { insets ->
-        Column(Modifier.padding(insets).padding(horizontal = 20.dp).fillMaxSize()) {
-            TopBar(title = "My plants", onBack = onBack) {
-                if (all != null) {
-                    // Price is only kept for wishes, so the collection sorts by date or name.
-                    val sorts = if (wishlist) DexSort.entries else listOf(DexSort.Date, DexSort.Name)
-                    SortMenu(sort = if (sort in sorts) sort else DexSort.Date, sorts = sorts) { sort = it }
+        Column(Modifier.padding(insets).fillMaxSize()) {
+            Column(Modifier.padding(horizontal = 20.dp)) {
+                TopBar(title = "My plants", onBack = onBack) {
+                    if (all != null) {
+                        // Price is only kept for wishes, so the collection sorts by date or name.
+                        val sorts = if (wishlist) DexSort.entries else listOf(DexSort.Date, DexSort.Name)
+                        SortMenu(sort = if (sort in sorts) sort else DexSort.Date, sorts = sorts) { sort = it }
+                    }
                 }
             }
             if (all == null) return@Column
             val owned = all.filter { it.owned }
             val wished = all.filterNot { it.owned }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Choice("Collection · ${owned.size}", selected = !wishlist) { wishlist = false }
-                Choice("Wishlist · ${wished.size}", selected = wishlist) { wishlist = true }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 20.dp)) {
+                Choice("Collection · ${owned.size}", selected = !wishlist) { scope.launch { pager.animateScrollToPage(0) } }
+                Choice("Wishlist · ${wished.size}", selected = wishlist) { scope.launch { pager.animateScrollToPage(1) } }
             }
             Spacer(Modifier.height(16.dp))
 
-            val shownSort = if (!wishlist && sort == DexSort.Price) DexSort.Date else sort
-            val shown = shownSort.apply(if (wishlist) wished else owned)
-            if (shown.isEmpty()) {
-                Text(
-                    if (wishlist) "Plants you dream of go here." else "Every plant you own, with its photo and number.",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = Fresh.InkSoft.copy(alpha = 0.75f),
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    if (wishlist) "Tap Add a wish below to wish for one." else "Tap Add a plant below to add your first.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Fresh.InkSoft.copy(alpha = 0.6f),
-                )
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = AddButtonClearance),
-                ) {
-                    items(shown, key = { it.id }) { DexCard(it) { onOpen(it.id) } }
-                }
+            HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) { page ->
+                val isWish = page == 1
+                val pageSort = if (!isWish && sort == DexSort.Price) DexSort.Date else sort
+                DexGrid(pageSort.apply(if (isWish) wished else owned), isWish, onOpen)
+            }
+        }
+    }
+}
+
+/** One page of the collection screen: the grid, or a hint when it is empty. */
+@Composable
+private fun DexGrid(shown: List<DexEntry>, wishlist: Boolean, onOpen: (Long) -> Unit) {
+    Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+        if (shown.isEmpty()) {
+            Text(
+                if (wishlist) "Plants you dream of go here." else "Every plant you own, with its photo and number.",
+                style = MaterialTheme.typography.headlineSmall,
+                color = Fresh.InkSoft.copy(alpha = 0.75f),
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                if (wishlist) "Tap Add a wish below to wish for one." else "Tap Add a plant below to add your first.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Fresh.InkSoft.copy(alpha = 0.6f),
+            )
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = AddButtonClearance),
+            ) {
+                items(shown, key = { it.id }) { DexCard(it) { onOpen(it.id) } }
             }
         }
     }
