@@ -13,6 +13,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -498,6 +500,24 @@ private fun CardActions(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 8.dp, bottom = 18.dp),
             )
+            // The whole description, which the card itself cuts off after four lines.
+            // A long one (a shopping list) scrolls inside its box.
+            item.description?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Fresh.InkSoft,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .padding(bottom = 18.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Fresh.Card)
+                        .heightIn(max = 240.dp)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                )
+            }
             if (confirming) {
                 ActionButton("Delete", Fresh.Error, Color.White, onDelete)
                 Spacer(Modifier.height(10.dp))
