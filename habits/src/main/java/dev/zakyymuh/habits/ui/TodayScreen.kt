@@ -470,7 +470,7 @@ private fun EditDialog(
 }
 
 /**
- * What holding a card for three seconds opens: Edit or Delete. Delete asks once more, so a
+ * What holding a card for a second and a quarter opens: Edit or Delete. Delete asks once more, so a
  * long press by accident cannot lose a card. A tap outside closes it.
  */
 @Composable

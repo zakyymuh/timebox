@@ -87,7 +87,7 @@ fun TaskCards(
     editable: Boolean,
     onStart: (Long) -> Unit,
     onDone: (Long) -> Unit,
-    /** Holding a card for three seconds: open its Edit / Delete popup. */
+    /** Holding a card for a second and a quarter: open its Edit / Delete popup. */
     onHold: (TodoItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -186,7 +186,7 @@ fun Modifier.blockTouches(on: Boolean): Modifier =
         }
     }
 
-private const val HOLD_MILLIS = 3_000L
+private const val HOLD_MILLIS = 1_250L
 
 /**
  * Calls [onHold] once a finger has stayed down for [millis]. Lifting sooner, or the pager
