@@ -3,6 +3,7 @@ package dev.zakyymuh.timebox.ui.theme
 import android.app.Activity
 import android.content.Context
 import android.content.res.Configuration
+import android.graphics.Color
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
@@ -45,9 +46,13 @@ enum class Appearance(val label: String) {
         fun start(activity: ComponentActivity, light: Palette, dark: Palette) {
             val night = isDark(activity)
             Fresh.use(if (night) dark else light, night)
+            // The status bar is see-through, so a page's own top (Papacti's glow, Daily's
+            // lock) runs right up to the top of the screen. Only its icons follow the theme.
+            val clear = Color.TRANSPARENT
+            val status = if (night) SystemBarStyle.dark(clear) else SystemBarStyle.light(clear, clear)
             val bar = Fresh.Page.toArgb()
-            val style = if (night) SystemBarStyle.dark(bar) else SystemBarStyle.light(bar, bar)
-            activity.enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+            val nav = if (night) SystemBarStyle.dark(bar) else SystemBarStyle.light(bar, bar)
+            activity.enableEdgeToEdge(statusBarStyle = status, navigationBarStyle = nav)
         }
     }
 }
