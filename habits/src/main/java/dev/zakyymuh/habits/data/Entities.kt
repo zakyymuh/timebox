@@ -41,3 +41,16 @@ data class MarkEntity(
     val name: String,
     val at: Instant,
 )
+
+/**
+ * A "sometimes" task: not for any one day, waiting in a pool. When every card on today's
+ * list is done, one of these is offered; taking it copies it onto today. It stays in the
+ * pool afterwards, since "sometimes" things come round again.
+ */
+@Entity(tableName = "sometimes")
+data class SometimesEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val text: String,
+    val icon: String? = null,
+    val description: String? = null,
+)

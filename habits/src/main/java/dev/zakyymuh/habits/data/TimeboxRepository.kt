@@ -179,6 +179,31 @@ class TimeboxRepository(
             .maxWithOrNull(compareBy<MarkEntity> { it.at }.thenBy { it.id })
             ?.let { dao.deleteMark(it.id) }
     }
+
+    // ---- sometimes -------------------------------------------------------------
+    // No onChanged for the pool itself: the widget shows only today's list.
+
+    fun sometimesFlow(): Flow<List<SometimesEntity>> = dao.sometimesFlow()
+
+    /** Puts a task in the pool rather than on today. */
+    suspend fun addSometimes(text: String, icon: String? = null, description: String? = null) {
+        if (text.isBlank()) return
+        dao.insertSometimes(
+            SometimesEntity(
+                text = text.trim(),
+                icon = icon?.trim()?.ifEmpty { null },
+                description = description?.trim()?.ifEmpty { null },
+            ),
+        )
+    }
+
+    /** Copies a pooled task onto today's list. The pool keeps it for another day. */
+    suspend fun takeSometimes(id: Long) {
+        val task = dao.sometimes(id) ?: return
+        addItem(task.text, task.icon, task.description)
+    }
+
+    suspend fun removeSometimes(id: Long) = dao.deleteSometimes(id)
 }
 
 private fun TodoItemEntity.toModel() = TodoItem(id, position, text, doneAt, icon, description, startedAt)

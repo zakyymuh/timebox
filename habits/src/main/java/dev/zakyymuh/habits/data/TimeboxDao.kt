@@ -91,4 +91,18 @@ interface TimeboxDao {
 
     @Query("DELETE FROM mark WHERE id = :id")
     suspend fun deleteMark(id: Long)
+
+    // ---- sometimes -------------------------------------------------------------
+
+    @Query("SELECT * FROM sometimes ORDER BY id ASC")
+    fun sometimesFlow(): Flow<List<SometimesEntity>>
+
+    @Query("SELECT * FROM sometimes WHERE id = :id")
+    suspend fun sometimes(id: Long): SometimesEntity?
+
+    @androidx.room.Insert
+    suspend fun insertSometimes(task: SometimesEntity)
+
+    @Query("DELETE FROM sometimes WHERE id = :id")
+    suspend fun deleteSometimes(id: Long)
 }

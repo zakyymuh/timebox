@@ -9,6 +9,7 @@ import dev.zakyymuh.timebox.core.DaySummary
 import dev.zakyymuh.timebox.core.TodoItem
 import dev.zakyymuh.timebox.core.lastdone.LastDone
 import dev.zakyymuh.timebox.ui.lastdone.LastDoneUi
+import dev.zakyymuh.habits.data.SometimesEntity
 import dev.zakyymuh.habits.data.TimeboxRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -29,6 +30,8 @@ data class Draft(
     val text: String = "",
     val icon: String = CardIcons.default,
     val description: String = "",
+    /** Tagged "Sometimes": goes to the pool, offered once the day is cleared. */
+    val sometimes: Boolean = false,
 )
 
 data class DayUiState(
@@ -48,6 +51,13 @@ data class DayUiState(
     val earlier: LocalDate? = null,
     val earlierSummary: DaySummary? = null,
     val hasLater: Boolean = false,
+    /**
+     * A "sometimes" task to offer: only on today, once every card on it is done, and
+     * never one already on today's list.
+     */
+    val offer: SometimesEntity? = null,
+    /** Whether "Another one" has anything else to show. */
+    val offerHasMore: Boolean = false,
 ) {
     val isEmpty: Boolean get() = items.isEmpty()
 }
@@ -81,8 +91,38 @@ class TodayViewModel(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val day = viewing.flatMapLatest { repo.dayFlow(it) }
 
+    /** Which pooled task is offered; "Not now" moves it on, and a new seed reshuffles. */
+    private val offerSeed = MutableStateFlow(Random.nextInt())
+
+    /**
+     * What has been waved off today: tasks skipped with "Another one", and whether "Not now"
+     * has quieted the popup until tomorrow. Kept in memory only; a new day starts clean.
+     */
+    private val declined = MutableStateFlow(Declined())
+
+    private data class Declined(
+        val date: LocalDate? = null,
+        val skipped: Set<Long> = emptySet(),
+        val quiet: Boolean = false,
+    )
+
+    private data class Offer(val task: SometimesEntity, val hasMore: Boolean)
+
+    private val offer = combine(day, repo.sometimesFlow(), declined, offerSeed) { d, pool, no, seed ->
+        val cleared = d.items.isNotEmpty() && d.items.all { it.isDone }
+        if (!cleared || !DayAccess.isToday(d.date, repo.todayDate())) return@combine null
+        val waved = no.date == d.date
+        if (waved && no.quiet) return@combine null
+        val onToday = d.items.map { it.text.lowercase() }.toSet()
+        val skipped = if (waved) no.skipped else emptySet()
+        val left = pool.filter { it.id !in skipped && it.text.lowercase() !in onToday }
+        if (left.isEmpty()) null else Offer(left[Random(seed).nextInt(left.size)], left.size > 1)
+    }
+
+    private val dayWithOffer = combine(day, offer) { d, o -> d to o }
+
     val state: StateFlow<DayUiState> =
-        combine(day, draft, templates, noteEdits, neighbours) { d, currentDraft, recent, edited, near ->
+        combine(dayWithOffer, draft, templates, noteEdits, neighbours) { (d, offered), currentDraft, recent, edited, near ->
             val today = repo.todayDate()
             val editable = DayAccess.isEditable(d.date, today)
             DayUiState(
@@ -99,6 +139,8 @@ class TodayViewModel(
                 earlier = near.earlier,
                 earlierSummary = near.earlierSummary,
                 hasLater = near.later != null,
+                offer = offered?.task,
+                offerHasMore = offered?.hasMore == true,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DayUiState())
 
@@ -180,6 +222,10 @@ class TodayViewModel(
         draft.value = draft.value.copy(description = text)
     }
 
+    fun onDraftSometimes(on: Boolean) {
+        draft.value = draft.value.copy(sometimes = on)
+    }
+
     /**
      * Commits the draft as a new card and clears the name and description, ready for the
      * next one. The icon stays picked, since a run of similar tasks often shares one.
@@ -189,9 +235,42 @@ class TodayViewModel(
         if (d.text.isBlank()) return
         draft.value = d.copy(text = "", description = "")
         viewModelScope.launch {
-            repo.addItem(d.text, d.icon, d.description)
-            refreshNeighbours()
+            if (d.sometimes) {
+                repo.addSometimes(d.text, d.icon, d.description)
+            } else {
+                repo.addItem(d.text, d.icon, d.description)
+                refreshNeighbours()
+            }
         }
+    }
+
+    // ---- sometimes -------------------------------------------------------------
+
+    /** "Do it now": the offered task joins today's list as a fresh card. */
+    fun takeOffer(id: Long) {
+        viewModelScope.launch { repo.takeSometimes(id) }
+    }
+
+    /** "Not now": no more offers until tomorrow. */
+    fun declineOffer() {
+        declined.value = todaysDeclined().copy(quiet = true)
+    }
+
+    /** "Another one": skips this task for today and shows a different one. */
+    fun anotherOffer(id: Long) {
+        val now = todaysDeclined()
+        declined.value = now.copy(skipped = now.skipped + id)
+        offerSeed.value = Random.nextInt()
+    }
+
+    private fun todaysDeclined(): Declined {
+        val today = repo.todayDate()
+        return declined.value.takeIf { it.date == today } ?: Declined(today)
+    }
+
+    /** Takes a task out of the pool for good. */
+    fun removeSometimes(id: Long) {
+        viewModelScope.launch { repo.removeSometimes(id) }
     }
 
     /** "Working on it": the card turns dark and holds the screen until [finish]. */

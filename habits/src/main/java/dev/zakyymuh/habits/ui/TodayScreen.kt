@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.zakyymuh.timebox.core.TodoItem
+import dev.zakyymuh.habits.data.SometimesEntity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -205,8 +206,31 @@ fun TodayScreen(viewModel: TodayViewModel) {
             onDraftChanged = viewModel::onDraftChanged,
             onIcon = viewModel::onDraftIcon,
             onDescription = viewModel::onDraftDescription,
+            onSometimes = viewModel::onDraftSometimes,
             onAdd = viewModel::addDraft,
             onDismiss = { adding = false },
+        )
+    }
+
+    // Every card done: offer one of the "sometimes" tasks, unless something else is open.
+    // A short wait first, so the last card's tick is seen before the popup covers it.
+    val offer = state.offer
+    var offerShown by remember { mutableStateOf(false) }
+    LaunchedEffect(offer != null) {
+        offerShown = false
+        if (offer != null) {
+            delay(900)
+            offerShown = true
+        }
+    }
+    if (offer != null && offerShown && !locked && !adding && acting == null && editing == null && !historyOpen && !opening) {
+        SometimesOffer(
+            task = offer,
+            hasMore = state.offerHasMore,
+            onTake = { viewModel.takeOffer(offer.id) },
+            onDecline = viewModel::declineOffer,
+            onAnother = { viewModel.anotherOffer(offer.id) },
+            onRemove = { viewModel.removeSometimes(offer.id) },
         )
     }
 }
@@ -330,6 +354,8 @@ private fun IdeaDialog(
     onDescription: (String) -> Unit,
     onAdd: () -> Unit,
     onDismiss: () -> Unit,
+    /** Shows the "Sometimes" tag; null hides it (editing a card already on the day). */
+    onSometimes: ((Boolean) -> Unit)? = null,
     title: String = "What is your idea?",
     submitLabel: String = "Add",
     /** Adding says "ready to go" and stays open for the next; editing just closes. */
@@ -365,7 +391,7 @@ private fun IdeaDialog(
             }
 
             if (ready) {
-                ReadyToGo()
+                ReadyToGo(if (draft.sometimes) "Saved for a cleared day" else "Your task is ready to go")
             } else {
                 Text(
                     title,
@@ -413,6 +439,8 @@ private fun IdeaDialog(
                     singleLine = false,
                     modifier = Modifier.padding(top = 10.dp),
                 )
+
+                onSometimes?.let { SometimesTag(on = draft.sometimes, onChange = it) }
 
                 val canAdd = draft.text.isNotBlank()
                 Box(
@@ -544,8 +572,122 @@ private fun ActionButton(label: String, container: Color, content: Color, onClic
     }
 }
 
+/**
+ * The "Sometimes" tag on the add popup. Tagged tasks skip today's list and wait in a pool,
+ * popping up once every card on a day is done.
+ */
 @Composable
-private fun ReadyToGo() {
+private fun SometimesTag(on: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .padding(top = 10.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(if (on) Fresh.Pastel else Fresh.Card)
+            .border(2.dp, if (on) Fresh.Green else Color.Transparent, RoundedCornerShape(18.dp))
+            .clickable { onChange(!on) }
+            .semantics { contentDescription = if (on) "Sometimes, on" else "Sometimes, off" }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("🎲", style = MaterialTheme.typography.titleMedium)
+        Column(Modifier.weight(1f).padding(start = 12.dp)) {
+            Text("Sometimes", style = MaterialTheme.typography.labelLarge, color = Fresh.Ink)
+            Text("Pops up once today's list is all done", style = Small, color = Fresh.InkSoft)
+        }
+        Text(
+            if (on) "✓" else "",
+            style = MaterialTheme.typography.titleMedium,
+            color = Fresh.GreenDeep,
+        )
+    }
+}
+
+/**
+ * The popup once a day is cleared: one task from the "sometimes" pool. Do it now puts it on
+ * today's list; Not now (or a tap outside) quiets the popup until tomorrow; Another one
+ * shows a different task; the small link takes this one out of the pool, after asking.
+ */
+@Composable
+private fun SometimesOffer(
+    task: SometimesEntity,
+    hasMore: Boolean,
+    onTake: () -> Unit,
+    onDecline: () -> Unit,
+    onAnother: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    var confirming by remember(task.id) { mutableStateOf(false) }
+    Dialog(onDismissRequest = onDecline) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(28.dp))
+                .background(Fresh.Page)
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text("All done for today. Fancy one more?", style = Label, color = Fresh.InkSoft)
+            Box(
+                modifier = Modifier.padding(top = 16.dp).size(88.dp).clip(CircleShape).background(Fresh.Card),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(task.icon ?: task.text.take(1).uppercase(), style = MaterialTheme.typography.headlineMedium)
+            }
+            Text(
+                text = if (confirming) "Remove \"${task.text}\" from Sometimes?" else task.text,
+                style = MaterialTheme.typography.titleMedium,
+                color = Fresh.Ink,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 12.dp),
+            )
+            task.description?.takeIf { !confirming }?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Fresh.InkSoft,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+            Spacer(Modifier.height(18.dp))
+            if (confirming) {
+                ActionButton("Remove", Fresh.Error, Color.White, onRemove)
+                Spacer(Modifier.height(10.dp))
+                ActionButton("Cancel", Fresh.Card, Fresh.Ink) { confirming = false }
+            } else {
+                ActionButton("Do it now", Fresh.Green, Color.White, onTake)
+                Spacer(Modifier.height(10.dp))
+                ActionButton("Not now", Fresh.Card, Fresh.Ink, onDecline)
+                if (hasMore) {
+                    Text(
+                        "Another one",
+                        style = Small,
+                        color = Fresh.InkSoft,
+                        modifier = Modifier
+                            .padding(top = 12.dp)
+                            .clip(CircleShape)
+                            .clickable(onClick = onAnother)
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                    )
+                }
+                Text(
+                    "Remove from Sometimes",
+                    style = Small,
+                    color = Fresh.Error,
+                    modifier = Modifier
+                        .padding(top = if (hasMore) 0.dp else 12.dp)
+                        .clip(CircleShape)
+                        .clickable { confirming = true }
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReadyToGo(message: String) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(vertical = 36.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -557,7 +699,7 @@ private fun ReadyToGo() {
             Text("✓", style = MaterialTheme.typography.headlineMedium, color = Fresh.GreenDeep)
         }
         Text(
-            "Your task is ready to go",
+            message,
             style = MaterialTheme.typography.titleMedium,
             color = Fresh.Ink,
             textAlign = TextAlign.Center,

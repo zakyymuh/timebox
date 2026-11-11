@@ -300,4 +300,39 @@ class TimeboxRepositoryTest {
         repo.undoLastMark("laundry")
         assertTrue(repo.eventsFlow().first().isEmpty())
     }
+
+    // ---- sometimes -------------------------------------------------------------
+
+    @Test
+    fun `a sometimes task goes to the pool, not onto today`() = runTest {
+        repo.addSometimes("  Clean the fridge  ", "🧹", " ")
+
+        assertTrue(repo.todayNow().items.isEmpty())
+        val pool = repo.sometimesFlow().first()
+        assertEquals(listOf("Clean the fridge"), pool.map { it.text })
+        assertEquals("🧹", pool.single().icon)
+        assertNull(pool.single().description)
+    }
+
+    @Test
+    fun `taking a sometimes task copies it onto today and keeps it in the pool`() = runTest {
+        repo.addItem("Laundry")
+        repo.addSometimes("Clean the fridge", "🧹", "top shelf")
+        val id = repo.sometimesFlow().first().single().id
+
+        repo.takeSometimes(id)
+
+        val items = repo.todayNow().items
+        assertEquals(listOf("Laundry", "Clean the fridge"), items.map { it.text })
+        assertEquals("top shelf", items.last().description)
+        assertFalse(items.last().isDone)
+        assertEquals(1, repo.sometimesFlow().first().size)
+    }
+
+    @Test
+    fun `removing a sometimes task empties it from the pool`() = runTest {
+        repo.addSometimes("Clean the fridge")
+        repo.removeSometimes(repo.sometimesFlow().first().single().id)
+        assertTrue(repo.sometimesFlow().first().isEmpty())
+    }
 }

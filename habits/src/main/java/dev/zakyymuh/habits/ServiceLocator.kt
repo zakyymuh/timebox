@@ -6,6 +6,7 @@ import androidx.room.Room
 import dev.zakyymuh.habits.data.HabitsDatabase
 import dev.zakyymuh.habits.data.MIGRATION_1_2
 import dev.zakyymuh.habits.data.MIGRATION_2_3
+import dev.zakyymuh.habits.data.MIGRATION_3_4
 import dev.zakyymuh.habits.data.TimeboxRepository
 import dev.zakyymuh.habits.widget.TodayWidget
 import java.time.Clock
@@ -24,7 +25,7 @@ object ServiceLocator {
             repository ?: TimeboxRepository(
                 // Never fallbackToDestructiveMigration: that would delete the user's lists.
                 dao = Room.databaseBuilder(context.applicationContext, HabitsDatabase::class.java, "habits.db")
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                     .dao(),
                 clock = Clock.systemDefaultZone(),
