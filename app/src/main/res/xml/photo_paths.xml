@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Only the camera's scratch folder is shared, and only with the camera app, for one shot. -->
+<!-- The camera's scratch folder, for one shot, and the latest share card, for the app it is sent to. -->
 <paths>
     <cache-path name="camera" path="camera/" />
+    <cache-path name="share" path="share/" />
 </paths>

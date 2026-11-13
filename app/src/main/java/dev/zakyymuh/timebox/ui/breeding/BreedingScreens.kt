@@ -60,6 +60,9 @@ import androidx.compose.ui.platform.LocalContext
 import dev.zakyymuh.timebox.ui.collection.CountDialog
 import dev.zakyymuh.timebox.ui.collection.DexPhoto
 import dev.zakyymuh.timebox.ui.collection.PlantList
+import dev.zakyymuh.timebox.ui.collection.ShareCard
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import dev.zakyymuh.timebox.ui.common.AddButton
 import dev.zakyymuh.timebox.ui.common.AddButtonClearance
 import dev.zakyymuh.timebox.ui.common.DateField
@@ -325,6 +328,7 @@ fun BreedingDetailScreen(viewModel: BreedingDetailViewModel, onBack: () -> Unit,
     val seedlings by viewModel.seedlings.collectAsStateWithLifecycle()
     var confirmRemove by rememberSaveable { mutableStateOf(false) }
     var sowing by rememberSaveable { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
     // Removed (or never there): nothing left to show.
     LaunchedEffect(state) { if (state.loaded && state.detail == null) onBack() }
@@ -336,6 +340,22 @@ fun BreedingDetailScreen(viewModel: BreedingDetailViewModel, onBack: () -> Unit,
             val d = state.detail
             TopBar(title = "Cross", onBack = onBack) {
                 if (d != null) {
+                    Pill(
+                        "Share",
+                        color = Fresh.Card,
+                        modifier = Modifier.clip(CircleShape).clickable {
+                            scope.launch {
+                                ShareCard.shareCross(
+                                    context,
+                                    d.mother?.photo,
+                                    d.father?.photo,
+                                    d.cross.name,
+                                    "${d.cross.code} · ${Breeding.date(d.cross.date)}",
+                                )
+                            }
+                        },
+                    )
+                    Spacer(Modifier.width(8.dp))
                     Pill("Remove", color = Fresh.Card, textColor = Fresh.Error, modifier = Modifier.clip(CircleShape).clickable { confirmRemove = true })
                 }
             }

@@ -61,8 +61,12 @@ fun PhotoDiary(
     onAdd: () -> Unit,
     onEditNote: (DexShot) -> Unit,
     cover: String? = null,
+    /** Told the photo on screen as the owner swipes; null when there is none. */
+    onShown: (DexShot?) -> Unit = {},
 ) {
     val pager = rememberPagerState { shots.size }
+    val shown = shots.getOrNull(pager.currentPage.coerceIn(0, maxOf(0, shots.lastIndex)))
+    LaunchedEffect(shown) { onShown(shown) }
     // Ids whose bubble already popped, so swiping back does not pop it again.
     val popped = remember { mutableSetOf<Long>() }
     // A photo just added is the newest: show it.
