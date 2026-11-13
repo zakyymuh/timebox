@@ -323,4 +323,28 @@ class MigrationTest {
         current.dexDao().insertOrigin(DexOriginEntity(kid, 1, null, "Kikko", null, null))
         assertEquals(listOf(kid), current.dexDao().childrenFlow(1).first().map { it.id })
     }
+
+    @Test
+    fun `the upgrade to 14 keeps each plant's photo, not pinned`() = runTest {
+        createVersion1()
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(name)
+                .callback(object : SupportSQLiteOpenHelper.Callback(13) {
+                    override fun onCreate(db: SupportSQLiteDatabase) = error("the v1 file must already exist")
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {
+                        ALL_MIGRATIONS.filter { it.endVersion <= 13 }.forEach { it.migrate(db) }
+                    }
+                })
+                .build(),
+        )
+        helper.writableDatabase.execSQL(
+            "INSERT INTO dex (id, number, name, species, owned, photo, acquired, note, createdAt, priceLow, priceHigh) VALUES (1, 1, 'Kikko', '', 1, 'k.jpg', '$day', '', 0, NULL, NULL)",
+        )
+        helper.close()
+
+        val kikko = openCurrent().dexDao().entries().single()
+        assertEquals("k.jpg", kikko.photo)
+        assertFalse(kikko.coverPinned)
+    }
 }

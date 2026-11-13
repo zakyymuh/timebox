@@ -81,7 +81,14 @@ class DexRepository(
     suspend fun addPhoto(id: Long, photo: String, note: String) {
         val existing = dao.entry(id) ?: return photos.delete(photo)
         insertPhoto(id, photo, note)
-        dao.update(existing.copy(photo = photo))
+        if (!existing.coverPinned) dao.update(existing.copy(photo = photo))
+    }
+
+    /** Makes photo [photoId] its plant's default picture; it stays the cover until another is chosen. */
+    suspend fun setCover(photoId: Long) {
+        val shot = dao.photo(photoId) ?: return
+        val entry = dao.entry(shot.dexId) ?: return
+        dao.update(entry.copy(photo = shot.file, coverPinned = true))
     }
 
     /** Changes the note on one photo; the photo and its place stay. */
@@ -96,7 +103,7 @@ class DexRepository(
         dao.deletePhoto(photoId)
         val left = dao.photos(shot.dexId)
         val entry = dao.entry(shot.dexId)
-        if (entry != null && entry.photo == shot.file) dao.update(entry.copy(photo = left.firstOrNull()?.file))
+        if (entry != null && entry.photo == shot.file) dao.update(entry.copy(photo = left.firstOrNull()?.file, coverPinned = false))
         if (left.none { it.file == shot.file }) photos.delete(shot.file)
     }
 
@@ -105,7 +112,7 @@ class DexRepository(
         val existing = dao.entry(id) ?: return files.forEach(photos::delete)
         if (files.isEmpty()) return
         files.forEach { insertPhoto(id, it, note) }
-        dao.update(existing.copy(photo = files.last()))
+        if (!existing.coverPinned) dao.update(existing.copy(photo = files.last()))
     }
 
     private suspend fun insertPhoto(id: Long, photo: String, note: String) {

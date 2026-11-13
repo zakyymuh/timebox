@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.zakyymuh.timebox.core.collection.DexPhotos
 import dev.zakyymuh.timebox.core.collection.DexShot
+import dev.zakyymuh.timebox.ui.common.Pill
 import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.common.softFieldColors
 import dev.zakyymuh.timebox.ui.theme.Fresh
@@ -50,10 +51,17 @@ private val PhotoShape = RoundedCornerShape(28.dp)
 /**
  * A plant's photos, newest first: swipe through the big photo. Each note sits in a bubble
  * at the top, popping in the first time its photo is shown. Tap a photo to change its
- * note or delete it; the camera adds a photo.
+ * note, make it the default picture or delete it; pinch to zoom. The camera adds a photo.
+ * The photo whose file is [cover] wears a ★ Default tag.
  */
 @Composable
-fun PhotoDiary(shots: List<DexShot>, wished: Boolean, onAdd: () -> Unit, onEditNote: (DexShot) -> Unit) {
+fun PhotoDiary(
+    shots: List<DexShot>,
+    wished: Boolean,
+    onAdd: () -> Unit,
+    onEditNote: (DexShot) -> Unit,
+    cover: String? = null,
+) {
     val pager = rememberPagerState { shots.size }
     // Ids whose bubble already popped, so swiping back does not pop it again.
     val popped = remember { mutableSetOf<Long>() }
@@ -75,7 +83,15 @@ fun PhotoDiary(shots: List<DexShot>, wished: Boolean, onAdd: () -> Unit, onEditN
                 HorizontalPager(state = pager, key = { shots[it].id }, pageSpacing = 12.dp) { page ->
                     val shot = shots[page]
                     Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(PhotoShape).clickable { onEditNote(shot) }) {
-                        DexPhoto(shot.file, Modifier.matchParentSize(), wished = wished, side = 1080, emojiSize = 72.sp)
+                        DexPhoto(shot.file, Modifier.matchParentSize().pinchToZoom(), wished = wished, side = 1080, emojiSize = 72.sp)
+                        if (shots.size > 1 && shot.file == cover) {
+                            Pill(
+                                "★ Default",
+                                color = Fresh.Page,
+                                textColor = Fresh.GreenDeep,
+                                modifier = Modifier.align(Alignment.BottomStart).padding(16.dp),
+                            )
+                        }
                         if (shot.note.isNotBlank()) {
                             NoteBubble(
                                 shot,
@@ -158,6 +174,8 @@ fun PhotoNoteDialog(
     hint: String? = null,
     /** Shown as "Delete photo" under the note, for a photo already in the diary. */
     onDelete: (() -> Unit)? = null,
+    /** Shown as "Make default picture", for a diary photo that is not the cover yet. */
+    onMakeDefault: (() -> Unit)? = null,
 ) {
     var note by rememberSaveable { mutableStateOf(initial) }
     AlertDialog(
@@ -184,8 +202,13 @@ fun PhotoNoteDialog(
                     color = Fresh.InkSoft,
                     modifier = Modifier.padding(start = 4.dp, top = 6.dp),
                 )
-                onDelete?.let {
+                onMakeDefault?.let {
                     TextButton(onClick = it, modifier = Modifier.padding(top = 10.dp)) {
+                        Text("★  Make default picture", color = Fresh.GreenDeep)
+                    }
+                }
+                onDelete?.let {
+                    TextButton(onClick = it, modifier = Modifier.padding(top = if (onMakeDefault != null) 0.dp else 10.dp)) {
                         Text("Delete photo", color = MaterialTheme.colorScheme.error)
                     }
                 }

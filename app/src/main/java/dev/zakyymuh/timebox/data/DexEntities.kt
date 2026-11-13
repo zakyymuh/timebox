@@ -1,5 +1,6 @@
 package dev.zakyymuh.timebox.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -35,6 +36,8 @@ data class DexEntity(
     /** Price seen for a wish, in rupiah (v5). */
     val priceLow: Long? = null,
     val priceHigh: Long? = null,
+    /** The owner chose [photo] as the default picture (v14), so a newer photo does not replace it. */
+    @ColumnInfo(defaultValue = "0") val coverPinned: Boolean = false,
 ) {
     fun toModel() = DexEntry(id, number, name, species, owned, photo, acquired, note, priceLow, priceHigh)
 }

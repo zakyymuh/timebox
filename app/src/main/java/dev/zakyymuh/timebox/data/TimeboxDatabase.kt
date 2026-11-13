@@ -6,7 +6,7 @@ import androidx.room.TypeConverters
 
 @Database(
     entities = [PlantEntity::class, WateringEntity::class, DexEntity::class, AirTestEntity::class, NoteEntity::class, DexPhotoEntity::class, BreedingEntity::class, DexOriginEntity::class],
-    version = 13,
+    version = 14,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)

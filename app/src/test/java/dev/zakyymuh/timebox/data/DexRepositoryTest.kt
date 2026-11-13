@@ -208,4 +208,30 @@ class DexRepositoryTest {
         assertEquals("g.jpg", entry.photo)
         assertEquals("from the market", entry.note)
     }
+
+    @Test
+    fun `a chosen default picture stays the cover when newer photos come`() = runTest {
+        val id = repo.add(DexForm("Kikko"), owned = true, photo = null)
+        repo.addPhotos(id, listOf("a.jpg", "b.jpg"), "")
+        val a = db.dexDao().photos(id).first { it.file == "a.jpg" }
+        repo.setCover(a.id)
+        assertEquals("a.jpg", repo.entry(id)!!.photo)
+
+        repo.addPhoto(id, "c.jpg", "")
+        repo.addPhotos(id, listOf("d.jpg"), "")
+        assertEquals("a.jpg", repo.entry(id)!!.photo)
+    }
+
+    @Test
+    fun `deleting the default picture hands the cover back to the newest`() = runTest {
+        val id = repo.add(DexForm("Kikko"), owned = true, photo = null)
+        repo.addPhotos(id, listOf("a.jpg", "b.jpg"), "")
+        val a = db.dexDao().photos(id).first { it.file == "a.jpg" }
+        repo.setCover(a.id)
+        repo.deletePhoto(a.id)
+        assertEquals("b.jpg", repo.entry(id)!!.photo)
+
+        repo.addPhoto(id, "c.jpg", "")
+        assertEquals("c.jpg", repo.entry(id)!!.photo) // no longer pinned
+    }
 }

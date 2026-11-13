@@ -70,6 +70,10 @@ class DexDetailViewModel(
         viewModelScope.launch { repo.setPhotoNote(photoId, note) }
     }
 
+    fun setCover(photoId: Long) {
+        viewModelScope.launch { repo.setCover(photoId) }
+    }
+
     fun deletePhoto(photoId: Long) {
         viewModelScope.launch { repo.deletePhoto(photoId) }
     }

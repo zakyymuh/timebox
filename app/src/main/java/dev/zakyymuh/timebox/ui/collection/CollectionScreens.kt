@@ -273,6 +273,15 @@ fun DexDetailScreen(
                 editing = null
                 deleting = shot
             },
+            onMakeDefault = if (shot.file != state.entry?.photo) {
+                {
+                    editing = null
+                    viewModel.setCover(shot.id)
+                    Toast.makeText(context, "Set as the default picture", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                null
+            },
         )
     }
     deleting?.let { shot ->
@@ -338,7 +347,7 @@ fun DexDetailScreen(
             }
             if (e == null) return@Column
 
-            PhotoDiary(shots ?: emptyList(), wished = !e.owned, onAdd = pick, onEditNote = { editing = it })
+            PhotoDiary(shots ?: emptyList(), wished = !e.owned, onAdd = pick, onEditNote = { editing = it }, cover = e.photo)
             origin?.let { OriginCard(it, onOpenPlant, Modifier.fillMaxWidth().padding(top = 12.dp)) }
 
             Text(e.name, style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink, modifier = Modifier.padding(top = 18.dp))
