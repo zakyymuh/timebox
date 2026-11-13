@@ -7,8 +7,10 @@ import androidx.room.Index
 import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import dev.zakyymuh.timebox.core.collection.DexEntry
+import dev.zakyymuh.timebox.core.collection.DexOrigin
 import dev.zakyymuh.timebox.core.collection.DexShot
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
@@ -59,6 +61,32 @@ data class DexPhotoEntity(
     fun toModel() = DexShot(id, file, note, takenOn)
 }
 
+/**
+ * Where a plant came from (v13): repotted out of [motherId], or grown from [crossId] of
+ * [motherId] × [fatherId]. Goes with its plant; a parent or cross leaving only clears its id,
+ * the names stay.
+ */
+@Entity(
+    tableName = "dex_origin",
+    foreignKeys = [
+        ForeignKey(entity = DexEntity::class, parentColumns = ["id"], childColumns = ["dexId"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(entity = DexEntity::class, parentColumns = ["id"], childColumns = ["motherId"], onDelete = ForeignKey.SET_NULL),
+        ForeignKey(entity = DexEntity::class, parentColumns = ["id"], childColumns = ["fatherId"], onDelete = ForeignKey.SET_NULL),
+        ForeignKey(entity = BreedingEntity::class, parentColumns = ["id"], childColumns = ["crossId"], onDelete = ForeignKey.SET_NULL),
+    ],
+    indices = [Index("motherId"), Index("fatherId"), Index("crossId")],
+)
+data class DexOriginEntity(
+    @PrimaryKey val dexId: Long,
+    val motherId: Long?,
+    val fatherId: Long?,
+    val motherName: String,
+    val fatherName: String?,
+    val crossId: Long?,
+) {
+    fun toModel() = DexOrigin(motherId, fatherId, motherName, fatherName, crossId)
+}
+
 @Dao
 interface DexDao {
     @Query("SELECT * FROM dex ORDER BY number")
@@ -81,6 +109,31 @@ interface DexDao {
 
     @Query("DELETE FROM dex WHERE id = :id")
     suspend fun delete(id: Long)
+
+    @Query("SELECT name FROM dex")
+    suspend fun names(): List<String>
+
+    @Insert
+    suspend fun insertOrigin(origin: DexOriginEntity)
+
+    /** Adds [children] together, each with a copy of [origin] pointing at it. Returns their ids. */
+    @Transaction
+    suspend fun insertChildren(children: List<DexEntity>, origin: DexOriginEntity): List<Long> =
+        children.map { child -> insert(child).also { insertOrigin(origin.copy(dexId = it)) } }
+
+    @Query("SELECT * FROM dex_origin WHERE dexId = :id")
+    fun originFlow(id: Long): Flow<DexOriginEntity?>
+
+    /** Plants that came from [id], by repot or by cross, in number order. */
+    @Query(
+        "SELECT dex.* FROM dex JOIN dex_origin ON dex_origin.dexId = dex.id " +
+            "WHERE dex_origin.motherId = :id OR dex_origin.fatherId = :id ORDER BY dex.number",
+    )
+    fun childrenFlow(id: Long): Flow<List<DexEntity>>
+
+    /** Plants grown from cross [crossId], in number order. */
+    @Query("SELECT dex.* FROM dex JOIN dex_origin ON dex_origin.dexId = dex.id WHERE dex_origin.crossId = :crossId ORDER BY dex.number")
+    fun seedlingsFlow(crossId: Long): Flow<List<DexEntity>>
 
     /** Newest first. */
     @Query("SELECT * FROM dex_photo WHERE dexId = :dexId ORDER BY createdAt DESC, id DESC")

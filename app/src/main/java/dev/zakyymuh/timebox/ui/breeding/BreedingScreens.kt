@@ -55,7 +55,11 @@ import dev.zakyymuh.timebox.core.collection.Cross
 import dev.zakyymuh.timebox.core.collection.CrossOutcome
 import dev.zakyymuh.timebox.core.collection.Dex
 import dev.zakyymuh.timebox.core.collection.DexEntry
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import dev.zakyymuh.timebox.ui.collection.CountDialog
 import dev.zakyymuh.timebox.ui.collection.DexPhoto
+import dev.zakyymuh.timebox.ui.collection.PlantList
 import dev.zakyymuh.timebox.ui.common.AddButton
 import dev.zakyymuh.timebox.ui.common.AddButtonClearance
 import dev.zakyymuh.timebox.ui.common.DateField
@@ -318,7 +322,10 @@ private fun ParentName(role: String, entry: DexEntry?, fallbackName: String?, al
 @Composable
 fun BreedingDetailScreen(viewModel: BreedingDetailViewModel, onBack: () -> Unit, onOpenPlant: (Long) -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val seedlings by viewModel.seedlings.collectAsStateWithLifecycle()
     var confirmRemove by rememberSaveable { mutableStateOf(false) }
+    var sowing by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
     // Removed (or never there): nothing left to show.
     LaunchedEffect(state) { if (state.loaded && state.detail == null) onBack() }
 
@@ -365,11 +372,37 @@ fun BreedingDetailScreen(viewModel: BreedingDetailViewModel, onBack: () -> Unit,
                     modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
                 )
             }
+            if (d.cross.outcome == CrossOutcome.Success) {
+                Spacer(Modifier.height(24.dp))
+                Button(
+                    onClick = { sowing = true },
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(containerColor = Fresh.Ink, contentColor = Fresh.Page),
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                ) {
+                    Text("🌱  Add seedlings to collection", style = MaterialTheme.typography.labelLarge)
+                }
+            }
+            PlantList("Seedlings", seedlings, onOpenPlant, Modifier.padding(top = 20.dp))
             Spacer(Modifier.height(32.dp))
         }
     }
 
     val shown = state.detail
+    if (sowing && shown != null) {
+        CountDialog(
+            title = "Seedlings of ${shown.cross.code}",
+            text = "How many came up? Each joins your collection with ${shown.cross.motherName} and ${shown.cross.fatherName} as parents.",
+            confirm = { "Add $it" },
+            onConfirm = { count ->
+                sowing = false
+                viewModel.sow(count) { added ->
+                    Toast.makeText(context, "$added seedlings added 🌱", Toast.LENGTH_SHORT).show()
+                }
+            },
+            onDismiss = { sowing = false },
+        )
+    }
     if (confirmRemove && shown != null) {
         AlertDialog(
             onDismissRequest = { confirmRemove = false },

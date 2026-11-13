@@ -115,4 +115,14 @@ class BreedingNewViewModelTest {
         assertEquals("1026001", cross.code)
         assertEquals(LocalDate.of(2026, 10, 30), cross.date)
     }
+
+    @Test
+    fun `opened from a plant's Breed button, that plant is already the seed parent`() = runBlocking {
+        val kikko = dex.add(DexForm("Kikko"), owned = true, photo = null)
+        dex.add(DexForm("Aloe"), owned = true, photo = null)
+        val vm = BreedingNewViewModel(repo, dex, motherId = kikko)
+        withTimeout(5_000) { vm.mother.filterNotNull().first() }
+        assertEquals("Kikko", vm.mother.value?.name)
+        assertEquals(kikko, vm.form.value.motherId)
+    }
 }

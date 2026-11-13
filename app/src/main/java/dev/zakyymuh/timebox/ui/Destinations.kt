@@ -19,7 +19,13 @@ object Destinations {
     const val DEX_EDIT = "collection/edit/{id}/{owned}"
     const val BREEDING = "breeding"
     const val BREEDING_NEW = "breeding/new"
+
+    /** The new-cross route as registered: [BREEDING_NEW] with an optional seed parent. */
+    const val BREEDING_NEW_ROUTE = "breeding/new?mother={mother}"
     const val CROSS = "breeding/cross/{id}"
+
+    /** Route to a new cross with plant [mother] already picked as seed parent. */
+    fun breedingNew(mother: Long): String = "breeding/new?mother=$mother"
 
     /** Route to one cross. */
     fun cross(id: Long): String = "breeding/cross/$id"

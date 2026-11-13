@@ -1,10 +1,13 @@
 package dev.zakyymuh.timebox.data
 
+import dev.zakyymuh.timebox.core.collection.Cross
 import dev.zakyymuh.timebox.core.collection.Dex
 import dev.zakyymuh.timebox.core.collection.DexEntry
 import dev.zakyymuh.timebox.core.collection.DexForm
+import dev.zakyymuh.timebox.core.collection.DexOrigin
 import dev.zakyymuh.timebox.core.collection.DexPhotos
 import dev.zakyymuh.timebox.core.collection.DexShot
+import dev.zakyymuh.timebox.core.collection.Lineage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
@@ -110,6 +113,60 @@ class DexRepository(
             DexPhotoEntity(dexId = id, file = photo, note = DexPhotos.note(note), takenOn = todayDate(), createdAt = clock.instant()),
         )
     }
+
+    /** Where [id] came from; null for a plant that was simply got. */
+    fun originFlow(id: Long): Flow<DexOrigin?> = dao.originFlow(id).map { it?.toModel() }
+
+    /** Plants repotted out of [id] or grown from a cross it was a parent in. */
+    fun childrenFlow(id: Long): Flow<List<DexEntry>> = dao.childrenFlow(id).map { it.map(DexEntity::toModel) }
+
+    /** Plants grown from cross [crossId]. */
+    fun seedlingsFlow(crossId: Long): Flow<List<DexEntry>> = dao.seedlingsFlow(crossId).map { it.map(DexEntity::toModel) }
+
+    /**
+     * Repots [parentId] into [count] new collection plants, named after it and of its kind,
+     * each remembering it as their mother. The parent stays unless [removeParent] (an
+     * emptied bulk pot). Returns the new ids; none if the parent is gone or only wished.
+     */
+    suspend fun repot(parentId: Long, count: Int, removeParent: Boolean = false): List<Long> {
+        val parent = dao.entry(parentId)?.takeIf { it.owned } ?: return emptyList()
+        val origin = DexOriginEntity(dexId = 0, motherId = parent.id, fatherId = null, motherName = parent.name, fatherName = null, crossId = null)
+        val ids = addChildren(parent.name, parent.species, count, origin)
+        if (removeParent) delete(parent.id)
+        return ids
+    }
+
+    /** Adds [count] seedlings of [cross] to the collection, each remembering both parents. */
+    suspend fun sow(cross: Cross, count: Int): List<Long> {
+        val origin = DexOriginEntity(
+            dexId = 0,
+            motherId = cross.motherId?.takeIf { dao.entry(it) != null },
+            fatherId = cross.fatherId?.takeIf { dao.entry(it) != null },
+            motherName = cross.motherName,
+            fatherName = cross.fatherName,
+            crossId = cross.id,
+        )
+        return addChildren(cross.name, "", count, origin)
+    }
+
+    private suspend fun addChildren(base: String, species: String, count: Int, origin: DexOriginEntity): List<Long> =
+        numbering.withLock {
+            val names = Lineage.names(base, count, dao.names())
+            val first = Dex.nextNumber(dao.numbers())
+            val children = names.mapIndexed { i, name ->
+                DexEntity(
+                    number = first + i,
+                    name = name,
+                    species = species,
+                    owned = true,
+                    photo = null,
+                    acquired = todayDate(),
+                    note = "",
+                    createdAt = clock.instant(),
+                )
+            }
+            dao.insertChildren(children, origin)
+        }
 
     /** A wished plant comes home: into the collection, same number, dated today. */
     suspend fun gotIt(id: Long) {

@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -25,8 +27,15 @@ class BreedingListViewModel(repo: BreedingRepository) : ViewModel() {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
 
-/** A new cross: two parents from the collection, a name made from theirs, and a date. */
-class BreedingNewViewModel(private val repo: BreedingRepository, dex: DexRepository) : ViewModel() {
+/**
+ * A new cross: two parents from the collection, a name made from theirs, and a date.
+ * Opened from a plant's Breed button, [motherId] starts picked as the seed parent.
+ */
+class BreedingNewViewModel(
+    private val repo: BreedingRepository,
+    dex: DexRepository,
+    motherId: Long? = null,
+) : ViewModel() {
     /** Plants in the collection; wishes cannot be parents. */
     val parents: StateFlow<List<DexEntry>?> = dex.entriesFlow()
         .map { list -> list.filter { it.owned } }
@@ -43,6 +52,14 @@ class BreedingNewViewModel(private val repo: BreedingRepository, dex: DexReposit
 
     private val _father = MutableStateFlow<DexEntry?>(null)
     val father: StateFlow<DexEntry?> = _father.asStateFlow()
+
+    init {
+        if (motherId != null) {
+            viewModelScope.launch {
+                parents.filterNotNull().first().firstOrNull { it.id == motherId }?.let { if (_mother.value == null) pickMother(it) }
+            }
+        }
+    }
 
     /** Once the owner types a name, picking another parent no longer replaces it. */
     private var renamed = false
@@ -91,7 +108,7 @@ data class CrossDetail(val cross: Cross, val mother: DexEntry?, val father: DexE
 /** [detail] is null before loading ([loaded] false), or for a cross that does not exist. */
 data class CrossState(val loaded: Boolean = false, val detail: CrossDetail? = null)
 
-class BreedingDetailViewModel(private val repo: BreedingRepository, dex: DexRepository, private val id: Long) : ViewModel() {
+class BreedingDetailViewModel(private val repo: BreedingRepository, private val dex: DexRepository, private val id: Long) : ViewModel() {
     val state: StateFlow<CrossState> = combine(repo.crossesFlow(), dex.entriesFlow()) { crosses, entries ->
         val cross = crosses.firstOrNull { it.id == id }
         CrossState(
@@ -101,6 +118,23 @@ class BreedingDetailViewModel(private val repo: BreedingRepository, dex: DexRepo
             },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CrossState())
+
+    /** Plants grown from this cross, in the collection. */
+    val seedlings: StateFlow<List<DexEntry>> = dex.seedlingsFlow(id)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private var busy = false
+
+    /** Adds [count] seedlings to the collection; [onDone] gets how many went in. */
+    fun sow(count: Int, onDone: (Int) -> Unit) {
+        if (busy) return
+        busy = true
+        viewModelScope.launch {
+            val added = repo.cross(id)?.let { dex.sow(it, count) }?.size ?: 0
+            busy = false
+            onDone(added)
+        }
+    }
 
     fun setOutcome(outcome: CrossOutcome) {
         viewModelScope.launch { repo.setOutcome(id, outcome) }

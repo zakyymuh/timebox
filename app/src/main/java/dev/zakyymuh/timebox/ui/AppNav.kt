@@ -124,19 +124,25 @@ fun AppNav(start: String?) {
             )
         }
 
-        composable(Destinations.BREEDING_NEW) { entry ->
+        composable(
+            route = Destinations.BREEDING_NEW_ROUTE,
+            arguments = listOf(navArgument("mother") { type = NavType.LongType; defaultValue = 0L }),
+        ) { entry ->
+            val mother = entry.arguments?.getLong("mother")?.takeIf { it != 0L }
             val vm: BreedingNewViewModel = viewModel(
                 factory = viewModelFactory {
-                    initializer { BreedingNewViewModel(ServiceLocator.breedingRepository(context), ServiceLocator.dexRepository(context)) }
+                    initializer {
+                        BreedingNewViewModel(ServiceLocator.breedingRepository(context), ServiceLocator.dexRepository(context), mother)
+                    }
                 },
             )
             BreedingNewScreen(
                 viewModel = vm,
                 onBack = { entry.ifResumed { nav.popBackStack() } },
-                // Show the new cross, with the list underneath for Back.
+                // Show the new cross in this screen's place, so Back goes where Breed was tapped.
                 onSaved = { id ->
                     entry.ifResumed {
-                        nav.navigate(Destinations.cross(id)) { popUpTo(Destinations.BREEDING) }
+                        nav.navigate(Destinations.cross(id)) { popUpTo(Destinations.BREEDING_NEW_ROUTE) { inclusive = true } }
                     }
                 },
             )
@@ -238,6 +244,9 @@ fun AppNav(start: String?) {
                 onBack = { entry.ifResumed { nav.popBackStack() } },
                 onEdit = { entry.ifResumed { nav.go(Destinations.dexEdit(id, owned = true)) } },
                 onOpenEntry = { info -> entry.ifResumed { nav.go(Destinations.entry(info)) } },
+                // Plain navigate, not go: a child's page opens on top of its parent's.
+                onOpenPlant = { plant -> entry.ifResumed { nav.navigate(Destinations.dex(plant)) } },
+                onBreed = { entry.ifResumed { nav.go(Destinations.breedingNew(id)) } },
             )
         }
 

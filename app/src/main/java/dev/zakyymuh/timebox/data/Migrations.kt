@@ -153,5 +153,22 @@ val MIGRATION_11_12 = object : Migration(11, 12) {
     }
 }
 
+/** Version 12 → 13: a plant can remember where it came from. Only creates a table. */
+val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `dex_origin` (`dexId` INTEGER NOT NULL, `motherId` INTEGER, `fatherId` INTEGER, " +
+                "`motherName` TEXT NOT NULL, `fatherName` TEXT, `crossId` INTEGER, PRIMARY KEY(`dexId`), " +
+                "FOREIGN KEY(`dexId`) REFERENCES `dex`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , " +
+                "FOREIGN KEY(`motherId`) REFERENCES `dex`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL , " +
+                "FOREIGN KEY(`fatherId`) REFERENCES `dex`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL , " +
+                "FOREIGN KEY(`crossId`) REFERENCES `breeding`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_dex_origin_motherId` ON `dex_origin` (`motherId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_dex_origin_fatherId` ON `dex_origin` (`fatherId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_dex_origin_crossId` ON `dex_origin` (`crossId`)")
+    }
+}
+
 /** Every migration, in order, for the app and its tests. */
-val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
+val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)

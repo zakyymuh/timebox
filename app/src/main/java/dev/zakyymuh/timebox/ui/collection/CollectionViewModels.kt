@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.zakyymuh.timebox.core.collection.DexEntry
 import dev.zakyymuh.timebox.core.collection.DexForm
+import dev.zakyymuh.timebox.core.collection.DexOrigin
 import dev.zakyymuh.timebox.core.collection.DexShot
 import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PhotoStore
@@ -40,8 +41,29 @@ class DexDetailViewModel(
     val shots: StateFlow<List<DexShot>?> = repo.photosFlow(id)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /** Where this plant came from; null for one simply got. */
+    val origin: StateFlow<DexOrigin?> = repo.originFlow(id)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Plants repotted out of this one or grown from its crosses. */
+    val children: StateFlow<List<DexEntry>> = repo.childrenFlow(id)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private var busy = false
+
     fun gotIt() {
         viewModelScope.launch { repo.gotIt(id) }
+    }
+
+    /** Repots into [count] new plants; [onDone] gets how many were added. */
+    fun repot(count: Int, removeParent: Boolean, onDone: (Int) -> Unit) {
+        if (busy) return
+        busy = true
+        viewModelScope.launch {
+            val added = repo.repot(id, count, removeParent).size
+            busy = false
+            onDone(added)
+        }
     }
 
     fun setNote(photoId: Long, note: String) {

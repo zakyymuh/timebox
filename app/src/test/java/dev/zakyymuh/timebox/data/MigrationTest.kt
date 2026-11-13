@@ -294,4 +294,33 @@ class MigrationTest {
         assertEquals("1126001", cross.code)
         assertEquals(dev.zakyymuh.timebox.core.collection.CrossOutcome.Waiting, cross.outcome)
     }
+
+    @Test
+    fun `the upgrade to 13 keeps the collection and adds an empty origin table that works`() = runTest {
+        createVersion1()
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(name)
+                .callback(object : SupportSQLiteOpenHelper.Callback(12) {
+                    override fun onCreate(db: SupportSQLiteDatabase) = error("the v1 file must already exist")
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {
+                        ALL_MIGRATIONS.filter { it.endVersion <= 12 }.forEach { it.migrate(db) }
+                    }
+                })
+                .build(),
+        )
+        helper.writableDatabase.execSQL(
+            "INSERT INTO dex (id, number, name, species, owned, photo, acquired, note, createdAt, priceLow, priceHigh) VALUES (1, 1, 'Kikko', '', 1, NULL, '$day', '', 0, NULL, NULL)",
+        )
+        helper.close()
+
+        val current = openCurrent()
+        assertEquals(listOf("Kikko"), current.dexDao().entries().map { it.name })
+        assertEquals(emptyList<Any>(), current.dexDao().childrenFlow(1).first())
+        val kid = current.dexDao().insert(
+            DexEntity(number = 2, name = "Kikko #1", species = "", owned = true, photo = null, acquired = day, note = "", createdAt = Instant.EPOCH),
+        )
+        current.dexDao().insertOrigin(DexOriginEntity(kid, 1, null, "Kikko", null, null))
+        assertEquals(listOf(kid), current.dexDao().childrenFlow(1).first().map { it.id })
+    }
 }

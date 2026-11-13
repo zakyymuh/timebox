@@ -31,6 +31,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FabPosition
@@ -224,9 +228,14 @@ fun DexDetailScreen(
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onOpenEntry: (String) -> Unit,
+    onOpenPlant: (Long) -> Unit,
+    onBreed: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val shots by viewModel.shots.collectAsStateWithLifecycle()
+    val origin by viewModel.origin.collectAsStateWithLifecycle()
+    val children by viewModel.children.collectAsStateWithLifecycle()
+    var repotting by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     // The picked photos wait here while their note is asked for.
     var picked by remember { mutableStateOf<List<Uri>?>(null) }
@@ -282,6 +291,38 @@ fun DexDetailScreen(
         )
     }
 
+    val parent = state.entry
+    if (repotting && parent != null) {
+        var removeOld by rememberSaveable { mutableStateOf(false) }
+        CountDialog(
+            title = "Repot ${parent.name}",
+            text = "How many plants came out? Each joins your collection as ${parent.name}'s child.",
+            confirm = { "Add $it" },
+            onConfirm = { count ->
+                repotting = false
+                viewModel.repot(count, removeOld) { added ->
+                    Toast.makeText(context, "$added plants added from ${parent.name} 🌱", Toast.LENGTH_SHORT).show()
+                }
+            },
+            onDismiss = { repotting = false },
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable { removeOld = !removeOld },
+            ) {
+                Checkbox(
+                    checked = removeOld,
+                    onCheckedChange = { removeOld = it },
+                    colors = CheckboxDefaults.colors(checkedColor = Fresh.GreenDeep),
+                )
+                Column {
+                    Text("The old pot is empty now", style = MaterialTheme.typography.bodyMedium, color = Fresh.Ink)
+                    Text("Removes ${parent.name} and its photos; the new plants keep its name.", style = Small, color = Fresh.InkSoft)
+                }
+            }
+        }
+    }
+
     // Deleted from the edit screen: nothing left to show here.
     LaunchedEffect(state) { if (state.loaded && state.entry == null) onBack() }
 
@@ -298,6 +339,7 @@ fun DexDetailScreen(
             if (e == null) return@Column
 
             PhotoDiary(shots ?: emptyList(), wished = !e.owned, onAdd = pick, onEditNote = { editing = it })
+            origin?.let { OriginCard(it, onOpenPlant, Modifier.fillMaxWidth().padding(top = 12.dp)) }
 
             Text(e.name, style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink, modifier = Modifier.padding(top = 18.dp))
             if (e.species.isNotBlank()) {
@@ -336,6 +378,29 @@ fun DexDetailScreen(
                 }
             }
 
+            PlantList("Children", children, onOpenPlant, Modifier.padding(top = 20.dp))
+
+            if (e.owned) {
+                Spacer(Modifier.height(24.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Button(
+                        onClick = { repotting = true },
+                        shape = CircleShape,
+                        colors = ButtonDefaults.buttonColors(containerColor = Fresh.Ink, contentColor = Fresh.Page),
+                        modifier = Modifier.weight(1f).height(56.dp),
+                    ) {
+                        Text("🪴  Repot", style = MaterialTheme.typography.labelLarge)
+                    }
+                    OutlinedButton(
+                        onClick = onBreed,
+                        shape = CircleShape,
+                        border = BorderStroke(1.5.dp, Fresh.Ink),
+                        modifier = Modifier.weight(1f).height(56.dp),
+                    ) {
+                        Text("❤️  Breed", style = MaterialTheme.typography.labelLarge, color = Fresh.Ink)
+                    }
+                }
+            }
             if (!e.owned) {
                 Spacer(Modifier.height(24.dp))
                 Button(
