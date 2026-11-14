@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.zakyymuh.timebox.core.plants.DayBorder
@@ -48,8 +49,9 @@ import java.time.format.DateTimeFormatter
 /** Today's pill and the collection tile, as in the owner's references. */
 internal val Lilac = Color(0xFFB98AEB)
 
-/** A day with a watering logged. */
-private val WateredBlue = Color(0xFFCFE6FF)
+/** A day with a watering logged: a quiet leaf green that sits beside the rose. */
+private val Sage: Color get() = if (Fresh.Dark) Color(0xFF2A3325) else Color(0xFFE1E9DA)
+private val SageInk: Color get() = if (Fresh.Dark) Color(0xFFC4D6B5) else Color(0xFF4F6342)
 private val dayName = DateTimeFormatter.ofPattern("EEE")
 private val dayHeading = DateTimeFormatter.ofPattern("EEEE d MMMM")
 private val RING = 5.dp
@@ -117,69 +119,52 @@ private fun DayPills(week: List<StripDay>, today: LocalDate, selected: LocalDate
 private val StripDay.isDueToday: Boolean get() = border == DayBorder.ToDo
 
 /**
- * Day name on top, the date in a white circle at the bottom. The circle sits [RING] in
- * from the sides and the bottom, so it shares a centre with the pill's round end and the
- * ring around it is even. A watered day is light blue; a day with a plant still to do has
- * a light green border. A selected day's border is thicker. Today with a plant to water
- * is [big] and inverted: a white pill with the date in a green circle.
+ * Day name on top, the date in a circle at the bottom; the pill itself has no fill, so only
+ * the circles carry colour. A watered day's circle is sage, a day with a plant still to do
+ * has a rose ring, any other day is cream. Today sits in a blush pill; when a plant needs
+ * water today it is [big] and its circle is solid rose. A selected day gets an outline.
  */
 @Composable
 private fun DayPill(day: StripDay, isToday: Boolean, isSelected: Boolean, big: Boolean, width: Dp, onClick: () -> Unit) {
     val shape = RoundedCornerShape(percent = 50)
     val watered = day.border == DayBorder.Watered
-    val border = when {
-        day.border == DayBorder.ToDo -> Fresh.Green.copy(alpha = 0.45f)
-        isSelected && !isToday -> Fresh.Ink
-        else -> Fresh.Page
-    }
-    // Today stays lilac so it is easy to find; when watered, its date circle turns blue.
-    val fill = when {
-        big -> Fresh.Page
-        isToday -> Lilac
-        watered -> WateredBlue
-        else -> Fresh.Card
-    }
+    val todo = day.border == DayBorder.ToDo
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .width(width)
-            .let { if (big) it.shadow(6.dp, shape, ambientColor = Fresh.Green, spotColor = Fresh.Green) else it }
             .clip(shape)
-            .background(fill)
-            .border(if (isSelected) 3.5.dp else 2.dp, border, shape)
+            .background(if (isToday) Fresh.Pastel else Color.Transparent)
+            .border(2.dp, if (isSelected && !isToday) Fresh.Ink else Color.Transparent, shape)
             .clickable(role = Role.Tab, onClickLabel = day.date.format(dayHeading), onClick = onClick)
             .padding(top = 14.dp, bottom = RING),
     ) {
         Text(
             day.date.format(dayName),
             style = Label,
-            color = when {
-                big -> Fresh.Ink
-                isToday -> Color.White
-                // The light blue stays light in dark mode, so it keeps dark words.
-                watered -> Fresh.Garden.inkSoft
-                else -> Fresh.InkSoft
-            },
+            fontWeight = if (isToday) FontWeight.SemiBold else null,
+            color = if (isToday) Fresh.GreenDeep else Fresh.InkSoft,
             maxLines = 1,
         )
         Spacer(Modifier.height(10.dp))
+        val circle = Modifier.size(width - RING * 2).clip(CircleShape)
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(width - RING * 2).clip(CircleShape)
-                .background(
-                    when {
-                        big -> Fresh.Green
-                        isToday && watered -> WateredBlue
-                        else -> Fresh.Page
-                    },
-                ),
+            modifier = when {
+                big -> circle.background(Fresh.Green)
+                watered -> circle.background(Sage)
+                todo -> circle.background(Fresh.Page).border(2.dp, Fresh.Green, CircleShape)
+                isToday -> circle.background(Fresh.Page)
+                else -> circle.background(Fresh.Card)
+            },
         ) {
             Text(
                 day.date.dayOfMonth.toString(),
                 style = if (big) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
                 color = when {
                     big -> Color.White
-                    isToday && watered -> Fresh.Garden.ink
+                    watered -> SageInk
+                    todo -> Fresh.GreenDeep
                     else -> Fresh.Ink
                 },
             )
