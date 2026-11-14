@@ -2,6 +2,7 @@ package dev.zakyymuh.timebox.ui.collection
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,7 +33,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,12 +66,8 @@ fun PhotoDiary(
     onAdd: () -> Unit,
     onEditNote: (DexShot) -> Unit,
     cover: String? = null,
-    /** Told the photo on screen as the owner swipes; null when there is none. */
-    onShown: (DexShot?) -> Unit = {},
 ) {
     val pager = rememberPagerState { shots.size }
-    val shown = shots.getOrNull(pager.currentPage.coerceIn(0, maxOf(0, shots.lastIndex)))
-    LaunchedEffect(shown) { onShown(shown) }
     // Ids whose bubble already popped, so swiping back does not pop it again.
     val popped = remember { mutableSetOf<Long>() }
     // A photo just added is the newest: show it.
@@ -180,12 +181,19 @@ fun PhotoNoteDialog(
     onDelete: (() -> Unit)? = null,
     /** Shown as "Make default picture", for a diary photo that is not the cover yet. */
     onMakeDefault: (() -> Unit)? = null,
+    /** Shown as a round share button beside the title, for a diary photo. */
+    onShare: (() -> Unit)? = null,
 ) {
     var note by rememberSaveable { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Fresh.Page,
-        title = { Text(title) },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(title, modifier = Modifier.weight(1f))
+                onShare?.let { ShareButton(it) }
+            }
+        },
         text = {
             Column {
                 TextField(
@@ -221,4 +229,30 @@ fun PhotoNoteDialog(
         confirmButton = { TextButton(onClick = { onSave(note) }) { Text(confirm) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
+}
+
+/** A pastel circle with the share mark: three dots joined by two lines. */
+@Composable
+private fun ShareButton(onClick: () -> Unit) {
+    val ink = Fresh.GreenDeep
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .background(Fresh.Pastel)
+            .clickable(onClickLabel = "Share this photo", onClick = onClick)
+            .semantics { contentDescription = "Share this photo" },
+    ) {
+        Canvas(Modifier.size(22.dp)) {
+            val dot = size.minDimension * 0.15f
+            val top = Offset(size.width * 0.78f, size.height * 0.2f)
+            val mid = Offset(size.width * 0.22f, size.height * 0.5f)
+            val bottom = Offset(size.width * 0.78f, size.height * 0.8f)
+            val line = size.minDimension * 0.09f
+            drawLine(ink, mid, top, strokeWidth = line, cap = StrokeCap.Round)
+            drawLine(ink, mid, bottom, strokeWidth = line, cap = StrokeCap.Round)
+            listOf(top, mid, bottom).forEach { drawCircle(ink, radius = dot, center = it) }
+        }
+    }
 }

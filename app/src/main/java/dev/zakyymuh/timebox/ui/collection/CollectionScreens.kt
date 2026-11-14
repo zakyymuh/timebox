@@ -237,7 +237,6 @@ fun DexDetailScreen(
     val origin by viewModel.origin.collectAsStateWithLifecycle()
     val children by viewModel.children.collectAsStateWithLifecycle()
     var repotting by rememberSaveable { mutableStateOf(false) }
-    var shown by remember { mutableStateOf<DexShot?>(null) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     // The picked photos wait here while their note is asked for.
@@ -272,6 +271,12 @@ fun DexDetailScreen(
                 viewModel.setNote(shot.id, note)
             },
             onDismiss = { editing = null },
+            onShare = state.entry?.let { e ->
+                {
+                    val subtitle = listOfNotNull(Dex.label(e.number), e.species.takeIf { it.isNotBlank() }).joinToString(" · ")
+                    scope.launch { ShareCard.sharePlant(context, shot.file, e.name, subtitle) }
+                }
+            },
             onDelete = {
                 editing = null
                 deleting = shot
@@ -345,23 +350,12 @@ fun DexDetailScreen(
             val e = state.entry
             TopBar(title = e?.let { Dex.label(it.number) } ?: "", onBack = onBack) {
                 if (e != null) {
-                    Pill(
-                        "Share",
-                        color = Fresh.Card,
-                        modifier = Modifier.clip(CircleShape).clickable {
-                            scope.launch {
-                                val subtitle = listOfNotNull(Dex.label(e.number), e.species.takeIf { it.isNotBlank() }).joinToString(" · ")
-                                ShareCard.sharePlant(context, shown?.file ?: e.photo, e.name, subtitle)
-                            }
-                        },
-                    )
-                    Spacer(Modifier.width(8.dp))
                     Pill("Edit", color = Fresh.Card, modifier = Modifier.clickable(onClick = onEdit))
                 }
             }
             if (e == null) return@Column
 
-            PhotoDiary(shots ?: emptyList(), wished = !e.owned, onAdd = pick, onEditNote = { editing = it }, cover = e.photo, onShown = { shown = it })
+            PhotoDiary(shots ?: emptyList(), wished = !e.owned, onAdd = pick, onEditNote = { editing = it }, cover = e.photo)
             origin?.let { OriginCard(it, onOpenPlant, Modifier.fillMaxWidth().padding(top = 12.dp)) }
 
             Text(e.name, style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink, modifier = Modifier.padding(top = 18.dp))
