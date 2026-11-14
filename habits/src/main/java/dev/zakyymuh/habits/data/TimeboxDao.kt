@@ -47,6 +47,10 @@ interface TimeboxDao {
     )
     suspend fun startWorking(id: Long, at: java.time.Instant): Int
 
+    /** Takes back "Working on it" tapped by mistake. Refused once the item is done. */
+    @Query("UPDATE todo_item SET startedAt = NULL WHERE id = :id AND doneAt IS NULL AND startedAt IS NOT NULL")
+    suspend fun stopWorking(id: Long): Int
+
     @Query("SELECT * FROM todo_item WHERE id = :id")
     suspend fun item(id: Long): TodoItemEntity?
 

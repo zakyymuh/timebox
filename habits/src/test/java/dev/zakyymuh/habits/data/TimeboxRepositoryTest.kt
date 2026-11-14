@@ -335,4 +335,32 @@ class TimeboxRepositoryTest {
         repo.removeSometimes(repo.sometimesFlow().first().single().id)
         assertTrue(repo.sometimesFlow().first().isEmpty())
     }
+
+    // ---- cancelling "Working on it" ----------------------------------------------
+
+    @Test
+    fun `cancelling work puts the card back to waiting, so another can start`() = runTest {
+        repo.addItem("Laundry")
+        repo.addItem("Dishes")
+        val (laundry, dishes) = repo.todayNow().items
+        assertTrue(repo.startWorking(laundry.id))
+
+        assertTrue(repo.stopWorking(laundry.id))
+
+        val after = repo.todayNow().items.first()
+        assertNull(after.startedAt)
+        assertFalse(after.isDone)
+        assertTrue(repo.startWorking(dishes.id))
+    }
+
+    @Test
+    fun `a finished card cannot be cancelled`() = runTest {
+        repo.addItem("Laundry")
+        val id = repo.todayNow().items.single().id
+        repo.startWorking(id)
+        repo.setDone(id, true)
+
+        assertFalse(repo.stopWorking(id))
+        assertTrue(repo.todayNow().items.single().isDone)
+    }
 }

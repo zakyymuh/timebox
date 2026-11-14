@@ -85,6 +85,13 @@ class TimeboxRepository(
         return changed
     }
 
+    /** Cancels "Working on it": the card goes back to waiting and the lock lifts. */
+    suspend fun stopWorking(itemId: Long): Boolean {
+        val changed = dao.stopWorking(itemId) > 0
+        if (changed) onChanged()
+        return changed
+    }
+
     suspend fun toggle(itemId: Long) {
         val date = today()
         val updated = Items.toggle(dayNow(date), itemId, clock.instant())

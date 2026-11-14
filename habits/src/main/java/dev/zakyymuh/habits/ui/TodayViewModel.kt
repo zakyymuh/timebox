@@ -278,6 +278,11 @@ class TodayViewModel(
         viewModelScope.launch { repo.startWorking(itemId) }
     }
 
+    /** "Cancel": undoes a mistaken "Working on it". */
+    fun stopWorking(itemId: Long) {
+        viewModelScope.launch { repo.stopWorking(itemId) }
+    }
+
     fun finish(itemId: Long) {
         viewModelScope.launch { repo.setDone(itemId, true) }
     }

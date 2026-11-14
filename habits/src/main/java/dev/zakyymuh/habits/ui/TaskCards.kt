@@ -87,6 +87,8 @@ fun TaskCards(
     editable: Boolean,
     onStart: (Long) -> Unit,
     onDone: (Long) -> Unit,
+    /** "Cancel" on the card in hand: back to waiting, for a mistaken "Working on it". */
+    onCancel: (Long) -> Unit,
     /** Holding a card for half a second: open its Edit / Delete popup. */
     onHold: (TodoItem) -> Unit,
     modifier: Modifier = Modifier,
@@ -139,6 +141,7 @@ fun TaskCards(
                     editable = editable,
                     onStart = onStart,
                     onDone = onDone,
+                    onCancel = onCancel,
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(max = 460.dp)
@@ -227,6 +230,7 @@ private fun TaskCard(
     editable: Boolean,
     onStart: (Long) -> Unit,
     onDone: (Long) -> Unit,
+    onCancel: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val working = item.isWorking
@@ -292,7 +296,21 @@ private fun TaskCard(
         when {
             item.isDone -> Badge("✓ Done")
             !editable -> Badge("Not done")
-            working -> CardButton("Done", Fresh.Green) { onDone(item.id) }
+            working -> {
+                CardButton("Done", Fresh.Green) { onDone(item.id) }
+                // For a "Working on it" tapped by mistake: the card goes back to waiting.
+                Text(
+                    text = "Cancel",
+                    style = Small,
+                    color = soft,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(top = 8.dp)
+                        .clip(CircleShape)
+                        .clickable { onCancel(item.id) }
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                )
+            }
             else -> CardButton("Working on it", Fresh.Ink) { onStart(item.id) }
         }
     }

@@ -151,6 +151,7 @@ fun TodayScreen(viewModel: TodayViewModel) {
                         editable = state.editable,
                         onStart = viewModel::startWorking,
                         onDone = viewModel::finish,
+                        onCancel = viewModel::stopWorking,
                         onHold = { acting = it },
                         // Room under the cards for the round + button.
                         modifier = Modifier.weight(1f).padding(bottom = if (state.editable) 96.dp else 0.dp),
