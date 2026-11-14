@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  The launch animation: the bishop's cap turns one rib (72°), so it ends looking exactly
-  as it started, while it breathes in slightly. Played once by the system splash screen.
+  The launch animation: the rosette turns once all the way round (its rings repeat at
+  different angles, so only a full turn ends as it started) while it breathes in slightly.
+  Played once by the system splash screen.
 -->
 <animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
-    android:drawable="@drawable/myriostigma">
+    android:drawable="@drawable/rosette">
     <target android:name="plant">
         <aapt:attr name="android:animation">
             <set>
@@ -14,7 +15,7 @@
                     android:interpolator="@android:interpolator/fast_out_slow_in"
                     android:propertyName="rotation"
                     android:valueFrom="0"
-                    android:valueTo="72" />
+                    android:valueTo="360" />
                 <objectAnimator
                     android:duration="450"
                     android:propertyName="scaleX"

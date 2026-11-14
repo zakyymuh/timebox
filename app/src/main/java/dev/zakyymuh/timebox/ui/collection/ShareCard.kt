@@ -34,8 +34,8 @@ object ShareCard {
 
     private const val INK = 0xFF1F2A22.toInt()
     private const val INK_SOFT = 0xFF6B7A70.toInt()
-    private const val GREEN = 0xFF1F4D33.toInt()
-    private const val PASTEL = 0xFFCDEBD5.toInt()
+    private const val GREEN = 0xFFB8727C.toInt() // dusty rose, the logo's
+    private const val PASTEL = 0xFFF7F1EE.toInt() // cream, behind the logo
 
     /** One plant: its photo [file] (null draws a pot), its name and its number. */
     suspend fun sharePlant(context: Context, file: String?, title: String, subtitle: String) {
@@ -119,7 +119,7 @@ object ShareCard {
         canvas.drawText(subtitle, W / 2f, top + 56f, text(36f, INK_SOFT))
     }
 
-    /** The launcher's bishop's cap on its pastel disc, with "papacti" beside it. */
+    /** The launcher's rosette on its cream disc, with "papacti" beside it. */
     private fun drawLogo(context: Context, canvas: Canvas) {
         val r = 36f
         val word = text(44f, GREEN, bold = true).apply { textAlign = Paint.Align.LEFT }
@@ -129,7 +129,7 @@ object ShareCard {
         val cy = H - MARGIN - r
         canvas.drawCircle(left + r, cy, r, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = PASTEL })
         ContextCompat.getDrawable(context, R.drawable.ic_launcher_foreground)?.let { cap ->
-            // The art sits in the middle of a 108-unit canvas; 1.5× the disc makes it fill it.
+            // The rosette spans about 64 of its 108 units; 1.5× the disc leaves a thin cream rim.
             val half = (r * 1.5f).toInt()
             cap.setBounds((left + r).toInt() - half, cy.toInt() - half, (left + r).toInt() + half, cy.toInt() + half)
             canvas.save()

@@ -20,8 +20,8 @@ data class Palette(
 
 /**
  * The colours every screen reads. White and pastel green unless the app picks another
- * [Palette] with [use], once, before anything is drawn: papacti and Daily keep [Garden],
- * Motor paints itself red. Each app is its own process, so one app's choice never
+ * [Palette] with [use], once, before anything is drawn: papacti paints itself dusty rose
+ * ([Rose]), Daily keeps [Garden], Motor paints itself red. Each app is its own process, so one app's choice never
  * reaches another.
  */
 object Fresh {
@@ -35,6 +35,33 @@ object Fresh {
         green = Color(0xFF5DB37E),
         greenDeep = Color(0xFF1F4D33),
         error = Color(0xFFC0453A),
+    )
+
+    /**
+     * Dusty rose, papacti's: the rosette logo's #B8727C on its cream #F7F1EE. [Palette.green]
+     * is the rose, [Palette.greenDeep] a deep rose that reads on cream and blush.
+     */
+    val Rose = Palette(
+        page = Color(0xFFFFFFFF),
+        card = Color(0xFFF7F1EE),
+        ink = Color(0xFF1E1A1B),
+        inkSoft = Color(0xFF6F6466),
+        pastel = Color(0xFFF2DFE0),
+        green = Color(0xFFB8727C),
+        greenDeep = Color(0xFF7A3E48),
+        error = Color(0xFFC0453A),
+    )
+
+    /** Rose at night: warm near-black page, light ink, a softer rose. */
+    val RoseDark = Palette(
+        page = Color(0xFF151213),
+        card = Color(0xFF231E1F),
+        ink = Color(0xFFF1E9E7),
+        inkSoft = Color(0xFFA89A9C),
+        pastel = Color(0xFF47292F),
+        green = Color(0xFFC4848C),
+        greenDeep = Color(0xFFEFC6CA),
+        error = Color(0xFFE5705F),
     )
 
     /** Garden at night: near-black page, light ink, the same green. */

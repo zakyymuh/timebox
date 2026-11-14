@@ -2,11 +2,11 @@
 <resources>
     <!--
       Android 12+ shows this the instant the app is tapped, before any code runs:
-      white page, pastel green circle, the bishop's cap turning once.
+      white page, cream circle, the dusty rose rosette turning once.
     -->
     <style name="Theme.Timebox" parent="@android:style/Theme.Material.Light.NoActionBar">
         <item name="android:windowSplashScreenBackground">#FFFFFF</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_myriostigma</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_rosette</item>
         <item name="android:windowSplashScreenAnimationDuration">900</item>
     </style>
 </resources>

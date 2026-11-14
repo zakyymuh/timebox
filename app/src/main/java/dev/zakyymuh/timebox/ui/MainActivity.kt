@@ -20,7 +20,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Light or dark, as picked in Settings; the system bars match the page.
-        Appearance.start(this, Fresh.Garden, Fresh.GardenDark)
+        Appearance.start(this, Fresh.Rose, Fresh.RoseDark)
 
         // Re-arming an already-armed alarm is harmless, and this covers a first launch
         // and any firing that was missed while the app was not running.
