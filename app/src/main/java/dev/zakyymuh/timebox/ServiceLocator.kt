@@ -9,6 +9,7 @@ import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PhotoStore
 import dev.zakyymuh.timebox.data.SoilRepository
 import dev.zakyymuh.timebox.data.PlantRepository
+import dev.zakyymuh.timebox.data.SaleRepository
 import dev.zakyymuh.timebox.data.TimeboxDatabase
 import java.time.Clock
 
@@ -62,6 +63,14 @@ object ServiceLocator {
         breedingRepository ?: synchronized(this) {
             breedingRepository ?: BreedingRepository(database(context).breedingDao(), database(context).dexDao(), clock)
                 .also { breedingRepository = it }
+        }
+
+    @Volatile
+    private var saleRepository: SaleRepository? = null
+
+    fun saleRepository(context: Context): SaleRepository =
+        saleRepository ?: synchronized(this) {
+            saleRepository ?: SaleRepository(database(context), clock).also { saleRepository = it }
         }
 
     fun noteRepository(context: Context): NoteRepository =
