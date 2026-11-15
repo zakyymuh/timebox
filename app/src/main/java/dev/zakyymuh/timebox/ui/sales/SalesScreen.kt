@@ -41,7 +41,11 @@ import dev.zakyymuh.timebox.core.collection.SaleForm
 import dev.zakyymuh.timebox.core.collection.Sales
 import dev.zakyymuh.timebox.core.collection.SalesTotals
 import dev.zakyymuh.timebox.core.motor.Money
+import androidx.compose.ui.platform.LocalContext
+import dev.zakyymuh.timebox.core.collection.DexEntry
 import dev.zakyymuh.timebox.ui.collection.DexCard
+import dev.zakyymuh.timebox.ui.collection.ShareCard
+import dev.zakyymuh.timebox.ui.collection.shareSubtitle
 import dev.zakyymuh.timebox.ui.common.SoftCard
 import dev.zakyymuh.timebox.ui.common.TopBar
 import dev.zakyymuh.timebox.ui.plants.Choice
@@ -63,6 +67,7 @@ fun SalesScreen(viewModel: SalesViewModel, onBack: () -> Unit, onOpenPlant: (Lon
     val state by viewModel.state.collectAsStateWithLifecycle()
     val pager = rememberPagerState { 2 }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var editing by remember { mutableStateOf<Sale?>(null) }
 
     editing?.let { sale ->
@@ -99,7 +104,7 @@ fun SalesScreen(viewModel: SalesViewModel, onBack: () -> Unit, onOpenPlant: (Lon
                 Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
                     if (page == 0) {
                         if (s.forSale.isEmpty()) {
-                            Hint("Nothing for sale. Open a plant and tap Sell.")
+                            Hint("Nothing for sale. Open a plant in your collection and tap \$.")
                         } else {
                             LazyVerticalGrid(
                                 columns = GridCells.Fixed(2),
@@ -107,7 +112,13 @@ fun SalesScreen(viewModel: SalesViewModel, onBack: () -> Unit, onOpenPlant: (Lon
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                                 contentPadding = PaddingValues(bottom = 32.dp),
                             ) {
-                                items(s.forSale, key = { it.id }) { DexCard(it) { onOpenPlant(it.id) } }
+                                items(s.forSale, key = { it.id }) { plant ->
+                                    ForSaleCard(plant, onOpen = { onOpenPlant(plant.id) }) {
+                                        scope.launch {
+                                            ShareCard.sharePlantForSale(context, plant.photo, plant.name, plant.askingPrice, shareSubtitle(plant))
+                                        }
+                                    }
+                                }
                             }
                         }
                     } else {
@@ -125,6 +136,25 @@ fun SalesScreen(viewModel: SalesViewModel, onBack: () -> Unit, onOpenPlant: (Lon
             }
         }
     }
+}
+
+/**
+ * A plant on the shelf: the rose frame, its asking price in a white pill on the photo (none
+ * without a price), and a round share button inside the photo's top-right corner that
+ * shares it as a story without opening the card.
+ */
+@Composable
+private fun ForSaleCard(plant: DexEntry, onOpen: () -> Unit, onShare: () -> Unit) {
+    DexCard(
+        plant,
+        modifier = Modifier.saleBorder(24.dp),
+        overlay = {
+            val price = plant.askingPrice
+            if (price != null) PricePill(price, Modifier.align(Alignment.BottomStart).padding(8.dp))
+            StoryShareButton(onClick = onShare, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp))
+        },
+        onClick = onOpen,
+    )
 }
 
 @Composable

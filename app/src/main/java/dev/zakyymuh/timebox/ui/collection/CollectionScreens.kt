@@ -77,9 +77,8 @@ import dev.zakyymuh.timebox.ui.common.SoftCard
 import dev.zakyymuh.timebox.ui.common.TopBar
 import dev.zakyymuh.timebox.ui.plants.Choice
 import dev.zakyymuh.timebox.ui.sales.AskingPriceDialog
-import dev.zakyymuh.timebox.ui.sales.SaleRibbon
+import androidx.compose.foundation.layout.BoxScope
 import dev.zakyymuh.timebox.ui.sales.SoldDialog
-import dev.zakyymuh.timebox.ui.sales.saleBorder
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -205,11 +204,19 @@ private fun SortMenu(sort: DexSort, sorts: List<DexSort>, onPick: (DexSort) -> U
     }
 }
 
+/**
+ * A numbered card: photo, number, name, kind, and a wish's price. [overlay] is laid over
+ * the photo, in its box: the Sales shelf puts the price pill and share button there.
+ */
 @Composable
-internal fun DexCard(entry: DexEntry, onClick: () -> Unit) {
+internal fun DexCard(
+    entry: DexEntry,
+    modifier: Modifier = Modifier,
+    overlay: @Composable BoxScope.() -> Unit = {},
+    onClick: () -> Unit,
+) {
     Column(
-        Modifier
-            .then(if (entry.forSale) Modifier.saleBorder(24.dp) else Modifier)
+        modifier
             .clip(RoundedCornerShape(24.dp))
             .background(Fresh.Card)
             .clickable(onClick = onClick)
@@ -217,7 +224,7 @@ internal fun DexCard(entry: DexEntry, onClick: () -> Unit) {
     ) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(18.dp))) {
             DexPhoto(entry.photo, Modifier.matchParentSize(), wished = !entry.owned)
-            if (entry.forSale) SaleRibbon(entry.askingPrice)
+            overlay()
         }
         Column(Modifier.padding(horizontal = 6.dp, vertical = 8.dp)) {
             Text(Dex.label(entry.number), style = Small, color = Fresh.InkSoft)
