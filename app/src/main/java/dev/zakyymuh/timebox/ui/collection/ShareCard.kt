@@ -4,27 +4,34 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapShader
+import android.graphics.BlendMode
 import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import android.graphics.RadialGradient
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
+import android.os.Build
 import android.text.TextPaint
 import android.text.TextUtils
-import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import dev.zakyymuh.timebox.R
 import dev.zakyymuh.timebox.ServiceLocator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.Random
 
 /**
  * A picture to share: the photo(s) on rounded corners inside a white frame, a title and a
- * subtitle under them, and the papacti logo at the bottom centre. Colours are fixed, so the
- * card looks the same in light and dark mode.
+ * subtitle under them set flush left, and the papacti rosette pressed over the photo's
+ * lower-right corner like a gyotaku ink print, half on the photo and half on the frame.
+ * Colours are fixed, so the card looks the same in light and dark mode.
  */
 object ShareCard {
     private const val W = 1080
@@ -34,16 +41,22 @@ object ShareCard {
 
     private const val INK = 0xFF1F2A22.toInt()
     private const val INK_SOFT = 0xFF6B7A70.toInt()
-    private const val GREEN = 0xFFB8727C.toInt() // dusty rose, the logo's
-    private const val PASTEL = 0xFFF7F1EE.toInt() // cream, behind the logo
+    private const val ROSE = 0xFFB8727C.toInt() // dusty rose, the logo's
+    private const val PASTEL = 0xFFF7F1EE.toInt() // cream, behind a missing photo
+
+    /** The print's side; the leaf tips reach about 0.48 of it from the centre. */
+    private const val PRINT = 342
+    private const val PRINT_REACH = PRINT * 0.48f
 
     /** One plant: its photo [file] (null draws a pot), its name and its number. */
     suspend fun sharePlant(context: Context, file: String?, title: String, subtitle: String) {
         val photo = load(context, file)
         share(context, title) { canvas ->
             val side = W - 2 * MARGIN
-            drawPhoto(canvas, photo, RectF(MARGIN, MARGIN, MARGIN + side, MARGIN + side))
-            drawWords(canvas, title, subtitle, top = MARGIN + side + 70f)
+            val box = RectF(MARGIN, MARGIN, MARGIN + side, MARGIN + side)
+            drawPhoto(canvas, photo, box)
+            drawWords(canvas, title, subtitle, top = box.bottom + 70f, right = printLeft(box) - 24f)
+            drawPrint(canvas, box)
         }
     }
 
@@ -54,16 +67,17 @@ object ShareCard {
         share(context, title) { canvas ->
             val gap = 28f
             val side = (W - 2 * MARGIN - gap) / 2
-            // Photos, × and words, centred in the space above the logo.
-            val top = 300f
+            val top = MARGIN + 120f
             drawPhoto(canvas, m, RectF(MARGIN, top, MARGIN + side, top + side))
             drawPhoto(canvas, f, RectF(MARGIN + side + gap, top, W - MARGIN, top + side))
             // The × sits on a white disc over the seam.
             val cx = W / 2f
             val cy = top + side / 2
             canvas.drawCircle(cx, cy, 52f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt() })
-            canvas.drawText("×", cx, cy + 26f, text(76f, GREEN, bold = true))
-            drawWords(canvas, title, subtitle, top = top + side + 110f)
+            canvas.drawText("×", cx, cy + 26f, text(76f, ROSE, bold = true))
+            val box = RectF(MARGIN, top, W - MARGIN, top + side)
+            drawWords(canvas, title, subtitle, top = box.bottom + 110f, right = W - MARGIN)
+            drawPrint(canvas, box)
         }
     }
 
@@ -77,7 +91,6 @@ object ShareCard {
             val canvas = Canvas(card)
             canvas.drawColor(0xFFFFFFFF.toInt())
             draw(canvas)
-            drawLogo(context, canvas)
             withContext(Dispatchers.IO) {
                 val dir = File(context.cacheDir, "share").apply { mkdirs() }
                 dir.listFiles()?.forEach { it.delete() } // only the latest card is kept
@@ -112,32 +125,140 @@ object ShareCard {
         canvas.drawRoundRect(box, RADIUS, RADIUS, paint)
     }
 
-    private fun drawWords(canvas: Canvas, title: String, subtitle: String, top: Float) {
-        val big = text(58f, INK, bold = true)
-        val fitted = TextUtils.ellipsize(title, big, W - 2 * MARGIN, TextUtils.TruncateAt.END).toString()
-        canvas.drawText(fitted, W / 2f, top, big)
-        canvas.drawText(subtitle, W / 2f, top + 56f, text(36f, INK_SOFT))
+    /** Title and subtitle flush left, the title cut short before it reaches [right]. */
+    private fun drawWords(canvas: Canvas, title: String, subtitle: String, top: Float, right: Float) {
+        val big = text(58f, INK, bold = true).apply { textAlign = Paint.Align.LEFT }
+        val small = text(36f, INK_SOFT).apply { textAlign = Paint.Align.LEFT }
+        val room = right - MARGIN
+        canvas.drawText(TextUtils.ellipsize(title, big, room, TextUtils.TruncateAt.END).toString(), MARGIN, top, big)
+        canvas.drawText(TextUtils.ellipsize(subtitle, small, room, TextUtils.TruncateAt.END).toString(), MARGIN, top + 56f, small)
     }
 
-    /** The launcher's rosette on its cream disc, with "papacti" beside it. */
-    private fun drawLogo(context: Context, canvas: Canvas) {
-        val r = 36f
-        val word = text(44f, GREEN, bold = true).apply { textAlign = Paint.Align.LEFT }
-        val gap = 18f
-        val width = 2 * r + gap + word.measureText("papacti")
-        val left = (W - width) / 2
-        val cy = H - MARGIN - r
-        canvas.drawCircle(left + r, cy, r, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = PASTEL })
-        ContextCompat.getDrawable(context, R.drawable.ic_launcher_foreground)?.let { cap ->
-            // The rosette spans about 64 of its 108 units; 1.5× the disc leaves a thin cream rim.
-            val half = (r * 1.5f).toInt()
-            cap.setBounds((left + r).toInt() - half, cy.toInt() - half, (left + r).toInt() + half, cy.toInt() + half)
-            canvas.save()
-            canvas.clipPath(Path().apply { addCircle(left + r, cy, r, Path.Direction.CW) })
-            cap.draw(canvas)
-            canvas.restore()
+    private fun printCentre(box: RectF) = box.right - 70f to box.bottom + 20f
+    private fun printLeft(box: RectF) = printCentre(box).first - PRINT_REACH
+
+    /** The gyotaku rosette over the photo's lower-right corner, multiplied into what is under it. */
+    private fun drawPrint(canvas: Canvas, box: RectF) {
+        val (cx, cy) = printCentre(box)
+        val paint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
+            alpha = (0.9f * 255).toInt()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) blendMode = BlendMode.MULTIPLY
         }
-        canvas.drawText("papacti", left + 2 * r + gap, cy + 15f, word)
+        canvas.save()
+        canvas.translate(cx, cy)
+        canvas.rotate(-6.9f)
+        canvas.drawBitmap(print, -PRINT / 2f, -PRINT / 2f, paint)
+        canvas.restore()
+    }
+
+    /** The rosette's rings: rotation, scale and the gap between leaves, as the launcher draws it. */
+    private val RINGS: List<Triple<Float, Float, Float>> =
+        (0 until 8).map { Triple(it * 45f, 2f, 3f) } +
+            (0 until 8).map { Triple(22.5f + it * 45f, 1.5f, 4f) } +
+            (0 until 6).map { Triple(it * 60f, 1f, 6f) } +
+            (0 until 5).map { Triple(36f + it * 72f, 0.55f, 10.9f) }
+
+    private val LEAF = Path().apply {
+        moveTo(0f, 0f)
+        cubicTo(38f, -18f, 46f, -62f, 0f, -100f)
+        cubicTo(-46f, -62f, -38f, -18f, 0f, 0f)
+        close()
+    }
+
+    /** Drawn once and kept; a fixed seed makes every card carry the same print. */
+    private val print: Bitmap by lazy { gyotaku(PRINT, ROSE) }
+
+    /**
+     * The rosette as a gyotaku: inked leaves pressed onto paper. Dense rims and a paler middle,
+     * midribs and veins left unprinted, blotches and grain where the ink didn't take, and a
+     * slight bleed at the edges.
+     */
+    private fun gyotaku(size: Int, color: Int): Bitmap {
+        val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        val r = Random(7)
+        fun rnd() = r.nextFloat()
+        val clear = PorterDuffXfermode(PorterDuff.Mode.DST_OUT)
+        val ink = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
+        val lift = Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = clear }
+        val vein = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            xfermode = clear; style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND
+        }
+        val gap = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            xfermode = clear; style = Paint.Style.STROKE; strokeJoin = Paint.Join.ROUND; this.color = Color.BLACK
+        }
+
+        c.translate(size / 2f, size / 2f)
+        c.scale(size / 420f, size / 420f)
+        for ((rot, sc, sw) in RINGS) {
+            c.save()
+            c.rotate(rot + (rnd() - 0.5f) * 2.5f)
+            c.scale(sc, sc)
+            ink.alpha = ((0.92f + rnd() * 0.08f) * 255).toInt()
+            c.drawPath(LEAF, ink)
+
+            c.save()
+            c.clipPath(LEAF)
+            val a = ((0.25f + rnd() * 0.2f) * 255).toInt()
+            lift.shader = LinearGradient(
+                -30f, 0f, 30f, 0f,
+                intArrayOf(0, Color.argb(a, 0, 0, 0), 0), floatArrayOf(0f, 0.5f, 1f), Shader.TileMode.CLAMP,
+            )
+            c.drawRect(-50f, -100f, 50f, 0f, lift)
+            vein.color = Color.argb(191, 0, 0, 0)
+            vein.strokeWidth = 2.2f / sc
+            c.drawPath(Path().apply { moveTo(0f, -6f); quadTo((rnd() - 0.5f) * 6f, -50f, 0f, -92f) }, vein)
+            vein.color = Color.argb(115, 0, 0, 0)
+            vein.strokeWidth = 1.1f / sc
+            var y = -20f
+            while (y > -85f) {
+                for (d in intArrayOf(-1, 1)) {
+                    val reach = d * (16f + rnd() * 8f) * (1 + y / 130f)
+                    c.drawPath(Path().apply { moveTo(0f, y); quadTo(d * 10f, y - 6f, reach, y - 16f) }, vein)
+                }
+                y -= 13f + rnd() * 6f
+            }
+            c.restore()
+
+            gap.strokeWidth = sw + 1.5f
+            c.drawPath(LEAF, gap)
+            c.restore()
+        }
+        c.drawCircle(0f, 0f, 9f, Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = clear })
+
+        // Blotches where the paper didn't touch the ink.
+        c.setMatrix(null)
+        val blot = Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = clear }
+        repeat(70) {
+            val x = rnd() * size
+            val y = rnd() * size
+            val rad = size * (0.02f + rnd() * 0.07f)
+            blot.shader = RadialGradient(
+                x, y, rad, Color.argb(((0.15f + rnd() * 0.35f) * 255).toInt(), 0, 0, 0), 0, Shader.TileMode.CLAMP,
+            )
+            c.drawCircle(x, y, rad, blot)
+        }
+
+        // Paper grain, then a light [1 2 1] blur of the ink so the edges bleed a little.
+        val px = IntArray(size * size)
+        bmp.getPixels(px, 0, size, 0, 0, size, size)
+        val alpha = FloatArray(px.size) { i ->
+            val a = (px[i] ushr 24).toFloat()
+            if (a == 0f) 0f else { val n = rnd(); a * if (n < 0.06f) 0.15f else 0.78f + n * 0.22f }
+        }
+        val tmp = FloatArray(alpha.size)
+        for (row in 0 until size) for (col in 0 until size) {
+            val i = row * size + col
+            tmp[i] = (alpha[i - if (col > 0) 1 else 0] + 2 * alpha[i] + alpha[i + if (col < size - 1) 1 else 0]) / 4
+        }
+        val rgb = color and 0xFFFFFF
+        for (row in 0 until size) for (col in 0 until size) {
+            val i = row * size + col
+            val a = (tmp[i - if (row > 0) size else 0] + 2 * tmp[i] + tmp[i + if (row < size - 1) size else 0]) / 4
+            px[i] = (a.toInt().coerceIn(0, 255) shl 24) or rgb
+        }
+        bmp.setPixels(px, 0, size, 0, 0, size, size)
+        return bmp
     }
 
     private fun text(size: Float, color: Int, bold: Boolean = false) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
