@@ -43,8 +43,10 @@ data class DexEntity(
     val askingPrice: Long? = null,
     /** The whole plant was sold that day (v15): the row stays, out of the collection. */
     val soldOn: LocalDate? = null,
+    /** The day it went up for sale (v16); null when not for sale. */
+    val forSaleSince: LocalDate? = null,
 ) {
-    fun toModel() = DexEntry(id, number, name, species, owned, photo, acquired, note, priceLow, priceHigh, forSale, askingPrice, soldOn)
+    fun toModel() = DexEntry(id, number, name, species, owned, photo, acquired, note, priceLow, priceHigh, forSale, askingPrice, soldOn, forSaleSince)
 }
 
 /**

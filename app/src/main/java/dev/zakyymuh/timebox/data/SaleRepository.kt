@@ -27,10 +27,24 @@ class SaleRepository(private val db: TimeboxDatabase, private val clock: Clock) 
 
     fun todayDate(): LocalDate = LocalDate.now(clock)
 
-    /** Puts an owned, unsold plant up for sale (or takes it off); anything else is left alone. */
+    /**
+     * Puts an owned, unsold plant up for sale (or takes it off); anything else is left alone.
+     * Going up for sale stamps today as [DexEntity.forSaleSince]; a price change keeps the day.
+     */
     suspend fun setForSale(dexId: Long, forSale: Boolean, askingPrice: Long?) {
         val plant = dex.entry(dexId)?.takeIf { it.owned && it.soldOn == null } ?: return
-        dex.update(plant.copy(forSale = forSale, askingPrice = askingPrice))
+        val since = if (!forSale) null else plant.forSaleSince?.takeIf { plant.forSale } ?: todayDate()
+        dex.update(plant.copy(forSale = forSale, askingPrice = askingPrice, forSaleSince = since))
+    }
+
+    /**
+     * Sold: the whole plant, today, at the [negotiated] price or else its asking price. The new
+     * sale's id, or null with no price to record (or a plant that can't be sold).
+     */
+    suspend fun sold(dexId: Long, negotiated: Long?): Long? {
+        val plant = dex.entry(dexId) ?: return null
+        val form = Sales.soldToday(negotiated, plant.askingPrice, todayDate()) ?: return null
+        return record(dexId, form)
     }
 
     /** The new sale's id, or null when refused: an invalid form, a wish, or a plant already sold. */
@@ -89,7 +103,7 @@ class SaleRepository(private val db: TimeboxDatabase, private val clock: Clock) 
     private suspend fun settle(dexId: Long) {
         val plant = dex.entry(dexId) ?: return
         val whole = sales.wholeSaleFor(dexId)
-        val settled = if (whole != null) plant.copy(soldOn = whole.soldOn, forSale = false) else plant.copy(soldOn = null)
+        val settled = if (whole != null) plant.copy(soldOn = whole.soldOn, forSale = false, forSaleSince = null) else plant.copy(soldOn = null)
         if (settled != plant) dex.update(settled)
     }
 }

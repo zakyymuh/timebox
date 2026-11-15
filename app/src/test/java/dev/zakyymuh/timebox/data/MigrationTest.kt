@@ -381,4 +381,43 @@ class MigrationTest {
         assertEquals(1L, sale.dexId)
         assertEquals(50_000L, sale.price)
     }
+
+    @Test
+    fun `the upgrade to 16 keeps each plant, its sale state and its sales, with no for-sale date`() = runTest {
+        createVersion1()
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(name)
+                .callback(object : SupportSQLiteOpenHelper.Callback(15) {
+                    override fun onCreate(db: SupportSQLiteDatabase) = error("the v1 file must already exist")
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {
+                        ALL_MIGRATIONS.filter { it.endVersion <= 15 }.forEach { it.migrate(db) }
+                    }
+                })
+                .build(),
+        )
+        helper.writableDatabase.execSQL(
+            "INSERT INTO dex (id, number, name, species, owned, photo, acquired, note, createdAt, priceLow, priceHigh, coverPinned, forSale, askingPrice, soldOn) " +
+                "VALUES (1, 1, 'Kikko', '', 1, 'k.jpg', '$day', '', 0, NULL, NULL, 0, 1, 150000, NULL)",
+        )
+        helper.writableDatabase.execSQL(
+            "INSERT INTO dex (id, number, name, species, owned, photo, acquired, note, createdAt, priceLow, priceHigh, coverPinned, forSale, askingPrice, soldOn) " +
+                "VALUES (2, 2, 'Astro', '', 1, NULL, '$day', '', 0, NULL, NULL, 0, 0, NULL, '$day')",
+        )
+        helper.writableDatabase.execSQL(
+            "INSERT INTO sale (dexId, plantName, kind, quantity, price, soldOn, note, createdAt) VALUES (2, 'Astro', 'WHOLE', 1, 90000, '$day', '', 0)",
+        )
+        helper.close()
+
+        val current = openCurrent()
+        val (kikko, astro) = current.dexDao().entries()
+        assertTrue(kikko.forSale)
+        assertEquals(150_000L, kikko.askingPrice)
+        assertEquals(null, kikko.forSaleSince)
+        assertEquals(day, astro.soldOn)
+        assertEquals(90_000L, current.saleDao().salesFlow().first().single().price)
+
+        current.dexDao().update(kikko.copy(forSaleSince = day))
+        assertEquals(day, current.dexDao().entry(1)!!.forSaleSince)
+    }
 }

@@ -154,4 +154,67 @@ class SaleRepositoryTest {
         val id = plant(owned = false)
         assertNull(repo.record(id, form(SaleKind.PUP)))
     }
+
+    @Test
+    fun `putting a plant up for sale remembers the day`() = runTest {
+        val id = plant()
+        repo.setForSale(id, true, 150_000)
+        assertEquals(today, db.dexDao().entry(id)!!.forSaleSince)
+    }
+
+    @Test
+    fun `changing the asking price keeps the for-sale day`() = runTest {
+        val id = plant()
+        val earlier = LocalDate.of(2026, 11, 1)
+        db.dexDao().update(db.dexDao().entry(id)!!.copy(forSale = true, askingPrice = 150_000, forSaleSince = earlier))
+        repo.setForSale(id, true, 120_000)
+        val e = db.dexDao().entry(id)!!
+        assertEquals(120_000L, e.askingPrice)
+        assertEquals(earlier, e.forSaleSince)
+    }
+
+    @Test
+    fun `cancelling the sale clears the day and keeps the price`() = runTest {
+        val id = plant()
+        repo.setForSale(id, true, 150_000)
+        repo.setForSale(id, false, 150_000)
+        val e = db.dexDao().entry(id)!!
+        assertFalse(e.forSale)
+        assertNull(e.forSaleSince)
+        assertEquals(150_000L, e.askingPrice)
+    }
+
+    @Test
+    fun `sold with a negotiated price records one whole sale at that price today`() = runTest {
+        val id = plant()
+        repo.setForSale(id, true, 150_000)
+        assertNotNull(repo.sold(id, negotiated = 120_000))
+        val sale = repo.salesFlow().first().single()
+        assertEquals(SaleKind.WHOLE, sale.kind)
+        assertEquals(1, sale.quantity)
+        assertEquals(120_000L, sale.price)
+        assertEquals(today, sale.soldOn)
+        assertEquals("", sale.note)
+        val e = db.dexDao().entry(id)!!
+        assertEquals(today, e.soldOn)
+        assertFalse(e.forSale)
+        assertNull(e.forSaleSince)
+    }
+
+    @Test
+    fun `sold with no negotiated price records the asking price`() = runTest {
+        val id = plant()
+        repo.setForSale(id, true, 150_000)
+        repo.sold(id, negotiated = null)
+        assertEquals(150_000L, repo.salesFlow().first().single().price)
+    }
+
+    @Test
+    fun `sold with no price at all is refused`() = runTest {
+        val id = plant()
+        repo.setForSale(id, true, null)
+        assertNull(repo.sold(id, negotiated = null))
+        assertTrue(repo.salesFlow().first().isEmpty())
+        assertTrue(db.dexDao().entry(id)!!.forSale)
+    }
 }
