@@ -2,7 +2,7 @@
 <!--
   The launch animation: the rosette turns once all the way round (its rings repeat at
   different angles, so only a full turn ends as it started) while it breathes in slightly.
-  Played once by the system splash screen, slowly: one unhurried turn over 2 s.
+  Played once by the system splash screen, slowly: one turn over 2 s that keeps slowing until it stops.
   MainActivity holds the splash until it ends (keep SPLASH_MS there in step).
 -->
 <animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -13,7 +13,7 @@
             <set>
                 <objectAnimator
                     android:duration="2000"
-                    android:interpolator="@android:interpolator/accelerate_decelerate"
+                    android:interpolator="@android:interpolator/decelerate_cubic"
                     android:propertyName="rotation"
                     android:valueFrom="0"
                     android:valueTo="360" />
