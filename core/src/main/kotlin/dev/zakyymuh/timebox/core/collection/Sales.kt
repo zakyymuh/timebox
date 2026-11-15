@@ -66,6 +66,10 @@ object Sales {
         return "${sale.quantity} $noun from ${sale.plantName} · $price"
     }
 
+    /** The dashboard tile's title: this month's takings, or "Nothing sold yet" before the first sale. */
+    fun dashboardLine(sales: List<Sale>, today: LocalDate): String =
+        if (sales.isEmpty()) "Nothing sold yet" else "${Money.rupiah(totals(sales, today).monthEarned)} this month"
+
     fun suggestedPrice(asking: Long?, quantity: Int): Long? = asking?.times(quantity)
 
     /** A whole plant is always one. */

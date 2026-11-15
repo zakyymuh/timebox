@@ -61,4 +61,14 @@ class SalesTest {
     @Test fun `a sold plant is not in the collection`() = assertFalse(entry(owned = true, soldOn = nov15).inCollection)
     @Test fun `an owned plant is in the collection`() = assertTrue(entry(owned = true).inCollection)
     @Test fun `a wish is not in the collection`() = assertFalse(entry(owned = false).inCollection)
+
+    @Test fun `dashboard line with no sales at all`() = assertEquals("Nothing sold yet", Sales.dashboardLine(emptyList(), nov15))
+
+    @Test fun `dashboard line shows this month's total`() = assertEquals(
+        "Rp 420.000 this month",
+        Sales.dashboardLine(listOf(sale(SaleKind.PUP, 2, 420_000), sale(SaleKind.WHOLE, 1, 99_000, LocalDate.of(2026, 10, 1))), nov15),
+    )
+
+    @Test fun `dashboard line when nothing sold this month`() =
+        assertEquals("Rp 0 this month", Sales.dashboardLine(listOf(sale(SaleKind.PUP, 1, 10_000, LocalDate.of(2026, 10, 1))), nov15))
 }

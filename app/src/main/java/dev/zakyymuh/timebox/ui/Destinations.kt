@@ -19,6 +19,7 @@ object Destinations {
     const val DEX = "collection/{id}"
     const val DEX_EDIT = "collection/edit/{id}/{owned}"
     const val BREEDING = "breeding"
+    const val SALES = "sales"
     const val BREEDING_NEW = "breeding/new"
 
     /** The new-cross route as registered: [BREEDING_NEW] with an optional seed parent. */

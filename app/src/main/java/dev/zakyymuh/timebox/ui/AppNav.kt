@@ -27,6 +27,8 @@ import dev.zakyymuh.timebox.ui.collection.DexDetailViewModel
 import dev.zakyymuh.timebox.ui.collection.DexEditScreen
 import dev.zakyymuh.timebox.ui.collection.DexEditViewModel
 import dev.zakyymuh.timebox.ui.dashboard.DashboardScreen
+import dev.zakyymuh.timebox.ui.sales.SalesScreen
+import dev.zakyymuh.timebox.ui.sales.SalesViewModel
 import dev.zakyymuh.timebox.ui.breeding.BreedingDetailScreen
 import dev.zakyymuh.timebox.ui.breeding.BreedingDetailViewModel
 import dev.zakyymuh.timebox.ui.breeding.BreedingListScreen
@@ -88,6 +90,7 @@ fun AppNav(start: String?) {
                         DashboardViewModel(
                             plants = ServiceLocator.plantRepository(context),
                             dex = ServiceLocator.dexRepository(context),
+                            sales = ServiceLocator.saleRepository(context),
                             clock = ServiceLocator.clock,
                         )
                     }
@@ -111,6 +114,18 @@ fun AppNav(start: String?) {
                 onOpenPlants = { entry.ifResumed { nav.go(Destinations.PLANTS) } },
                 onOpenCollection = { entry.ifResumed { nav.go(Destinations.COLLECTION) } },
                 onOpenHistory = { entry.ifResumed { nav.go(Destinations.HISTORY) } },
+                onOpenSales = { entry.ifResumed { nav.go(Destinations.SALES) } },
+            )
+        }
+
+        composable(Destinations.SALES) { entry ->
+            val vm: SalesViewModel = viewModel(
+                factory = viewModelFactory { initializer { SalesViewModel(ServiceLocator.saleRepository(context)) } },
+            )
+            SalesScreen(
+                viewModel = vm,
+                onBack = { entry.ifResumed { nav.popBackStack() } },
+                onOpenPlant = { id -> entry.ifResumed { nav.go(Destinations.dex(id)) } },
             )
         }
 

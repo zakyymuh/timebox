@@ -48,6 +48,7 @@ class DashboardViewModelTest {
     private lateinit var db: TimeboxDatabase
     private lateinit var plants: PlantRepository
     private lateinit var dex: DexRepository
+    private lateinit var sales: SaleRepository
 
     @Before
     fun setUp() {
@@ -56,6 +57,7 @@ class DashboardViewModelTest {
             .allowMainThreadQueries().build()
         plants = PlantRepository(db.plantDao(), clock)
         dex = DexRepository(db.dexDao(), clock) {}
+        sales = SaleRepository(db, clock)
     }
 
     @After
@@ -64,7 +66,7 @@ class DashboardViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun vm(random: Random = Random(1)) = DashboardViewModel(plants, dex, clock, random)
+    private fun vm(random: Random = Random(1)) = DashboardViewModel(plants, dex, sales, clock, random)
 
     private suspend fun DashboardViewModel.await(check: (DashboardState) -> Boolean) =
         withTimeout(5_000) { state.first(check) }
@@ -90,10 +92,22 @@ class DashboardViewModelTest {
     fun `a sold plant is not counted or used as the cover`() = runBlocking {
         val sold = dex.add(DexForm("Greenovia"), owned = true, photo = "g.jpg")
         dex.add(DexForm("Aloe"), owned = true, photo = "a.jpg")
-        SaleRepository(db, clock).record(sold, SaleForm(SaleKind.WHOLE, price = 150_000, soldOn = LocalDate.of(2026, 11, 7)))
+        sales.record(sold, SaleForm(SaleKind.WHOLE, price = 150_000, soldOn = LocalDate.of(2026, 11, 7)))
         assertEquals("1 plant", vm().await { it.owned == "1 plant" }.owned)
         val covers = (1..12).map { seed -> vm(Random(seed)).await { it.cover != null }.cover }.toSet()
         assertEquals(setOf("a.jpg"), covers)
+    }
+
+    @Test
+    fun `sales line is nothing sold yet with no sales`() = runBlocking {
+        assertEquals("Nothing sold yet", vm().await { it.date != null }.sales)
+    }
+
+    @Test
+    fun `sales line shows this month's total`() = runBlocking {
+        val id = dex.add(DexForm("Astro"), owned = true, photo = null)
+        sales.record(id, SaleForm(SaleKind.PUP, quantity = 3, price = 420_000, soldOn = LocalDate.of(2026, 11, 2)))
+        assertEquals("Rp 420.000 this month", vm().await { it.sales == "Rp 420.000 this month" }.sales)
     }
 
     @Test

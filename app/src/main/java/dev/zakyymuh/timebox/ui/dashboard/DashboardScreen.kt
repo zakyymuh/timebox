@@ -73,7 +73,7 @@ import java.time.format.DateTimeFormatter
 private const val GREETING = "Hello, Zaky 👋"
 
 /** The week, the two tiles, soil and breeding: the cards that come in one by one. */
-private const val CARDS = 6
+private const val CARDS = 7
 private const val REVEAL_STEP_MS = 140L
 
 /** Hidden until [order] < [shown], then fades in and rises a little into place. */
@@ -113,6 +113,7 @@ fun DashboardScreen(
     onOpenPlants: () -> Unit,
     onOpenCollection: () -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenSales: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -162,13 +163,14 @@ fun DashboardScreen(
                     EventTile(state.event, onOpenHistory, Modifier.weight(1f).reveal(2, shown))
                 }
 
+                Box(Modifier.reveal(3, shown)) { SalesCard(state.sales, onOpenSales) }
                 Row(Modifier.padding(top = CARD_GAP)) {
                     // The soil slot keeps its half while the status loads, so the light tile doesn't jump.
-                    Box(Modifier.weight(1f).reveal(3, shown)) { soil?.let { SoilWaterCard(it, onOpenSoil, compact = true) } }
+                    Box(Modifier.weight(1f).reveal(4, shown)) { soil?.let { SoilWaterCard(it, onOpenSoil, compact = true) } }
                     Spacer(Modifier.width(CARD_GAP))
-                    LightCard(onOpenLight, Modifier.weight(1f).reveal(4, shown))
+                    LightCard(onOpenLight, Modifier.weight(1f).reveal(5, shown))
                 }
-                crosses?.let { Box(Modifier.reveal(5, shown)) { BreedingCard(it.firstOrNull(), onOpenBreeding) } }
+                crosses?.let { Box(Modifier.reveal(6, shown)) { BreedingCard(it.firstOrNull(), onOpenBreeding) } }
                 Spacer(Modifier.height(32.dp))
             }
         }
@@ -267,6 +269,34 @@ private fun EventTile(event: String?, onOpen: () -> Unit, modifier: Modifier) {
         ) {
             Text("🕘", fontSize = 18.sp)
         }
+    }
+}
+
+/** The way into sales: full width, a 💲, and this month's takings. */
+@Composable
+private fun SalesCard(line: String, onOpen: () -> Unit) {
+    SoftCard(
+        color = Fresh.Page,
+        corner = CARD_CORNER,
+        onClick = onOpen,
+        modifier = Modifier
+            .padding(top = CARD_GAP)
+            .shadow(10.dp, RoundedCornerShape(CARD_CORNER), ambientColor = Fresh.Ink.copy(alpha = 0.08f), spotColor = Fresh.Ink.copy(alpha = 0.08f))
+            .semantics(mergeDescendants = true) { contentDescription = "Open sales" },
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(SMALL_ICON).clip(CircleShape).background(Fresh.Pastel),
+            ) {
+                Text("💲", fontSize = 18.sp)
+            }
+            Spacer(Modifier.width(12.dp))
+            Text("Sales", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Fresh.Ink, modifier = Modifier.weight(1f))
+            Text("→", style = MaterialTheme.typography.titleMedium, color = Fresh.InkSoft)
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(line, style = MaterialTheme.typography.bodyMedium, color = Fresh.InkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

@@ -2,6 +2,7 @@ package dev.zakyymuh.timebox.ui.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.zakyymuh.timebox.core.collection.Sales
 import dev.zakyymuh.timebox.core.plants.FunFact
 import dev.zakyymuh.timebox.core.plants.FunFacts
 import dev.zakyymuh.timebox.core.plants.PlantEvents
@@ -9,6 +10,7 @@ import dev.zakyymuh.timebox.core.plants.StripDay
 import dev.zakyymuh.timebox.core.plants.WeekStrip
 import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PlantRepository
+import dev.zakyymuh.timebox.data.SaleRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -31,11 +33,14 @@ data class DashboardState(
     val event: String? = null,
     /** A plant fact from the encyclopedia; tapping it draws another. */
     val fact: FunFact? = null,
+    /** The sales tile's title: "Rp 420.000 this month", or "Nothing sold yet". */
+    val sales: String = "",
 )
 
 class DashboardViewModel(
     private val plants: PlantRepository,
     private val dex: DexRepository,
+    private val sales: SaleRepository,
     private val clock: Clock,
     private val random: Random = Random.Default,
 ) : ViewModel() {
@@ -51,7 +56,7 @@ class DashboardViewModel(
     /** Which photo is the collection tile's background: drawn once, so it changes each open. */
     private val coverSeed = random.nextInt()
 
-    val state: StateFlow<DashboardState> = combine(
+    private val base = combine(
         plants.plantsFlow(),
         plants.wateringsFlow(),
         dex.entriesFlow(),
@@ -67,6 +72,10 @@ class DashboardViewModel(
             event = PlantEvents.random(plantList, waterings, entries, date, Random(eventSeed)),
             fact = shownFact,
         )
+    }
+
+    val state: StateFlow<DashboardState> = combine(base, sales.salesFlow()) { shown, sold ->
+        shown.copy(sales = Sales.dashboardLine(sold, shown.date ?: LocalDate.now(clock)))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardState())
 
     /** Another fact, never the one already showing. */
