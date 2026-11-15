@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -52,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -62,8 +64,6 @@ import dev.zakyymuh.timebox.ui.theme.Fresh
 import dev.zakyymuh.timebox.ui.theme.Label
 import dev.zakyymuh.timebox.core.collection.Breeding
 import dev.zakyymuh.timebox.core.collection.Cross
-import dev.zakyymuh.timebox.ui.soil.SoilWaterCard
-import dev.zakyymuh.timebox.ui.light.LightCard
 import dev.zakyymuh.timebox.core.soil.SampleStatus
 import dev.zakyymuh.timebox.ui.common.SoftCard
 import dev.zakyymuh.timebox.ui.plants.PlantDot
@@ -72,7 +72,7 @@ import java.time.format.DateTimeFormatter
 
 private const val GREETING = "Hello, Zaky 👋"
 
-/** The week, the two tiles, soil and breeding: the cards that come in one by one. */
+/** The week, the collection, the four small tiles and breeding: they come in one by one. */
 private const val CARDS = 7
 private const val REVEAL_STEP_MS = 140L
 
@@ -96,11 +96,13 @@ internal val CARD_CORNER = 32.dp
 internal val CARD_GAP = 14.dp
 private val ICON = 56.dp
 private val SMALL_ICON = 40.dp
+private val GRID_GAP = 10.dp
+private val SMALL_CORNER = 22.dp
 
 /**
- * The front door: a greeting with a plant fact, the plant schedule as a week, two tiles
- * (the collection and a random thing that happened, which opens the history), the soil
- * air-space check, the light check, and breeding.
+ * The front door: a greeting with a plant fact, the plant schedule as a week, the
+ * collection tile with a 2×2 of small icon tiles beside it (history, sales, the soil
+ * air-space check, the light check), and breeding.
  */
 @Composable
 fun DashboardScreen(
@@ -160,16 +162,29 @@ fun DashboardScreen(
                 Row(Modifier.padding(top = CARD_GAP)) {
                     CollectionTile(state.cover, state.owned, onOpenCollection, Modifier.weight(1f).reveal(1, shown))
                     Spacer(Modifier.width(CARD_GAP))
-                    EventTile(state.event, onOpenHistory, Modifier.weight(1f).reveal(2, shown))
+                    // Beside the collection, the same size: four small doors, two by two.
+                    Column(Modifier.weight(1f).aspectRatio(1f)) {
+                        Row(Modifier.weight(1f)) {
+                            IconTile("🕘", "Open history", Brush.verticalGradient(listOf(Fresh.Page, Lilac.copy(alpha = 0.22f))), onOpenHistory, Modifier.weight(1f).reveal(2, shown))
+                            Spacer(Modifier.width(GRID_GAP))
+                            IconTile("💲", "Open sales: ${state.sales}", Brush.verticalGradient(listOf(Fresh.Page, Fresh.Pastel)), onOpenSales, Modifier.weight(1f).reveal(3, shown))
+                        }
+                        Spacer(Modifier.height(GRID_GAP))
+                        Row(Modifier.weight(1f)) {
+                            IconTile(
+                                "🧪",
+                                if (soil is SampleStatus.Due) "Open soil air space check, due now" else "Open soil air space check",
+                                Brush.verticalGradient(listOf(Color(0xFFE6F5FF), Color(0xFFBFE2FF))),
+                                onOpenSoil,
+                                Modifier.weight(1f).reveal(4, shown),
+                                badge = soil is SampleStatus.Due,
+                            )
+                            Spacer(Modifier.width(GRID_GAP))
+                            IconTile("☀️", "Open light check", Brush.verticalGradient(listOf(Color(0xFFFFF6DC), Color(0xFFFFE1B0))), onOpenLight, Modifier.weight(1f).reveal(5, shown))
+                        }
+                    }
                 }
 
-                Box(Modifier.reveal(3, shown)) { SalesCard(state.sales, onOpenSales) }
-                Row(Modifier.padding(top = CARD_GAP)) {
-                    // The soil slot keeps its half while the status loads, so the light tile doesn't jump.
-                    Box(Modifier.weight(1f).reveal(4, shown)) { soil?.let { SoilWaterCard(it, onOpenSoil, compact = true) } }
-                    Spacer(Modifier.width(CARD_GAP))
-                    LightCard(onOpenLight, Modifier.weight(1f).reveal(5, shown))
-                }
                 crosses?.let { Box(Modifier.reveal(6, shown)) { BreedingCard(it.firstOrNull(), onOpenBreeding) } }
                 Spacer(Modifier.height(32.dp))
             }
@@ -249,54 +264,40 @@ private fun CollectionTile(cover: String?, owned: String, onOpen: () -> Unit, mo
     }
 }
 
-/** A random thing that happened, new each time the app opens; the way into the history. */
+/**
+ * One of the four small doors beside the collection: just an emoji on a soft gradient,
+ * named for screen readers. [badge] puts a dot in the corner (soil: a check is due).
+ */
 @Composable
-private fun EventTile(event: String?, onOpen: () -> Unit, modifier: Modifier) {
-    Tile(
-        color = Fresh.Page,
-        ink = Fresh.Ink,
-        label = "History",
-        title = event ?: "Nothing yet",
-        onClick = onOpen,
-        description = "Open history",
-        modifier = modifier,
-        titleStyle = MaterialTheme.typography.titleSmall,
+private fun IconTile(
+    emoji: String,
+    description: String,
+    background: Brush,
+    onClick: () -> Unit,
+    modifier: Modifier,
+    badge: Boolean = false,
+) {
+    val shape = RoundedCornerShape(SMALL_CORNER)
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .fillMaxHeight()
+            .shadow(8.dp, shape, ambientColor = Fresh.Ink.copy(alpha = 0.08f), spotColor = Fresh.Ink.copy(alpha = 0.08f))
+            .clip(shape)
+            .background(background)
+            .clickable(role = Role.Button, onClickLabel = description, onClick = onClick)
+            .clearAndSetSemantics { contentDescription = description },
     ) {
-        // Smaller than the collection's icon, so a whole line about what happened fits.
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.size(SMALL_ICON).clip(CircleShape).background(Lilac.copy(alpha = 0.18f)),
-        ) {
-            Text("🕘", fontSize = 18.sp)
-        }
-    }
-}
-
-/** The way into sales: full width, a 💲, and this month's takings. */
-@Composable
-private fun SalesCard(line: String, onOpen: () -> Unit) {
-    SoftCard(
-        color = Fresh.Page,
-        corner = CARD_CORNER,
-        onClick = onOpen,
-        modifier = Modifier
-            .padding(top = CARD_GAP)
-            .shadow(10.dp, RoundedCornerShape(CARD_CORNER), ambientColor = Fresh.Ink.copy(alpha = 0.08f), spotColor = Fresh.Ink.copy(alpha = 0.08f))
-            .semantics(mergeDescendants = true) { contentDescription = "Open sales" },
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(emoji, fontSize = 28.sp)
+        if (badge) {
             Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.size(SMALL_ICON).clip(CircleShape).background(Fresh.Pastel),
-            ) {
-                Text("💲", fontSize = 18.sp)
-            }
-            Spacer(Modifier.width(12.dp))
-            Text("Sales", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Fresh.Ink, modifier = Modifier.weight(1f))
-            Text("→", style = MaterialTheme.typography.titleMedium, color = Fresh.InkSoft)
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(10.dp)
+                    .size(10.dp)
+                    .background(Color(0xFF0E3A5C), CircleShape),
+            )
         }
-        Spacer(Modifier.height(10.dp))
-        Text(line, style = MaterialTheme.typography.bodyMedium, color = Fresh.InkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

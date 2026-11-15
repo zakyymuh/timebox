@@ -9,8 +9,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,7 +33,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,88 +49,50 @@ private val CORNER = 32.dp
 /**
  * The soil air-space reminder, on water: a pale blue that drifts softly behind blurred
  * light, a big 🧪 in a white circle, and when the sample is next due. "Due now" when it is.
- * Tappable when [onClick] is given. [compact] makes it a square tile (icon on top, a short
- * line below) to sit beside another on the dashboard.
+ * Tappable when [onClick] is given.
  */
 @Composable
-fun SoilWaterCard(status: SampleStatus, onClick: (() -> Unit)?, modifier: Modifier = Modifier, compact: Boolean = false) {
+fun SoilWaterCard(status: SampleStatus, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
     val due = status is SampleStatus.Due
     val shape = RoundedCornerShape(CORNER)
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .let { if (compact) it.aspectRatio(1f) else it }
             .shadow(10.dp, shape, ambientColor = WaterBottom, spotColor = WaterBottom)
             .clip(shape)
             .background(Brush.verticalGradient(listOf(WaterTop, WaterBottom)))
             .let { if (onClick != null) it.clickable(onClick = onClick) else it },
     ) {
         Water(Modifier.matchParentSize())
-        if (compact) {
-            Column(Modifier.matchParentSize().padding(18.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(52.dp)
-                    Spacer(Modifier.weight(1f))
-                    if (due) DuePill()
-                }
-                Spacer(Modifier.weight(1f))
-                Text("Soil air space", style = Label, color = Ink.copy(alpha = 0.7f), maxLines = 1)
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    shortLabel(status),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Ink,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                )
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(20.dp)) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(68.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.9f)),
+            ) {
+                Text("🧪", fontSize = 32.sp)
             }
-        } else {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(20.dp)) {
-                Icon(68.dp)
-                Spacer(Modifier.width(16.dp))
-                Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Soil air space", style = Label, color = Ink.copy(alpha = 0.7f), modifier = Modifier.weight(1f))
-                        if (due) DuePill()
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Soil air space", style = Label, color = Ink.copy(alpha = 0.7f), modifier = Modifier.weight(1f))
+                    if (due) {
+                        Text(
+                            "Due now",
+                            style = Label,
+                            color = Color.White,
+                            modifier = Modifier.clip(CircleShape).background(Ink).padding(horizontal = 10.dp, vertical = 3.dp),
+                        )
                     }
-                    Spacer(Modifier.width(4.dp))
-                    Text(SampleCheck.label(status), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Ink)
                 }
-                if (onClick != null) {
-                    Spacer(Modifier.width(8.dp))
-                    Text("→", style = MaterialTheme.typography.titleMedium, color = Ink.copy(alpha = 0.6f))
-                }
+                Spacer(Modifier.width(4.dp))
+                Text(SampleCheck.label(status), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Ink)
+            }
+            if (onClick != null) {
+                Spacer(Modifier.width(8.dp))
+                Text("→", style = MaterialTheme.typography.titleMedium, color = Ink.copy(alpha = 0.6f))
             }
         }
     }
-}
-
-/** The tile's line: [SampleCheck.label] cut down to fit half the width. */
-private fun shortLabel(status: SampleStatus): String = when (status) {
-    SampleStatus.NotStarted -> "Test a sample to start"
-    is SampleStatus.Waiting -> if (status.left == 1) "Check after 1 more watering" else "Check after ${status.left} more waterings"
-    is SampleStatus.Due -> "Time to check your sample"
-}
-
-@Composable
-private fun Icon(size: Dp) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier.size(size).clip(CircleShape).background(Color.White.copy(alpha = 0.9f)),
-    ) {
-        Text("🧪", fontSize = (size.value * 0.47f).sp)
-    }
-}
-
-@Composable
-private fun DuePill() {
-    Text(
-        "Due now",
-        style = Label,
-        color = Color.White,
-        modifier = Modifier.clip(CircleShape).background(Ink).padding(horizontal = 10.dp, vertical = 3.dp),
-    )
 }
 
 /** Soft blobs of light that drift slowly, blurred like light through water. */
