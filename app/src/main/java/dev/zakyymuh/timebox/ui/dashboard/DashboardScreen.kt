@@ -174,7 +174,12 @@ fun DashboardScreen(
                             IconTile(
                                 "🧪",
                                 if (soil is SampleStatus.Due) "Open soil air space check, due now" else "Open soil air space check",
-                                Brush.verticalGradient(listOf(Color(0xFFE6F5FF), Color(0xFFBFE2FF))),
+                                // A deeper blue when a check is due.
+                                if (soil is SampleStatus.Due) {
+                                    Brush.verticalGradient(listOf(Color(0xFF9CCEF2), Color(0xFF5E9FD3)))
+                                } else {
+                                    Brush.verticalGradient(listOf(Color(0xFFE6F5FF), Color(0xFFBFE2FF)))
+                                },
                                 onOpenSoil,
                                 Modifier.weight(1f).reveal(4, shown),
                             )
