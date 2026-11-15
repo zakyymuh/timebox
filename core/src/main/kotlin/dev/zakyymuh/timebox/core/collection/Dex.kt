@@ -25,9 +25,14 @@ data class DexEntry(
     val askingPrice: Long? = null,
     /** The whole plant was sold on this day: kept, but out of the collection. */
     val soldOn: LocalDate? = null,
+    /** The day it last went up for sale; null when not for sale. */
+    val forSaleSince: LocalDate? = null,
 ) {
-    /** Owned and still here: what the collection, its count and breeding show. */
+    /** Owned and still here: what the collection's count and breeding show. */
     val inCollection: Boolean get() = owned && soldOn == null
+
+    /** What the collection grid shows: in the collection and not on the sales shelf. */
+    val inGrid: Boolean get() = inCollection && !forSale
 
     /** Sold: its page still opens, but nothing on it can be changed. */
     val readOnly: Boolean get() = soldOn != null
@@ -60,6 +65,9 @@ object Dex {
 
     /** After the highest ever given, so a deleted number is never handed out again. */
     fun nextNumber(existing: List<Int>): Int = (existing.maxOrNull() ?: 0) + 1
+
+    /** The collection grid: a plant up for sale sits under Sales instead. */
+    fun grid(entries: List<DexEntry>): List<DexEntry> = entries.filter { it.inGrid }
 
     fun gotIt(entry: DexEntry, today: LocalDate): DexEntry = entry.copy(owned = true, acquired = today)
 

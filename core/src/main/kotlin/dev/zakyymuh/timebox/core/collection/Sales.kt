@@ -72,6 +72,13 @@ object Sales {
 
     fun suggestedPrice(asking: Long?, quantity: Int): Long? = asking?.times(quantity)
 
+    /** What a plant sold for: the [negotiated] price, else the [asking] one; null with neither (or out of range). */
+    fun soldPrice(negotiated: Long?, asking: Long?): Long? = (negotiated ?: asking)?.takeIf { it in 0..DexForm.MAX_PRICE }
+
+    /** Tapping Sold: the whole plant, today, at [soldPrice]; null when there is no price to record. */
+    fun soldToday(negotiated: Long?, asking: Long?, today: LocalDate): SaleForm? =
+        soldPrice(negotiated, asking)?.let { SaleForm(kind = SaleKind.WHOLE, quantity = 1, price = it, soldOn = today, note = "") }
+
     /** A whole plant is always one. */
     fun normalise(form: SaleForm): SaleForm = if (form.kind == SaleKind.WHOLE) form.copy(quantity = 1) else form
 }
