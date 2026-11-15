@@ -22,20 +22,23 @@ import android.text.TextPaint
 import android.text.TextUtils
 import androidx.core.content.FileProvider
 import dev.zakyymuh.timebox.ServiceLocator
+import dev.zakyymuh.timebox.core.collection.Story
+import dev.zakyymuh.timebox.core.motor.Money
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Random
 
 /**
- * A picture to share: the photo(s) on rounded corners inside a white frame, a title and a
- * subtitle under them set flush left, and the papacti rosette pressed over the photo's
- * lower-right corner like a gyotaku ink print, half on the photo and half on the frame.
- * Colours are fixed, so the card looks the same in light and dark mode.
+ * A picture to share, shaped as an Instagram Story ([Story], 1080×1920): the photo(s) on
+ * rounded corners filling the tall space inside a white frame, a title and a subtitle under
+ * them set flush left, and the papacti rosette pressed over the photo's lower-right corner
+ * like a gyotaku ink print, half on the photo and half on the frame. Colours are fixed, so
+ * the card looks the same in light and dark mode.
  */
 object ShareCard {
-    private const val W = 1080
-    private const val H = 1350
+    private const val W = Story.WIDTH
+    private const val H = Story.HEIGHT
     private const val MARGIN = 56f
     private const val RADIUS = 44f
 
@@ -49,13 +52,23 @@ object ShareCard {
     private const val PRINT_REACH = PRINT * 0.48f
 
     /** One plant: its photo [file] (null draws a pot), its name and its number. */
-    suspend fun sharePlant(context: Context, file: String?, title: String, subtitle: String) {
+    suspend fun sharePlant(context: Context, file: String?, title: String, subtitle: String) =
+        sharePortrait(context, file, title, price = null, subtitle = subtitle)
+
+    /**
+     * A plant up for sale: the same story as [sharePlant], with its asking [price] in bold rose
+     * between the title and the subtitle (none without a price). No SALE text or mark.
+     */
+    suspend fun sharePlantForSale(context: Context, file: String?, title: String, price: Long?, subtitle: String) =
+        sharePortrait(context, file, title, price, subtitle)
+
+    /** The photo fills a tall portrait box, full width inside the margin, ending [Story.PHOTO_BOTTOM]. */
+    private suspend fun sharePortrait(context: Context, file: String?, title: String, price: Long?, subtitle: String) {
         val photo = load(context, file)
         share(context, title) { canvas ->
-            val side = W - 2 * MARGIN
-            val box = RectF(MARGIN, MARGIN, MARGIN + side, MARGIN + side)
+            val box = RectF(MARGIN, MARGIN, W - MARGIN, Story.PHOTO_BOTTOM)
             drawPhoto(canvas, photo, box)
-            drawWords(canvas, title, subtitle, top = box.bottom + 70f, right = printLeft(box) - 24f)
+            drawWords(canvas, title, subtitle, top = box.bottom + 70f, right = printLeft(box) - 24f, price = price)
             drawPrint(canvas, box)
         }
     }
@@ -67,22 +80,23 @@ object ShareCard {
         share(context, title) { canvas ->
             val gap = 28f
             val side = (W - 2 * MARGIN - gap) / 2
-            val top = MARGIN + 120f
-            drawPhoto(canvas, m, RectF(MARGIN, top, MARGIN + side, top + side))
-            drawPhoto(canvas, f, RectF(MARGIN + side + gap, top, W - MARGIN, top + side))
+            // Side by side and as tall as the single photo, the × on the seam.
+            val box = RectF(MARGIN, MARGIN, W - MARGIN, Story.PHOTO_BOTTOM)
+            drawPhoto(canvas, m, RectF(box.left, box.top, box.left + side, box.bottom))
+            drawPhoto(canvas, f, RectF(box.right - side, box.top, box.right, box.bottom))
             // The × sits on a white disc over the seam.
             val cx = W / 2f
-            val cy = top + side / 2
+            val cy = box.centerY()
             canvas.drawCircle(cx, cy, 52f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt() })
             canvas.drawText("×", cx, cy + 26f, text(76f, ROSE, bold = true))
-            val box = RectF(MARGIN, top, W - MARGIN, top + side)
-            drawWords(canvas, title, subtitle, top = box.bottom + 110f, right = W - MARGIN)
+            drawWords(canvas, title, subtitle, top = box.bottom + 70f, right = printLeft(box) - 24f)
             drawPrint(canvas, box)
         }
     }
 
+    /** Decoded for the story's height, so the tall crop doesn't go soft. */
     private suspend fun load(context: Context, file: String?): Bitmap? =
-        file?.let { ServiceLocator.photoStore(context).load(it, W) }
+        file?.let { ServiceLocator.photoStore(context).load(it, H) }
 
     /** Draws the card, writes it to cache/share and opens the share sheet. */
     private suspend fun share(context: Context, title: String, draw: (Canvas) -> Unit) {
@@ -125,13 +139,22 @@ object ShareCard {
         canvas.drawRoundRect(box, RADIUS, RADIUS, paint)
     }
 
-    /** Title and subtitle flush left, the title cut short before it reaches [right]. */
-    private fun drawWords(canvas: Canvas, title: String, subtitle: String, top: Float, right: Float) {
+    /**
+     * Title and subtitle flush left, cut short before they reach [right]. A [price] goes
+     * between them in bold rose.
+     */
+    private fun drawWords(canvas: Canvas, title: String, subtitle: String, top: Float, right: Float, price: Long? = null) {
         val big = text(58f, INK, bold = true).apply { textAlign = Paint.Align.LEFT }
+        val rose = text(46f, ROSE, bold = true).apply { textAlign = Paint.Align.LEFT }
         val small = text(36f, INK_SOFT).apply { textAlign = Paint.Align.LEFT }
         val room = right - MARGIN
         canvas.drawText(TextUtils.ellipsize(title, big, room, TextUtils.TruncateAt.END).toString(), MARGIN, top, big)
-        canvas.drawText(TextUtils.ellipsize(subtitle, small, room, TextUtils.TruncateAt.END).toString(), MARGIN, top + 56f, small)
+        var subtitleTop = top + 56f
+        if (price != null) {
+            canvas.drawText(Money.rupiah(price), MARGIN, top + 62f, rose)
+            subtitleTop = top + 118f
+        }
+        canvas.drawText(TextUtils.ellipsize(subtitle, small, room, TextUtils.TruncateAt.END).toString(), MARGIN, subtitleTop, small)
     }
 
     private fun printCentre(box: RectF) = box.right - 70f to box.bottom + 20f
