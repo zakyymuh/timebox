@@ -20,7 +20,15 @@ data class DexEntry(
     /** The price seen for a wish, in rupiah: one price, or a range. */
     val priceLow: Long? = null,
     val priceHigh: Long? = null,
-)
+    /** Up for sale, at [askingPrice] rupiah (each). */
+    val forSale: Boolean = false,
+    val askingPrice: Long? = null,
+    /** The whole plant was sold on this day: kept, but out of the collection. */
+    val soldOn: LocalDate? = null,
+) {
+    /** Owned and still here: what the collection, its count and breeding show. */
+    val inCollection: Boolean get() = owned && soldOn == null
+}
 
 /** What the edit screen holds. */
 data class DexForm(
