@@ -347,4 +347,38 @@ class MigrationTest {
         assertEquals("k.jpg", kikko.photo)
         assertFalse(kikko.coverPinned)
     }
+
+    @Test
+    fun `the upgrade to 15 keeps each plant, not for sale, and adds an empty sale table that works`() = runTest {
+        createVersion1()
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(name)
+                .callback(object : SupportSQLiteOpenHelper.Callback(14) {
+                    override fun onCreate(db: SupportSQLiteDatabase) = error("the v1 file must already exist")
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {
+                        ALL_MIGRATIONS.filter { it.endVersion <= 14 }.forEach { it.migrate(db) }
+                    }
+                })
+                .build(),
+        )
+        helper.writableDatabase.execSQL(
+            "INSERT INTO dex (id, number, name, species, owned, photo, acquired, note, createdAt, priceLow, priceHigh, coverPinned) VALUES (1, 1, 'Kikko', '', 1, 'k.jpg', '$day', '', 0, NULL, NULL, 0)",
+        )
+        helper.close()
+
+        val current = openCurrent()
+        val kikko = current.dexDao().entries().single()
+        assertEquals("k.jpg", kikko.photo)
+        assertFalse(kikko.forSale)
+        assertEquals(null, kikko.askingPrice)
+        assertEquals(null, kikko.soldOn)
+
+        current.saleDao().insert(
+            SaleEntity(dexId = 1, plantName = "Kikko", kind = "PUP", quantity = 2, price = 50_000, soldOn = day, note = "", createdAt = Instant.EPOCH),
+        )
+        val sale = current.saleDao().salesFlow().first().single()
+        assertEquals(1L, sale.dexId)
+        assertEquals(50_000L, sale.price)
+    }
 }

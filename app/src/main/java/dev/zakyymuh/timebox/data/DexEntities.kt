@@ -38,8 +38,13 @@ data class DexEntity(
     val priceHigh: Long? = null,
     /** The owner chose [photo] as the default picture (v14), so a newer photo does not replace it. */
     @ColumnInfo(defaultValue = "0") val coverPinned: Boolean = false,
+    /** Up for sale at [askingPrice] rupiah each (v15). */
+    @ColumnInfo(defaultValue = "0") val forSale: Boolean = false,
+    val askingPrice: Long? = null,
+    /** The whole plant was sold that day (v15): the row stays, out of the collection. */
+    val soldOn: LocalDate? = null,
 ) {
-    fun toModel() = DexEntry(id, number, name, species, owned, photo, acquired, note, priceLow, priceHigh)
+    fun toModel() = DexEntry(id, number, name, species, owned, photo, acquired, note, priceLow, priceHigh, forSale, askingPrice, soldOn)
 }
 
 /**
@@ -112,6 +117,10 @@ interface DexDao {
 
     @Query("DELETE FROM dex WHERE id = :id")
     suspend fun delete(id: Long)
+
+    /** Owned, not yet sold, and up for sale. */
+    @Query("SELECT * FROM dex WHERE owned = 1 AND forSale = 1 AND soldOn IS NULL ORDER BY number")
+    fun forSaleFlow(): Flow<List<DexEntity>>
 
     @Query("SELECT name FROM dex")
     suspend fun names(): List<String>

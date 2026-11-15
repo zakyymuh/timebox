@@ -177,5 +177,21 @@ val MIGRATION_13_14 = object : Migration(13, 14) {
     }
 }
 
+/** Version 14 → 15: plants can be up for sale, and every sale is kept. Every row kept. */
+val MIGRATION_14_15 = object : Migration(14, 15) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `dex` ADD COLUMN `forSale` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `dex` ADD COLUMN `askingPrice` INTEGER")
+        db.execSQL("ALTER TABLE `dex` ADD COLUMN `soldOn` TEXT")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `sale` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `dexId` INTEGER, " +
+                "`plantName` TEXT NOT NULL, `kind` TEXT NOT NULL, `quantity` INTEGER NOT NULL, `price` INTEGER NOT NULL, " +
+                "`soldOn` TEXT NOT NULL, `note` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, " +
+                "FOREIGN KEY(`dexId`) REFERENCES `dex`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_sale_dexId` ON `sale` (`dexId`)")
+    }
+}
+
 /** Every migration, in order, for the app and its tests. */
-val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
+val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
