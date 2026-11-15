@@ -241,7 +241,12 @@ fun AppNav(start: String?) {
             val vm: DexDetailViewModel = viewModel(
                 factory = viewModelFactory {
                     initializer {
-                        DexDetailViewModel(ServiceLocator.dexRepository(context), ServiceLocator.photoStore(context), id)
+                        DexDetailViewModel(
+                            ServiceLocator.dexRepository(context),
+                            ServiceLocator.photoStore(context),
+                            id,
+                            ServiceLocator.saleRepository(context),
+                        )
                     }
                 },
             )

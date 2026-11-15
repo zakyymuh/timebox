@@ -67,6 +67,9 @@ import dev.zakyymuh.timebox.core.collection.DexEntry
 import dev.zakyymuh.timebox.core.collection.DexForm
 import dev.zakyymuh.timebox.core.collection.DexShot
 import dev.zakyymuh.timebox.core.collection.DexSort
+import dev.zakyymuh.timebox.core.collection.SaleForm
+import dev.zakyymuh.timebox.core.collection.SaleKind
+import dev.zakyymuh.timebox.core.motor.Money
 import dev.zakyymuh.timebox.core.plants.Encyclopedia
 import dev.zakyymuh.timebox.ui.common.AddButton
 import dev.zakyymuh.timebox.ui.common.AddButtonClearance
@@ -75,7 +78,9 @@ import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.common.SoftCard
 import dev.zakyymuh.timebox.ui.common.TopBar
 import dev.zakyymuh.timebox.ui.plants.Choice
+import dev.zakyymuh.timebox.ui.sales.RecordSaleSheet
 import dev.zakyymuh.timebox.ui.sales.SaleRibbon
+import dev.zakyymuh.timebox.ui.sales.SellSheet
 import dev.zakyymuh.timebox.ui.sales.saleBorder
 import dev.zakyymuh.timebox.ui.common.DateField
 import dev.zakyymuh.timebox.ui.common.softFieldColors
@@ -257,6 +262,8 @@ fun DexDetailScreen(
     val origin by viewModel.origin.collectAsStateWithLifecycle()
     val children by viewModel.children.collectAsStateWithLifecycle()
     var repotting by rememberSaveable { mutableStateOf(false) }
+    var selling by rememberSaveable { mutableStateOf(false) }
+    var recording by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     // The picked photos wait here while their note is asked for.
@@ -360,6 +367,43 @@ fun DexDetailScreen(
         }
     }
 
+    val seller = state.entry?.takeIf { it.inCollection }
+    if (selling && seller != null) {
+        SellSheet(
+            name = seller.name,
+            forSale = seller.forSale,
+            asking = seller.askingPrice,
+            onSave = { on, asking ->
+                selling = false
+                viewModel.setForSale(on, asking)
+            },
+            onRecord = {
+                selling = false
+                recording = true
+            },
+            onDismiss = { selling = false },
+        )
+    }
+    if (recording && seller != null) {
+        RecordSaleSheet(
+            title = "Record a sale",
+            initial = SaleForm(kind = if (seller.forSale) SaleKind.WHOLE else SaleKind.PUP, soldOn = viewModel.todayDate()),
+            asking = seller.askingPrice,
+            onSave = { form ->
+                recording = false
+                viewModel.recordSale(form) { kept ->
+                    val text = when {
+                        !kept -> "Couldn't save that sale"
+                        form.kind == SaleKind.WHOLE -> "Sold! ${seller.name} moves to your sales 💲"
+                        else -> "Sale saved 💲"
+                    }
+                    Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+                }
+            },
+            onDismiss = { recording = false },
+        )
+    }
+
     // Deleted from the edit screen: nothing left to show here.
     LaunchedEffect(state) { if (state.loaded && state.entry == null) onBack() }
 
@@ -383,15 +427,31 @@ fun DexDetailScreen(
                 Text(e.species, style = MaterialTheme.typography.bodyLarge, color = Fresh.InkSoft)
             }
             Spacer(Modifier.height(12.dp))
+            val soldOn = e.soldOn
             Pill(
-                text = if (e.owned) {
-                    e.acquired?.let { "In your collection since ${it.format(sinceFormat)}" } ?: "In your collection"
-                } else {
-                    "On your wishlist"
+                text = when {
+                    soldOn != null -> "Sold on ${soldOn.format(sinceFormat)}"
+                    e.owned -> e.acquired?.let { "In your collection since ${it.format(sinceFormat)}" } ?: "In your collection"
+                    else -> "On your wishlist"
                 },
-                color = if (e.owned) Fresh.Pastel else Fresh.Card,
-                textColor = if (e.owned) Fresh.GreenDeep else Fresh.InkSoft,
+                color = if (e.inCollection) Fresh.Pastel else Fresh.Card,
+                textColor = if (e.inCollection) Fresh.GreenDeep else Fresh.InkSoft,
             )
+            if (e.inCollection && e.forSale) {
+                SoftCard(
+                    color = Fresh.Pastel,
+                    corner = 20.dp,
+                    onClick = { selling = true },
+                    modifier = Modifier.padding(top = 12.dp).saleBorder(20.dp),
+                ) {
+                    Text("For sale", style = Label, color = Fresh.GreenDeep.copy(alpha = 0.75f))
+                    Text(
+                        e.askingPrice?.let { "${Money.rupiah(it)} each" } ?: "No price set",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Fresh.GreenDeep,
+                    )
+                }
+            }
             if (!e.owned) {
                 Dex.price(e.priceLow, e.priceHigh)?.let { price ->
                     SoftCard(color = Fresh.Pastel, corner = 20.dp, modifier = Modifier.padding(top = 12.dp)) {
@@ -417,7 +477,7 @@ fun DexDetailScreen(
 
             PlantList("Children", children, onOpenPlant, Modifier.padding(top = 20.dp))
 
-            if (e.owned) {
+            if (e.inCollection) {
                 Spacer(Modifier.height(24.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Button(
@@ -436,6 +496,15 @@ fun DexDetailScreen(
                     ) {
                         Text("❤️  Breed", style = MaterialTheme.typography.labelLarge, color = Fresh.Ink)
                     }
+                }
+                Spacer(Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = { selling = true },
+                    shape = CircleShape,
+                    border = BorderStroke(1.5.dp, Fresh.Green),
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                ) {
+                    Text("💲  Sell", style = MaterialTheme.typography.labelLarge, color = Fresh.GreenDeep)
                 }
             }
             if (!e.owned) {

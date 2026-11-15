@@ -7,8 +7,10 @@ import dev.zakyymuh.timebox.core.collection.DexEntry
 import dev.zakyymuh.timebox.core.collection.DexForm
 import dev.zakyymuh.timebox.core.collection.DexOrigin
 import dev.zakyymuh.timebox.core.collection.DexShot
+import dev.zakyymuh.timebox.core.collection.SaleForm
 import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PhotoStore
+import dev.zakyymuh.timebox.data.SaleRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -32,6 +34,7 @@ class DexDetailViewModel(
     private val repo: DexRepository,
     private val photos: PhotoStore,
     private val id: Long,
+    private val sales: SaleRepository,
 ) : ViewModel() {
     val state: StateFlow<DexDetailState> = repo.entriesFlow()
         .map { list -> DexDetailState(loaded = true, entry = list.firstOrNull { it.id == id }) }
@@ -64,6 +67,18 @@ class DexDetailViewModel(
             busy = false
             onDone(added)
         }
+    }
+
+    /** Today, for a new sale's date. */
+    fun todayDate(): LocalDate = sales.todayDate()
+
+    fun setForSale(forSale: Boolean, asking: Long?) {
+        viewModelScope.launch { sales.setForSale(id, forSale, asking) }
+    }
+
+    /** [onDone] gets whether the sale was kept (false for an invalid form or a plant already sold). */
+    fun recordSale(form: SaleForm, onDone: (Boolean) -> Unit) {
+        viewModelScope.launch { onDone(sales.record(id, form) != null) }
     }
 
     fun setNote(photoId: Long, note: String) {
