@@ -28,6 +28,9 @@ data class DexEntry(
 ) {
     /** Owned and still here: what the collection, its count and breeding show. */
     val inCollection: Boolean get() = owned && soldOn == null
+
+    /** Sold: its page still opens, but nothing on it can be changed. */
+    val readOnly: Boolean get() = soldOn != null
 }
 
 /** What the edit screen holds. */

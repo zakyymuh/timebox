@@ -23,7 +23,8 @@ object PlantEvents {
             }
 
             val arrived = entries.filter { it.owned && it.acquired != null }.sortedBy { it.acquired }
-            arrived.firstOrNull()?.let {
+            // A sold plant still "arrived" once, but it is no longer the oldest one you have.
+            arrived.firstOrNull { it.inCollection }?.let {
                 add("Your oldest plant is ${it.name}, ${with(it.acquired!!, today)} with you.")
             }
             arrived.forEach { add("You got ${it.name} ${LastDone.ago(it.acquired!!, today)}.") }

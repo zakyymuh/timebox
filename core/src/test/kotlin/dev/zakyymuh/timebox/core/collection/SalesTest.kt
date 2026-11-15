@@ -71,4 +71,8 @@ class SalesTest {
 
     @Test fun `dashboard line when nothing sold this month`() =
         assertEquals("Rp 0 this month", Sales.dashboardLine(listOf(sale(SaleKind.PUP, 1, 10_000, LocalDate.of(2026, 10, 1))), nov15))
+
+    @Test fun `a sold plant's page is read-only`() = assertTrue(entry(owned = true, soldOn = nov15).readOnly)
+    @Test fun `a plant in the collection can be changed`() = assertFalse(entry(owned = true).readOnly)
+    @Test fun `a wish can be changed`() = assertFalse(entry(owned = false).readOnly)
 }

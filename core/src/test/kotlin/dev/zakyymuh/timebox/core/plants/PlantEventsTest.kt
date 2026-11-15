@@ -53,6 +53,14 @@ class PlantEventsTest {
     }
 
     @Test
+    fun `a sold plant is never the oldest plant`() {
+        val sold = dex("Monstera", d(9, 8)).copy(soldOn = d(5))
+        val lines = all(emptyList(), emptyList(), listOf(sold, dex("Aloe", d(1))))
+        assertTrue("Your oldest plant is Aloe, 8 days with you." in lines)
+        assertTrue(lines.none { it.startsWith("Your oldest plant is Monstera") })
+    }
+
+    @Test
     fun `wishlist plants and plants without a date are left out`() {
         val lines = all(emptyList(), emptyList(), listOf(dex("Fig", d(1), owned = false), dex("Jade", null)))
         assertEquals(emptyList<String>(), lines)

@@ -413,13 +413,20 @@ fun DexDetailScreen(
         ) {
             val e = state.entry
             TopBar(title = e?.let { Dex.label(it.number) } ?: "", onBack = onBack) {
-                if (e != null) {
+                // A sold plant's page is read-only: no Edit, no new photos, no note changes.
+                if (e != null && !e.readOnly) {
                     Pill("Edit", color = Fresh.Card, modifier = Modifier.clickable(onClick = onEdit))
                 }
             }
             if (e == null) return@Column
 
-            PhotoDiary(shots ?: emptyList(), wished = !e.owned, onAdd = pick, onEditNote = { editing = it }, cover = e.photo)
+            PhotoDiary(
+                shots ?: emptyList(),
+                wished = !e.owned,
+                onAdd = pick.takeUnless { e.readOnly },
+                onEditNote = if (e.readOnly) null else { shot -> editing = shot },
+                cover = e.photo,
+            )
             origin?.let { OriginCard(it, onOpenPlant, Modifier.fillMaxWidth().padding(top = 12.dp)) }
 
             Text(e.name, style = MaterialTheme.typography.headlineLarge, color = Fresh.Ink, modifier = Modifier.padding(top = 18.dp))

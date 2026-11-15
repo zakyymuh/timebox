@@ -63,8 +63,8 @@ private val PhotoShape = RoundedCornerShape(28.dp)
 fun PhotoDiary(
     shots: List<DexShot>,
     wished: Boolean,
-    onAdd: () -> Unit,
-    onEditNote: (DexShot) -> Unit,
+    onAdd: (() -> Unit)?,
+    onEditNote: ((DexShot) -> Unit)?,
     cover: String? = null,
 ) {
     val pager = rememberPagerState { shots.size }
@@ -79,7 +79,7 @@ fun PhotoDiary(
             if (shots.isEmpty()) {
                 DexPhoto(
                     null,
-                    Modifier.fillMaxWidth().aspectRatio(1f).clip(PhotoShape).clickable(onClick = onAdd),
+                    Modifier.fillMaxWidth().aspectRatio(1f).clip(PhotoShape).then(if (onAdd != null) Modifier.clickable(onClick = onAdd) else Modifier),
                     wished = wished,
                     side = 1080,
                     emojiSize = 72.sp,
@@ -87,7 +87,10 @@ fun PhotoDiary(
             } else {
                 HorizontalPager(state = pager, key = { shots[it].id }, pageSpacing = 12.dp) { page ->
                     val shot = shots[page]
-                    Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(PhotoShape).clickable { onEditNote(shot) }) {
+                    Box(
+                        Modifier.fillMaxWidth().aspectRatio(1f).clip(PhotoShape)
+                            .then(if (onEditNote != null) Modifier.clickable { onEditNote(shot) } else Modifier),
+                    ) {
                         DexPhoto(shot.file, Modifier.matchParentSize().pinchToZoom(), wished = wished, side = 1080, emojiSize = 72.sp)
                         if (shots.size > 1 && shot.file == cover) {
                             Pill(
@@ -108,13 +111,15 @@ fun PhotoDiary(
                     }
                 }
             }
-            RoundButton(
-                glyph = "📷",
-                onClick = onAdd,
-                container = Fresh.Page,
-                description = "Add a photo",
-                modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
-            )
+            if (onAdd != null) {
+                RoundButton(
+                    glyph = "📷",
+                    onClick = onAdd,
+                    container = Fresh.Page,
+                    description = "Add a photo",
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
+                )
+            }
         }
         if (shots.isNotEmpty()) {
             val page = pager.currentPage.coerceIn(0, shots.lastIndex)
