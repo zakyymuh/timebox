@@ -7,7 +7,7 @@ import dev.zakyymuh.timebox.core.collection.DexEntry
 import dev.zakyymuh.timebox.core.collection.DexForm
 import dev.zakyymuh.timebox.core.collection.DexOrigin
 import dev.zakyymuh.timebox.core.collection.DexShot
-import dev.zakyymuh.timebox.core.collection.SaleForm
+import dev.zakyymuh.timebox.core.collection.Dex
 import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PhotoStore
 import dev.zakyymuh.timebox.data.SaleRepository
@@ -20,9 +20,13 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
-/** The grid. Null until loaded, so the empty message never flashes. */
+/** The collection page's grid (a plant up for sale sits under Sales instead) and the wishlist. */
+data class CollectionLists(val grid: List<DexEntry>, val wishlist: List<DexEntry>)
+
+/** The two tabs. Null until loaded, so the empty message never flashes. */
 class CollectionViewModel(repo: DexRepository) : ViewModel() {
-    val entries: StateFlow<List<DexEntry>?> = repo.entriesFlow()
+    val lists: StateFlow<CollectionLists?> = repo.entriesFlow()
+        .map { all -> CollectionLists(grid = Dex.grid(all), wishlist = all.filterNot { it.owned }) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
 
@@ -69,16 +73,31 @@ class DexDetailViewModel(
         }
     }
 
-    /** Today, for a new sale's date. */
-    fun todayDate(): LocalDate = sales.todayDate()
-
+    /** Puts it up for sale at [asking] (or changes the price), or with false takes it back into the collection. */
     fun setForSale(forSale: Boolean, asking: Long?) {
         viewModelScope.launch { sales.setForSale(id, forSale, asking) }
     }
 
+    /** Today, for a new sale's date. */
+    fun todayDate(): LocalDate = sales.todayDate()
+
     /** [onDone] gets whether the sale was kept (false for an invalid form or a plant already sold). */
-    fun recordSale(form: SaleForm, onDone: (Boolean) -> Unit) {
+    fun recordSale(form: dev.zakyymuh.timebox.core.collection.SaleForm, onDone: (Boolean) -> Unit) {
         viewModelScope.launch { onDone(sales.record(id, form) != null) }
+    }
+
+    /**
+     * Sold today, at [negotiated] or else the asking price. [onDone] gets whether the sale was
+     * kept (false with no price at all, or a plant already sold).
+     */
+    fun sold(negotiated: Long?, onDone: (Boolean) -> Unit) {
+        if (busy) return
+        busy = true
+        viewModelScope.launch {
+            val kept = sales.sold(id, negotiated) != null
+            busy = false
+            onDone(kept)
+        }
     }
 
     fun setNote(photoId: Long, note: String) {

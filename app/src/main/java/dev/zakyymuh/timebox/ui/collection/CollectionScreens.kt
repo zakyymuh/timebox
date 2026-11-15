@@ -99,14 +99,12 @@ fun CollectionScreen(
     onOpen: (Long) -> Unit,
     onAdd: (owned: Boolean) -> Unit,
 ) {
-    val entries by viewModel.entries.collectAsStateWithLifecycle()
+    val all by viewModel.lists.collectAsStateWithLifecycle()
     // Page 0 is the collection, page 1 the wishlist; swipe or tap a tab to move.
     val pager = rememberPagerState { 2 }
     val wishlist = pager.currentPage == 1
     val scope = rememberCoroutineScope()
     var sort by rememberSaveable { mutableStateOf(DexSort.Date) }
-    var forSaleOnly by rememberSaveable { mutableStateOf(false) }
-    val all = entries
 
     Scaffold(
         containerColor = Fresh.Page,
@@ -123,35 +121,23 @@ fun CollectionScreen(
                     }
                 }
             }
-            if (all == null) return@Column
-            val owned = all.filter { it.inCollection }
-            val wished = all.filterNot { it.owned }
-            val onSale = owned.filter { it.forSale }
-            // Only the collection page narrows; the chip goes away when nothing is for sale.
-            val saleOnly = forSaleOnly && onSale.isNotEmpty()
-            // Scrolls sideways so three chips fit on a narrow phone.
+            val lists = all ?: return@Column
+            // A plant up for sale is on the Sales shelf, not here; the count matches the grid.
+            val owned = lists.grid
+            val wished = lists.wishlist
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp),
             ) {
-                Choice("Collection · ${owned.size}", selected = !wishlist && !saleOnly) {
-                    forSaleOnly = false
-                    scope.launch { pager.animateScrollToPage(0) }
-                }
+                Choice("Collection · ${owned.size}", selected = !wishlist) { scope.launch { pager.animateScrollToPage(0) } }
                 Choice("Wishlist · ${wished.size}", selected = wishlist) { scope.launch { pager.animateScrollToPage(1) } }
-                if (onSale.isNotEmpty()) {
-                    Choice("For sale · ${onSale.size}", selected = !wishlist && saleOnly) {
-                        forSaleOnly = true
-                        scope.launch { pager.animateScrollToPage(0) }
-                    }
-                }
             }
             Spacer(Modifier.height(16.dp))
 
             HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) { page ->
                 val isWish = page == 1
                 val pageSort = if (!isWish && sort == DexSort.Price) DexSort.Date else sort
-                DexGrid(pageSort.apply(if (isWish) wished else if (saleOnly) onSale else owned), isWish, onOpen)
+                DexGrid(pageSort.apply(if (isWish) wished else owned), isWish, onOpen)
             }
         }
     }
