@@ -61,8 +61,8 @@ class DashboardViewModel(
         DashboardState(
             date = date,
             week = WeekStrip.of(plantList, waterings, date),
-            owned = entries.count { it.owned }.let { if (it == 1) "1 plant" else "$it plants" },
-            cover = entries.filter { it.owned && it.photo != null }.sortedBy { it.number }
+            owned = entries.count { it.inCollection }.let { if (it == 1) "1 plant" else "$it plants" },
+            cover = entries.filter { it.inCollection && it.photo != null }.sortedBy { it.number }
                 .let { photos -> photos.getOrNull(Math.floorMod(coverSeed, photos.size.coerceAtLeast(1)))?.photo },
             event = PlantEvents.random(plantList, waterings, entries, date, Random(eventSeed)),
             fact = shownFact,

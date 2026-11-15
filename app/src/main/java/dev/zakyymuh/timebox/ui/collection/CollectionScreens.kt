@@ -23,6 +23,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -74,6 +75,8 @@ import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.common.SoftCard
 import dev.zakyymuh.timebox.ui.common.TopBar
 import dev.zakyymuh.timebox.ui.plants.Choice
+import dev.zakyymuh.timebox.ui.sales.SaleRibbon
+import dev.zakyymuh.timebox.ui.sales.saleBorder
 import dev.zakyymuh.timebox.ui.common.DateField
 import dev.zakyymuh.timebox.ui.common.softFieldColors
 import dev.zakyymuh.timebox.ui.theme.Fresh
@@ -97,6 +100,7 @@ fun CollectionScreen(
     val wishlist = pager.currentPage == 1
     val scope = rememberCoroutineScope()
     var sort by rememberSaveable { mutableStateOf(DexSort.Date) }
+    var forSaleOnly by rememberSaveable { mutableStateOf(false) }
     val all = entries
 
     Scaffold(
@@ -115,18 +119,34 @@ fun CollectionScreen(
                 }
             }
             if (all == null) return@Column
-            val owned = all.filter { it.owned }
+            val owned = all.filter { it.inCollection }
             val wished = all.filterNot { it.owned }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 20.dp)) {
-                Choice("Collection · ${owned.size}", selected = !wishlist) { scope.launch { pager.animateScrollToPage(0) } }
+            val onSale = owned.filter { it.forSale }
+            // Only the collection page narrows; the chip goes away when nothing is for sale.
+            val saleOnly = forSaleOnly && onSale.isNotEmpty()
+            // Scrolls sideways so three chips fit on a narrow phone.
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp),
+            ) {
+                Choice("Collection · ${owned.size}", selected = !wishlist && !saleOnly) {
+                    forSaleOnly = false
+                    scope.launch { pager.animateScrollToPage(0) }
+                }
                 Choice("Wishlist · ${wished.size}", selected = wishlist) { scope.launch { pager.animateScrollToPage(1) } }
+                if (onSale.isNotEmpty()) {
+                    Choice("For sale · ${onSale.size}", selected = !wishlist && saleOnly) {
+                        forSaleOnly = true
+                        scope.launch { pager.animateScrollToPage(0) }
+                    }
+                }
             }
             Spacer(Modifier.height(16.dp))
 
             HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.Top) { page ->
                 val isWish = page == 1
                 val pageSort = if (!isWish && sort == DexSort.Price) DexSort.Date else sort
-                DexGrid(pageSort.apply(if (isWish) wished else owned), isWish, onOpen)
+                DexGrid(pageSort.apply(if (isWish) wished else if (saleOnly) onSale else owned), isWish, onOpen)
             }
         }
     }
@@ -188,19 +208,19 @@ private fun SortMenu(sort: DexSort, sorts: List<DexSort>, onPick: (DexSort) -> U
 }
 
 @Composable
-private fun DexCard(entry: DexEntry, onClick: () -> Unit) {
+internal fun DexCard(entry: DexEntry, onClick: () -> Unit) {
     Column(
         Modifier
+            .then(if (entry.forSale) Modifier.saleBorder(24.dp) else Modifier)
             .clip(RoundedCornerShape(24.dp))
             .background(Fresh.Card)
             .clickable(onClick = onClick)
             .padding(8.dp),
     ) {
-        DexPhoto(
-            entry.photo,
-            Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(18.dp)),
-            wished = !entry.owned,
-        )
+        Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(18.dp))) {
+            DexPhoto(entry.photo, Modifier.matchParentSize(), wished = !entry.owned)
+            if (entry.forSale) SaleRibbon(entry.askingPrice)
+        }
         Column(Modifier.padding(horizontal = 6.dp, vertical = 8.dp)) {
             Text(Dex.label(entry.number), style = Small, color = Fresh.InkSoft)
             Text(

@@ -38,7 +38,7 @@ class BreedingNewViewModel(
 ) : ViewModel() {
     /** Plants in the collection; wishes cannot be parents. */
     val parents: StateFlow<List<DexEntry>?> = dex.entriesFlow()
-        .map { list -> list.filter { it.owned } }
+        .map { list -> list.filter { it.inCollection } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val _form = MutableStateFlow(BreedingForm())

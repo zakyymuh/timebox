@@ -3,12 +3,15 @@ package dev.zakyymuh.timebox.ui.dashboard
 import androidx.room.Room
 import dev.zakyymuh.timebox.TestClock
 import dev.zakyymuh.timebox.core.collection.DexForm
+import dev.zakyymuh.timebox.core.collection.SaleForm
+import dev.zakyymuh.timebox.core.collection.SaleKind
 import dev.zakyymuh.timebox.core.plants.DayMark
 import dev.zakyymuh.timebox.core.plants.PlantColour
 import dev.zakyymuh.timebox.core.plants.PlantForm
 import dev.zakyymuh.timebox.core.plants.FunFacts
 import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PlantRepository
+import dev.zakyymuh.timebox.data.SaleRepository
 import dev.zakyymuh.timebox.data.TimeboxDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,6 +32,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.random.Random
 
@@ -80,6 +84,16 @@ class DashboardViewModelTest {
         dex.add(DexForm("Variegata"), owned = false, photo = null)
         dex.add(DexForm("Aloe"), owned = true, photo = null)
         assertEquals("2 plants", vm().await { it.owned == "2 plants" }.owned)
+    }
+
+    @Test
+    fun `a sold plant is not counted or used as the cover`() = runBlocking {
+        val sold = dex.add(DexForm("Greenovia"), owned = true, photo = "g.jpg")
+        dex.add(DexForm("Aloe"), owned = true, photo = "a.jpg")
+        SaleRepository(db, clock).record(sold, SaleForm(SaleKind.WHOLE, price = 150_000, soldOn = LocalDate.of(2026, 11, 7)))
+        assertEquals("1 plant", vm().await { it.owned == "1 plant" }.owned)
+        val covers = (1..12).map { seed -> vm(Random(seed)).await { it.cover != null }.cover }.toSet()
+        assertEquals(setOf("a.jpg"), covers)
     }
 
     @Test
