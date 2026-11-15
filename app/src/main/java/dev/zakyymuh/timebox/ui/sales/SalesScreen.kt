@@ -74,7 +74,6 @@ fun SalesScreen(viewModel: SalesViewModel, onBack: () -> Unit, onOpenPlant: (Lon
         RecordSaleSheet(
             title = "Change this sale",
             initial = SaleForm(sale.kind, sale.quantity, sale.price, sale.soldOn, sale.note),
-            asking = null,
             onSave = { form ->
                 editing = null
                 viewModel.edit(sale.id, form)

@@ -1,9 +1,6 @@
 package dev.zakyymuh.timebox.ui.sales
 
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,18 +19,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import dev.zakyymuh.timebox.core.collection.DexForm
 import dev.zakyymuh.timebox.core.collection.SaleForm
-import dev.zakyymuh.timebox.core.collection.SaleKind
 import dev.zakyymuh.timebox.core.collection.Sales
 import dev.zakyymuh.timebox.core.motor.Money
 import dev.zakyymuh.timebox.ui.common.DateField
 import dev.zakyymuh.timebox.ui.common.softFieldColors
-import dev.zakyymuh.timebox.ui.plants.Choice
 import dev.zakyymuh.timebox.ui.theme.Fresh
 import dev.zakyymuh.timebox.ui.theme.Label
 import dev.zakyymuh.timebox.ui.theme.Small
@@ -124,47 +118,28 @@ fun SoldDialog(name: String, asking: Long?, onSold: (negotiated: Long?) -> Unit,
 }
 
 /**
- * What went out, how many, for how much, and when. The price follows asking × quantity
- * until it is typed over. With [onDelete] it is editing a sale already kept.
+ * Changing a sale already kept, from a long press in the Sold tab: what it sold for, when,
+ * a note, or Delete. Sales are whole plants now; an old pup or cutting sale keeps its kind
+ * and count, which this never changes.
  */
 @Composable
 fun RecordSaleSheet(
     title: String,
     initial: SaleForm,
-    asking: Long?,
     onSave: (SaleForm) -> Unit,
     onDismiss: () -> Unit,
     onDelete: (() -> Unit)? = null,
 ) {
     var form by remember { mutableStateOf(initial) }
-    var typed by remember { mutableStateOf(initial.price != null) }
-    val shown = Sales.normalise(form).let { f -> if (typed) f else f.copy(price = Sales.suggestedPrice(asking, f.quantity)) }
+    val shown = Sales.normalise(form)
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Fresh.Page,
         title = { Text(title) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                    SaleKind.entries.forEach { kind ->
-                        Choice(kind.label, selected = form.kind == kind) { form = form.copy(kind = kind) }
-                    }
-                }
-                if (form.kind != SaleKind.WHOLE) {
-                    Spacer(Modifier.height(12.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("How many", style = MaterialTheme.typography.titleMedium, color = Fresh.Ink, modifier = Modifier.weight(1f))
-                        TextButton(onClick = { form = form.copy(quantity = (form.quantity - 1).coerceAtLeast(1)) }) { Text("−") }
-                        Text("${form.quantity}", style = MaterialTheme.typography.titleMedium, color = Fresh.Ink)
-                        TextButton(onClick = { form = form.copy(quantity = (form.quantity + 1).coerceAtMost(SaleForm.MAX_QUANTITY)) }) { Text("+") }
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-                Text("Sold for (total)", style = Label, color = Fresh.InkSoft, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
-                RupiahField(shown.price, "Rp, e.g. 150000", Modifier.fillMaxWidth()) {
-                    typed = true
-                    form = form.copy(price = it)
-                }
+                Text("Sold for", style = Label, color = Fresh.InkSoft, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
+                RupiahField(shown.price, "Rp, e.g. 150000", Modifier.fillMaxWidth()) { form = form.copy(price = it) }
                 Spacer(Modifier.height(12.dp))
                 DateField("Sold on", form.soldOn) { form = form.copy(soldOn = it) }
                 Spacer(Modifier.height(12.dp))
