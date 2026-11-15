@@ -162,8 +162,12 @@ fun DashboardScreen(
                     EventTile(state.event, onOpenHistory, Modifier.weight(1f).reveal(2, shown))
                 }
 
-                soil?.let { SoilWaterCard(it, onOpenSoil, Modifier.padding(top = CARD_GAP).reveal(3, shown)) }
-                LightCard(onOpenLight, Modifier.padding(top = CARD_GAP).reveal(4, shown))
+                Row(Modifier.padding(top = CARD_GAP)) {
+                    // The soil slot keeps its half while the status loads, so the light tile doesn't jump.
+                    Box(Modifier.weight(1f).reveal(3, shown)) { soil?.let { SoilWaterCard(it, onOpenSoil, compact = true) } }
+                    Spacer(Modifier.width(CARD_GAP))
+                    LightCard(onOpenLight, Modifier.weight(1f).reveal(4, shown))
+                }
                 crosses?.let { Box(Modifier.reveal(5, shown)) { BreedingCard(it.firstOrNull(), onOpenBreeding) } }
                 Spacer(Modifier.height(32.dp))
             }
