@@ -78,14 +78,6 @@ class DexDetailViewModel(
         viewModelScope.launch { sales.setForSale(id, forSale, asking) }
     }
 
-    /** Today, for a new sale's date. */
-    fun todayDate(): LocalDate = sales.todayDate()
-
-    /** [onDone] gets whether the sale was kept (false for an invalid form or a plant already sold). */
-    fun recordSale(form: dev.zakyymuh.timebox.core.collection.SaleForm, onDone: (Boolean) -> Unit) {
-        viewModelScope.launch { onDone(sales.record(id, form) != null) }
-    }
-
     /**
      * Sold today, at [negotiated] or else the asking price. [onDone] gets whether the sale was
      * kept (false with no price at all, or a plant already sold).

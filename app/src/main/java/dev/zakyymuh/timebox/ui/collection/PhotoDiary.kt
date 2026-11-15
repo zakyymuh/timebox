@@ -48,6 +48,8 @@ import dev.zakyymuh.timebox.core.collection.DexShot
 import dev.zakyymuh.timebox.ui.common.Pill
 import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.common.softFieldColors
+import dev.zakyymuh.timebox.ui.sales.StoryShareButton
+import dev.zakyymuh.timebox.ui.sales.saleBorder
 import dev.zakyymuh.timebox.ui.theme.Fresh
 import dev.zakyymuh.timebox.ui.theme.Small
 
@@ -57,7 +59,9 @@ private val PhotoShape = RoundedCornerShape(28.dp)
  * A plant's photos, newest first: swipe through the big photo. Each note sits in a bubble
  * at the top, popping in the first time its photo is shown. Tap a photo to change its
  * note, make it the default picture or delete it; pinch to zoom. The camera adds a photo.
- * The photo whose file is [cover] wears a ★ Default tag.
+ * The photo whose file is [cover] wears a ★ Default tag. A plant up for sale is [framed] in
+ * rose, and [onShare] puts a round share button in the top-right corner; it gets the file of
+ * the photo shown (the cover when there are none).
  */
 @Composable
 fun PhotoDiary(
@@ -66,6 +70,8 @@ fun PhotoDiary(
     onAdd: (() -> Unit)?,
     onEditNote: ((DexShot) -> Unit)?,
     cover: String? = null,
+    framed: Boolean = false,
+    onShare: ((file: String?) -> Unit)? = null,
 ) {
     val pager = rememberPagerState { shots.size }
     // Ids whose bubble already popped, so swiping back does not pop it again.
@@ -75,7 +81,7 @@ fun PhotoDiary(
     LaunchedEffect(newest) { if (newest != null) pager.scrollToPage(0) }
 
     Column {
-        Box {
+        Box(if (framed) Modifier.saleBorder(28.dp) else Modifier) {
             if (shots.isEmpty()) {
                 DexPhoto(
                     null,
@@ -105,7 +111,9 @@ fun PhotoDiary(
                                 shot,
                                 showing = pager.currentPage == page,
                                 popped = popped,
-                                modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp, start = 24.dp, end = 24.dp),
+                                // Clear of the share button when there is one.
+                                modifier = Modifier.align(Alignment.TopCenter)
+                                    .padding(top = 16.dp, start = if (onShare != null) 68.dp else 24.dp, end = if (onShare != null) 68.dp else 24.dp),
                             )
                         }
                     }
@@ -118,6 +126,12 @@ fun PhotoDiary(
                     container = Fresh.Page,
                     description = "Add a photo",
                     modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
+                )
+            }
+            if (onShare != null) {
+                StoryShareButton(
+                    onClick = { onShare(shots.getOrNull(pager.currentPage)?.file ?: cover) },
+                    modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
                 )
             }
         }

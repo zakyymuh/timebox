@@ -14,8 +14,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -32,6 +30,7 @@ import dev.zakyymuh.timebox.core.collection.DexForm
 import dev.zakyymuh.timebox.core.collection.SaleForm
 import dev.zakyymuh.timebox.core.collection.SaleKind
 import dev.zakyymuh.timebox.core.collection.Sales
+import dev.zakyymuh.timebox.core.motor.Money
 import dev.zakyymuh.timebox.ui.common.DateField
 import dev.zakyymuh.timebox.ui.common.softFieldColors
 import dev.zakyymuh.timebox.ui.plants.Choice
@@ -54,49 +53,71 @@ internal fun RupiahField(value: Long?, hint: String, modifier: Modifier = Modifi
     )
 }
 
-/** Put a plant up for sale (or take it off) with an asking price; or go record a sale. */
+/**
+ * The asking price, optional: to put a plant up for sale ("Put Astro up for sale" / "Put up
+ * for sale"), or to change the price of one already for sale.
+ */
 @Composable
-fun SellSheet(
-    name: String,
-    forSale: Boolean,
+fun AskingPriceDialog(
+    title: String,
     asking: Long?,
-    onSave: (forSale: Boolean, asking: Long?) -> Unit,
-    onRecord: () -> Unit,
+    confirm: String,
+    onSave: (asking: Long?) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var on by remember { mutableStateOf(forSale) }
     var price by remember { mutableStateOf(asking) }
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Fresh.Page,
-        title = { Text("Sell $name") },
+        title = { Text(title) },
         text = {
             Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("For sale", style = MaterialTheme.typography.titleMedium, color = Fresh.Ink)
-                        Text("Shows a SALE ribbon in your collection", style = Small, color = Fresh.InkSoft)
-                    }
-                    Switch(
-                        checked = on,
-                        onCheckedChange = { on = it },
-                        colors = SwitchDefaults.colors(checkedTrackColor = Fresh.Green),
-                    )
-                }
-                Spacer(Modifier.height(14.dp))
-                Text("Asking price, each (optional)", style = Label, color = Fresh.InkSoft, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
+                Text("Asking price (optional)", style = Label, color = Fresh.InkSoft, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
                 RupiahField(price, "Rp, e.g. 150000", Modifier.fillMaxWidth()) { price = it }
-                Spacer(Modifier.height(14.dp))
-                TextButton(onClick = onRecord) {
-                    Text("💲  Record a sale →", style = MaterialTheme.typography.labelLarge, color = Fresh.GreenDeep)
-                }
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onSave(on, price) },
+                onClick = { onSave(price) },
                 enabled = (price ?: 0) <= DexForm.MAX_PRICE,
-            ) { Text("Save") }
+            ) { Text(confirm) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+/**
+ * "Sold Astro?": an optional negotiated price over the [asking] one. Sold stays disabled
+ * until there is a price to record: the negotiated one, or else the asking one.
+ */
+@Composable
+fun SoldDialog(name: String, asking: Long?, onSold: (negotiated: Long?) -> Unit, onDismiss: () -> Unit) {
+    var negotiated by remember { mutableStateOf<Long?>(null) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Fresh.Page,
+        title = { Text("Sold $name?") },
+        text = {
+            Column {
+                Text(
+                    asking?.let { "Asking price ${Money.rupiah(it)}" } ?: "No asking price",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Fresh.Ink,
+                )
+                Spacer(Modifier.height(14.dp))
+                Text("Negotiated price (optional)", style = Label, color = Fresh.InkSoft, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
+                RupiahField(negotiated, asking?.let { Money.rupiah(it) } ?: "Rp, e.g. 150000", Modifier.fillMaxWidth()) { negotiated = it }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Leave it empty if they paid the asking price. Sold today.",
+                    style = Small,
+                    color = Fresh.InkSoft,
+                    modifier = Modifier.padding(start = 4.dp),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSold(negotiated) }, enabled = Sales.soldPrice(negotiated, asking) != null) { Text("Sold") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )

@@ -67,8 +67,6 @@ import dev.zakyymuh.timebox.core.collection.DexEntry
 import dev.zakyymuh.timebox.core.collection.DexForm
 import dev.zakyymuh.timebox.core.collection.DexShot
 import dev.zakyymuh.timebox.core.collection.DexSort
-import dev.zakyymuh.timebox.core.collection.SaleForm
-import dev.zakyymuh.timebox.core.collection.SaleKind
 import dev.zakyymuh.timebox.core.motor.Money
 import dev.zakyymuh.timebox.core.plants.Encyclopedia
 import dev.zakyymuh.timebox.ui.common.AddButton
@@ -78,10 +76,15 @@ import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.common.SoftCard
 import dev.zakyymuh.timebox.ui.common.TopBar
 import dev.zakyymuh.timebox.ui.plants.Choice
-import dev.zakyymuh.timebox.ui.sales.RecordSaleSheet
+import dev.zakyymuh.timebox.ui.sales.AskingPriceDialog
 import dev.zakyymuh.timebox.ui.sales.SaleRibbon
-import dev.zakyymuh.timebox.ui.sales.SellSheet
+import dev.zakyymuh.timebox.ui.sales.SoldDialog
 import dev.zakyymuh.timebox.ui.sales.saleBorder
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import dev.zakyymuh.timebox.ui.common.DateField
 import dev.zakyymuh.timebox.ui.common.softFieldColors
 import dev.zakyymuh.timebox.ui.theme.Fresh
@@ -90,6 +93,10 @@ import dev.zakyymuh.timebox.ui.theme.Small
 import java.time.format.DateTimeFormatter
 
 private val sinceFormat = DateTimeFormatter.ofPattern("d MMM yyyy")
+
+/** A share card's subtitle: "#001 · Astrophytum asterias". */
+internal fun shareSubtitle(e: DexEntry): String =
+    listOfNotNull(Dex.label(e.number), e.species.takeIf { it.isNotBlank() }).joinToString(" · ")
 
 /** The dex: two tabs, a grid of numbered cards. Wishes are grey until you get them. */
 @Composable
@@ -248,8 +255,10 @@ fun DexDetailScreen(
     val origin by viewModel.origin.collectAsStateWithLifecycle()
     val children by viewModel.children.collectAsStateWithLifecycle()
     var repotting by rememberSaveable { mutableStateOf(false) }
+    // The $ dialog, the asking-price dialog on the shelf, and the Sold pop-up.
+    var listing by rememberSaveable { mutableStateOf(false) }
+    var pricing by rememberSaveable { mutableStateOf(false) }
     var selling by rememberSaveable { mutableStateOf(false) }
-    var recording by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     // The picked photos wait here while their note is asked for.
@@ -286,8 +295,7 @@ fun DexDetailScreen(
             onDismiss = { editing = null },
             onShare = state.entry?.let { e ->
                 {
-                    val subtitle = listOfNotNull(Dex.label(e.number), e.species.takeIf { it.isNotBlank() }).joinToString(" · ")
-                    scope.launch { ShareCard.sharePlant(context, shot.file, e.name, subtitle) }
+                    scope.launch { ShareCard.sharePlant(context, shot.file, e.name, shareSubtitle(e)) }
                 }
             },
             onDelete = {
@@ -353,40 +361,52 @@ fun DexDetailScreen(
         }
     }
 
-    val seller = state.entry?.takeIf { it.inCollection }
-    if (selling && seller != null) {
-        SellSheet(
-            name = seller.name,
-            forSale = seller.forSale,
-            asking = seller.askingPrice,
-            onSave = { on, asking ->
-                selling = false
-                viewModel.setForSale(on, asking)
+    // In the collection: $ puts it on the Sales shelf, and it leaves the grid, so go back there.
+    val listable = state.entry?.takeIf { it.inGrid }
+    if (listing && listable != null) {
+        AskingPriceDialog(
+            title = "Put ${listable.name} up for sale",
+            asking = listable.askingPrice,
+            confirm = "Put up for sale",
+            onSave = { asking ->
+                listing = false
+                viewModel.setForSale(true, asking)
+                Toast.makeText(context, "${listable.name} is up for sale 💲", Toast.LENGTH_SHORT).show()
+                onBack()
             },
-            onRecord = {
-                selling = false
-                recording = true
-            },
-            onDismiss = { selling = false },
+            onDismiss = { listing = false },
         )
     }
-    if (recording && seller != null) {
-        RecordSaleSheet(
-            title = "Record a sale",
-            initial = SaleForm(kind = if (seller.forSale) SaleKind.WHOLE else SaleKind.PUP, soldOn = viewModel.todayDate()),
-            asking = seller.askingPrice,
-            onSave = { form ->
-                recording = false
-                viewModel.recordSale(form) { kept ->
-                    val text = when {
-                        !kept -> "Couldn't save that sale"
-                        form.kind == SaleKind.WHOLE -> "Sold! ${seller.name} moves to your sales 💲"
-                        else -> "Sale saved 💲"
+    // On the shelf: change the asking price, or sell it.
+    val shelved = state.entry?.takeIf { it.inCollection && it.forSale }
+    if (pricing && shelved != null) {
+        AskingPriceDialog(
+            title = "Asking price for ${shelved.name}",
+            asking = shelved.askingPrice,
+            confirm = "Save",
+            onSave = { asking ->
+                pricing = false
+                viewModel.setForSale(true, asking)
+            },
+            onDismiss = { pricing = false },
+        )
+    }
+    if (selling && shelved != null) {
+        SoldDialog(
+            name = shelved.name,
+            asking = shelved.askingPrice,
+            onSold = { negotiated ->
+                selling = false
+                viewModel.sold(negotiated) { kept ->
+                    if (kept) {
+                        Toast.makeText(context, "Sold! 💲", Toast.LENGTH_SHORT).show()
+                        onBack()
+                    } else {
+                        Toast.makeText(context, "Couldn't save that sale", Toast.LENGTH_SHORT).show()
                     }
-                    Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
                 }
             },
-            onDismiss = { recording = false },
+            onDismiss = { selling = false },
         )
     }
 
@@ -398,9 +418,11 @@ fun DexDetailScreen(
             Modifier.padding(insets).padding(horizontal = 20.dp).fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
             val e = state.entry
+            // Up for sale: on the Sales shelf, with no Edit, Repot, Breed or $.
+            val onShelf = e != null && e.inCollection && e.forSale
             TopBar(title = e?.let { Dex.label(it.number) } ?: "", onBack = onBack) {
                 // A sold plant's page is read-only: no Edit, no new photos, no note changes.
-                if (e != null && !e.readOnly) {
+                if (e != null && !e.readOnly && !onShelf) {
                     Pill("Edit", color = Fresh.Card, modifier = Modifier.clickable(onClick = onEdit))
                 }
             }
@@ -412,6 +434,12 @@ fun DexDetailScreen(
                 onAdd = pick.takeUnless { e.readOnly },
                 onEditNote = if (e.readOnly) null else { shot -> editing = shot },
                 cover = e.photo,
+                framed = onShelf,
+                onShare = if (onShelf) {
+                    { file -> scope.launch { ShareCard.sharePlantForSale(context, file, e.name, e.askingPrice, shareSubtitle(e)) } }
+                } else {
+                    null
+                },
             )
             origin?.let { OriginCard(it, onOpenPlant, Modifier.fillMaxWidth().padding(top = 12.dp)) }
 
@@ -430,19 +458,24 @@ fun DexDetailScreen(
                 color = if (e.inCollection) Fresh.Pastel else Fresh.Card,
                 textColor = if (e.inCollection) Fresh.GreenDeep else Fresh.InkSoft,
             )
-            if (e.inCollection && e.forSale) {
+            if (onShelf) {
+                // Tap to change the asking price.
                 SoftCard(
                     color = Fresh.Pastel,
                     corner = 20.dp,
-                    onClick = { selling = true },
-                    modifier = Modifier.padding(top = 12.dp).saleBorder(20.dp),
+                    onClick = { pricing = true },
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                 ) {
-                    Text("For sale", style = Label, color = Fresh.GreenDeep.copy(alpha = 0.75f))
+                    Text("Asking price", style = Label, color = Fresh.GreenDeep.copy(alpha = 0.75f))
                     Text(
-                        e.askingPrice?.let { "${Money.rupiah(it)} each" } ?: "No price set",
+                        e.askingPrice?.let { Money.rupiah(it) } ?: "No price set",
                         style = MaterialTheme.typography.titleLarge,
                         color = Fresh.GreenDeep,
                     )
+                    val since = e.forSaleSince
+                    if (since != null) {
+                        Text("For sale since ${since.format(sinceFormat)}", style = Small, color = Fresh.GreenDeep.copy(alpha = 0.75f))
+                    }
                 }
             }
             if (!e.owned) {
@@ -470,9 +503,30 @@ fun DexDetailScreen(
 
             PlantList("Children", children, onOpenPlant, Modifier.padding(top = 20.dp))
 
-            if (e.inCollection) {
+            if (onShelf) {
                 Spacer(Modifier.height(24.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(
+                    onClick = { selling = true },
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(containerColor = Fresh.Ink, contentColor = Fresh.Page),
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                ) {
+                    Text("Sold", style = MaterialTheme.typography.labelLarge)
+                }
+                // Quiet on purpose, but still a real button with a full touch target.
+                TextButton(
+                    onClick = {
+                        viewModel.setForSale(false, e.askingPrice)
+                        Toast.makeText(context, "Back in your collection", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp).heightIn(min = 44.dp),
+                ) {
+                    Text("Cancel sale", color = Fresh.InkSoft, fontSize = 14.sp)
+                }
+            }
+            if (e.inGrid) {
+                Spacer(Modifier.height(24.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Button(
                         onClick = { repotting = true },
                         shape = CircleShape,
@@ -489,15 +543,22 @@ fun DexDetailScreen(
                     ) {
                         Text("❤️  Breed", style = MaterialTheme.typography.labelLarge, color = Fresh.Ink)
                     }
-                }
-                Spacer(Modifier.height(10.dp))
-                OutlinedButton(
-                    onClick = { selling = true },
-                    shape = CircleShape,
-                    border = BorderStroke(1.5.dp, Fresh.Green),
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                ) {
-                    Text("💲  Sell", style = MaterialTheme.typography.labelLarge, color = Fresh.GreenDeep)
+                    // $: put it up for sale. A fixed circle beside the two wide buttons.
+                    OutlinedButton(
+                        onClick = { listing = true },
+                        shape = CircleShape,
+                        border = BorderStroke(1.5.dp, Fresh.Green),
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier.size(56.dp).semantics { contentDescription = "Put up for sale" },
+                    ) {
+                        Text(
+                            "\$",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Fresh.Ink,
+                            modifier = Modifier.clearAndSetSemantics {},
+                        )
+                    }
                 }
             }
             if (!e.owned) {

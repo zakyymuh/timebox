@@ -2,12 +2,11 @@ package dev.zakyymuh.timebox.ui.collection
 
 import androidx.room.Room
 import dev.zakyymuh.timebox.core.collection.DexForm
-import dev.zakyymuh.timebox.core.collection.SaleForm
-import dev.zakyymuh.timebox.core.collection.SaleKind
 import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PhotoStore
 import dev.zakyymuh.timebox.data.SaleRepository
 import dev.zakyymuh.timebox.data.TimeboxDatabase
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -67,13 +66,15 @@ class DexDetailSellTest {
     }
 
     @Test
-    fun `recording a whole sale from the page marks the plant sold`() = runBlocking {
+    fun `tapping Sold on the page marks the plant sold today`() = runBlocking {
         val id = dex.add(DexForm("Astro"), owned = true, photo = null)
         val vm = vm(id)
-        var ok = false
-        vm.recordSale(SaleForm(SaleKind.WHOLE, price = 150_000, soldOn = LocalDate.of(2026, 11, 15))) { ok = it }
+        vm.setForSale(true, 150_000)
+        withTimeout(5_000) { vm.state.first { it.entry?.forSale == true } }
+        val ok = CompletableDeferred<Boolean>()
+        vm.sold(negotiated = null) { ok.complete(it) }
+        assertTrue(withTimeout(5_000) { ok.await() })
         val e = withTimeout(5_000) { vm.state.first { it.entry?.soldOn != null } }.entry!!
         assertEquals(LocalDate.of(2026, 11, 15), e.soldOn)
-        assertTrue(ok)
     }
 }

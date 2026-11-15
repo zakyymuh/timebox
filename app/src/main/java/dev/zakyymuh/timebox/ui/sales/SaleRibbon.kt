@@ -62,6 +62,3 @@ fun BoxScope.SaleRibbon(price: Long?) {
         }
     }
 }
-
-/** The rose frame a for-sale card wears, matching the card's [corner]. */
-fun Modifier.saleBorder(corner: Dp): Modifier = border(3.dp, Fresh.Green, RoundedCornerShape(corner))
