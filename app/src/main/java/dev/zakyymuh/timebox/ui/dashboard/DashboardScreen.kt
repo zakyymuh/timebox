@@ -63,6 +63,7 @@ import dev.zakyymuh.timebox.ui.theme.Label
 import dev.zakyymuh.timebox.core.collection.Breeding
 import dev.zakyymuh.timebox.core.collection.Cross
 import dev.zakyymuh.timebox.ui.soil.SoilWaterCard
+import dev.zakyymuh.timebox.ui.light.LightCard
 import dev.zakyymuh.timebox.core.soil.SampleStatus
 import dev.zakyymuh.timebox.ui.common.SoftCard
 import dev.zakyymuh.timebox.ui.plants.PlantDot
@@ -72,7 +73,7 @@ import java.time.format.DateTimeFormatter
 private const val GREETING = "Hello, Zaky 👋"
 
 /** The week, the two tiles, soil and breeding: the cards that come in one by one. */
-private const val CARDS = 5
+private const val CARDS = 6
 private const val REVEAL_STEP_MS = 140L
 
 /** Hidden until [order] < [shown], then fades in and rises a little into place. */
@@ -99,13 +100,14 @@ private val SMALL_ICON = 40.dp
 /**
  * The front door: a greeting with a plant fact, the plant schedule as a week, two tiles
  * (the collection and a random thing that happened, which opens the history), the soil
- * air-space check, and breeding.
+ * air-space check, the light check, and breeding.
  */
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel,
     soil: SampleStatus?,
     onOpenSoil: () -> Unit,
+    onOpenLight: () -> Unit,
     crosses: List<Cross>?,
     onOpenBreeding: () -> Unit,
     onOpenPlants: () -> Unit,
@@ -161,7 +163,8 @@ fun DashboardScreen(
                 }
 
                 soil?.let { SoilWaterCard(it, onOpenSoil, Modifier.padding(top = CARD_GAP).reveal(3, shown)) }
-                crosses?.let { Box(Modifier.reveal(4, shown)) { BreedingCard(it.firstOrNull(), onOpenBreeding) } }
+                LightCard(onOpenLight, Modifier.padding(top = CARD_GAP).reveal(4, shown))
+                crosses?.let { Box(Modifier.reveal(5, shown)) { BreedingCard(it.firstOrNull(), onOpenBreeding) } }
                 Spacer(Modifier.height(32.dp))
             }
         }

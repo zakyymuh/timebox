@@ -34,6 +34,7 @@ import dev.zakyymuh.timebox.ui.breeding.BreedingListViewModel
 import dev.zakyymuh.timebox.ui.breeding.BreedingNewScreen
 import dev.zakyymuh.timebox.ui.breeding.BreedingNewViewModel
 import dev.zakyymuh.timebox.ui.soil.AirSpaceScreen
+import dev.zakyymuh.timebox.ui.light.LightScreen
 import dev.zakyymuh.timebox.ui.soil.AirSpaceViewModel
 import dev.zakyymuh.timebox.ui.soil.SoilHistoryScreen
 import dev.zakyymuh.timebox.ui.soil.SoilHistoryViewModel
@@ -104,6 +105,7 @@ fun AppNav(start: String?) {
                 viewModel = vm,
                 soil = soil,
                 onOpenSoil = { entry.ifResumed { nav.go(Destinations.SOIL) } },
+                onOpenLight = { entry.ifResumed { nav.go(Destinations.LIGHT) } },
                 crosses = crosses,
                 onOpenBreeding = { entry.ifResumed { nav.go(Destinations.BREEDING) } },
                 onOpenPlants = { entry.ifResumed { nav.go(Destinations.PLANTS) } },
@@ -206,6 +208,10 @@ fun AppNav(start: String?) {
                 onBack = { entry.ifResumed { nav.popBackStack() } },
                 onHistory = { entry.ifResumed { nav.go(Destinations.SOIL_HISTORY) } },
             )
+        }
+
+        composable(Destinations.LIGHT) { entry ->
+            LightScreen(onBack = { entry.ifResumed { nav.popBackStack() } })
         }
 
         composable(Destinations.SOIL_HISTORY) { entry ->
