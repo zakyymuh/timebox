@@ -177,7 +177,6 @@ fun DashboardScreen(
                                 Brush.verticalGradient(listOf(Color(0xFFE6F5FF), Color(0xFFBFE2FF))),
                                 onOpenSoil,
                                 Modifier.weight(1f).reveal(4, shown),
-                                badge = soil is SampleStatus.Due,
                             )
                             Spacer(Modifier.width(GRID_GAP))
                             IconTile("☀️", "Open light check", Brush.verticalGradient(listOf(Color(0xFFFFF6DC), Color(0xFFFFE1B0))), onOpenLight, Modifier.weight(1f).reveal(5, shown))
@@ -266,7 +265,7 @@ private fun CollectionTile(cover: String?, owned: String, onOpen: () -> Unit, mo
 
 /**
  * One of the four small doors beside the collection: just an emoji on a soft gradient,
- * named for screen readers. [badge] puts a dot in the corner (soil: a check is due).
+ * named for screen readers.
  */
 @Composable
 private fun IconTile(
@@ -275,7 +274,6 @@ private fun IconTile(
     background: Brush,
     onClick: () -> Unit,
     modifier: Modifier,
-    badge: Boolean = false,
 ) {
     val shape = RoundedCornerShape(SMALL_CORNER)
     Box(
@@ -289,15 +287,6 @@ private fun IconTile(
             .clearAndSetSemantics { contentDescription = description },
     ) {
         Text(emoji, fontSize = 28.sp)
-        if (badge) {
-            Box(
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(10.dp)
-                    .size(10.dp)
-                    .background(Color(0xFF0E3A5C), CircleShape),
-            )
-        }
     }
 }
 
