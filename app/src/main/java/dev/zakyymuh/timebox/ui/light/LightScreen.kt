@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -26,6 +27,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,6 +48,8 @@ import dev.zakyymuh.timebox.ui.common.TopBar
 import dev.zakyymuh.timebox.ui.theme.Fresh
 import dev.zakyymuh.timebox.ui.theme.Label
 import dev.zakyymuh.timebox.ui.theme.Small
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** Each band's swatch, from shade to full sun. */
 internal fun LightBand.colour(): Color = when (this) {
@@ -58,15 +63,17 @@ internal fun LightBand.colour(): Color = when (this) {
 /**
  * A live lux meter from the phone's light sensor: the reading, what kind of spot that is
  * for a plant, the brightest seen since opening (↺ resets it), and how to hold the phone.
- * Nothing is saved.
+ * The 💾 button saves the current reading with its time.
  */
 @Composable
-fun LightScreen(onBack: () -> Unit) {
+fun LightScreen(onBack: () -> Unit, onSave: suspend (Float) -> Unit) {
     val context = LocalContext.current
     val manager = remember { context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager }
     val sensor = remember { manager?.getDefaultSensor(Sensor.TYPE_LIGHT) }
     var lux by remember { mutableStateOf<Float?>(null) }
     var peak by remember { mutableStateOf<Float?>(null) }
+    var saved by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     if (manager != null && sensor != null) {
         DisposableEffect(sensor) {
@@ -84,7 +91,28 @@ fun LightScreen(onBack: () -> Unit) {
         }
     }
 
-    Scaffold(containerColor = Fresh.Page) { insets ->
+    Scaffold(
+        containerColor = Fresh.Page,
+        floatingActionButton = {
+            if (sensor != null) {
+                FloatingActionButton(
+                    onClick = {
+                        val now = lux ?: return@FloatingActionButton
+                        scope.launch {
+                            onSave(now)
+                            saved = true
+                            delay(1_000)
+                            saved = false
+                        }
+                    },
+                    containerColor = Fresh.Green,
+                    modifier = Modifier.semantics { contentDescription = "Save this reading" },
+                ) {
+                    Text(if (saved) "✓" else "💾", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                }
+            }
+        },
+    ) { insets ->
         Column(
             Modifier.padding(insets).padding(horizontal = 20.dp).fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
@@ -132,7 +160,7 @@ fun LightScreen(onBack: () -> Unit) {
                 Text("Phones differ: treat it as a guide, not a meter.", style = Small, color = Fresh.InkSoft)
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(96.dp))
         }
     }
 }

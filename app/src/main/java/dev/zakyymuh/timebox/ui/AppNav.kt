@@ -226,7 +226,10 @@ fun AppNav(start: String?) {
         }
 
         composable(Destinations.LIGHT) { entry ->
-            LightScreen(onBack = { entry.ifResumed { nav.popBackStack() } })
+            LightScreen(
+                onBack = { entry.ifResumed { nav.popBackStack() } },
+                onSave = { ServiceLocator.lightRepository(context).save(it) },
+            )
         }
 
         composable(Destinations.SOIL_HISTORY) { entry ->
