@@ -99,7 +99,8 @@ fun LightScreen(onBack: () -> Unit, onSave: suspend (Float) -> Unit) {
                     onClick = {
                         lux?.let { now ->
                             scope.launch {
-                                onSave(now)
+                                // A failed save (disk full, say) just shows no ✓ instead of crashing.
+                                if (runCatching { onSave(now) }.isFailure) return@launch
                                 saved = true
                                 delay(1_000)
                                 saved = false

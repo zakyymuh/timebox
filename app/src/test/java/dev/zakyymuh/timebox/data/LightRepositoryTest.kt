@@ -2,6 +2,8 @@ package dev.zakyymuh.timebox.data
 
 import androidx.room.Room
 import dev.zakyymuh.timebox.TestClock
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -56,5 +58,13 @@ class LightRepositoryTest {
         val saved = db.lightDao().all()
         assertEquals(listOf(0f, 0f), saved.map { it.lux })
         assertEquals(listOf("Dark", "Dark"), saved.map { it.band })
+    }
+
+    @Test
+    fun `leaving the screen mid-save still keeps the reading`() = runTest {
+        val job = launch(start = CoroutineStart.UNDISPATCHED) { light.save(4_000f) }
+        job.cancel()
+        job.join()
+        assertEquals(listOf(4_000f), db.lightDao().all().map { it.lux })
     }
 }

@@ -6,6 +6,8 @@ import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import dev.zakyymuh.timebox.core.light.LightLevel
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import java.time.Clock
 import java.time.Instant
 
@@ -30,9 +32,12 @@ interface LightReadingDao {
 
 class LightRepository(private val dao: LightReadingDao, private val clock: Clock) {
 
-    /** Saves [lux] as it is now; a negative or broken reading counts as 0. Returns the new id. */
-    suspend fun save(lux: Float): Long {
+    /**
+     * Saves [lux] as it is now; a negative or broken reading counts as 0. Returns the new id.
+     * Finishes even if the caller is cancelled, so leaving the screen right after a tap keeps it.
+     */
+    suspend fun save(lux: Float): Long = withContext(NonCancellable) {
         val clean = if (lux.isNaN()) 0f else lux.coerceAtLeast(0f)
-        return dao.insert(LightReadingEntity(lux = clean, band = LightLevel.band(clean).name, takenAt = clock.instant()))
+        dao.insert(LightReadingEntity(lux = clean, band = LightLevel.band(clean).name, takenAt = clock.instant()))
     }
 }
