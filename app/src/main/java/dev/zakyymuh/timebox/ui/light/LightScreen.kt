@@ -97,12 +97,13 @@ fun LightScreen(onBack: () -> Unit, onSave: suspend (Float) -> Unit) {
             if (sensor != null) {
                 FloatingActionButton(
                     onClick = {
-                        val now = lux ?: return@FloatingActionButton
-                        scope.launch {
-                            onSave(now)
-                            saved = true
-                            delay(1_000)
-                            saved = false
+                        lux?.let { now ->
+                            scope.launch {
+                                onSave(now)
+                                saved = true
+                                delay(1_000)
+                                saved = false
+                            }
                         }
                     },
                     containerColor = Fresh.Green,
