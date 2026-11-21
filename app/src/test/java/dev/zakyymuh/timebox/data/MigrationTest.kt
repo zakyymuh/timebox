@@ -420,4 +420,31 @@ class MigrationTest {
         current.dexDao().update(kikko.copy(forSaleSince = day))
         assertEquals(day, current.dexDao().entry(1)!!.forSaleSince)
     }
+
+    @Test
+    fun `the upgrade to 17 keeps the collection and adds an empty light table that works`() = runTest {
+        createVersion1()
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(name)
+                .callback(object : SupportSQLiteOpenHelper.Callback(16) {
+                    override fun onCreate(db: SupportSQLiteDatabase) = error("the v1 file must already exist")
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {
+                        ALL_MIGRATIONS.filter { it.endVersion <= 16 }.forEach { it.migrate(db) }
+                    }
+                })
+                .build(),
+        )
+        helper.writableDatabase.execSQL(
+            "INSERT INTO dex (id, number, name, species, owned, photo, acquired, note, createdAt, priceLow, priceHigh, coverPinned, forSale, askingPrice, soldOn, forSaleSince) " +
+                "VALUES (1, 1, 'Kikko', '', 1, 'k.jpg', '$day', '', 0, NULL, NULL, 0, 0, NULL, NULL, NULL)",
+        )
+        helper.close()
+
+        val current = openCurrent()
+        assertEquals("Kikko", current.dexDao().entries().single().name)
+        assertEquals(emptyList<LightReadingEntity>(), current.lightDao().all())
+        current.lightDao().insert(LightReadingEntity(lux = 3_100f, band = "Medium", takenAt = Instant.EPOCH))
+        assertEquals(listOf(3_100f), current.lightDao().all().map { it.lux })
+    }
 }

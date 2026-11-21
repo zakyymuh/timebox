@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import dev.zakyymuh.timebox.data.ALL_MIGRATIONS
 import dev.zakyymuh.timebox.data.BreedingRepository
+import dev.zakyymuh.timebox.data.LightRepository
 import dev.zakyymuh.timebox.data.NoteRepository
 import dev.zakyymuh.timebox.data.DexRepository
 import dev.zakyymuh.timebox.data.PhotoStore
@@ -71,6 +72,14 @@ object ServiceLocator {
     fun saleRepository(context: Context): SaleRepository =
         saleRepository ?: synchronized(this) {
             saleRepository ?: SaleRepository(database(context), clock).also { saleRepository = it }
+        }
+
+    @Volatile
+    private var lightRepository: LightRepository? = null
+
+    fun lightRepository(context: Context): LightRepository =
+        lightRepository ?: synchronized(this) {
+            lightRepository ?: LightRepository(database(context).lightDao(), clock).also { lightRepository = it }
         }
 
     fun noteRepository(context: Context): NoteRepository =
