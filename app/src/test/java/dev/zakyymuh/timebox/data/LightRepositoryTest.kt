@@ -87,4 +87,14 @@ class LightRepositoryTest {
         db.lightDao().insert(LightReadingEntity(lux = 5f, band = "Gloomy", takenAt = clock.instant()))
         assertEquals(LightBand.Dark, light.readingsFlow().first().single().band)
     }
+
+    @Test
+    fun `clearing empties the saved list, and saving starts it again`() = runTest {
+        light.save(420f)
+        light.save(3_100f)
+        light.clear()
+        assertEquals(emptyList<SavedLight>(), light.readingsFlow().first())
+        light.save(12_300f)
+        assertEquals(listOf(12_300f), light.readingsFlow().first().map { it.lux })
+    }
 }

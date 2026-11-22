@@ -8,3 +8,9 @@ Builds on `2026-11-22-light-save-design.md`. The owner couldn't see what 💾 sa
 - The sensor keeps listening while the card is closed, so ☀️ always saves the live value.
 
 Non-goals: deleting readings, showing dates, attaching readings to plants.
+
+## Round 2 (owner's feedback)
+
+- ☀️ is a large FAB (96dp).
+- A small ↺ at the page's top right, beside ?, clears every saved reading after "Clear all saved light?". Shown only when the list has readings.
+- The ? card is titled "Information" and only explains each band: swatch, name, lux range, plant note. The live reading, brightest/↺ and "How to measure" are gone.

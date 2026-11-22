@@ -37,6 +37,9 @@ interface LightReadingDao {
 
     @Query("SELECT * FROM light_readings ORDER BY takenAt DESC, id DESC")
     fun allFlow(): Flow<List<LightReadingEntity>>
+
+    @Query("DELETE FROM light_readings")
+    suspend fun clear()
 }
 
 class LightRepository(private val dao: LightReadingDao, private val clock: Clock) {
@@ -47,6 +50,9 @@ class LightRepository(private val dao: LightReadingDao, private val clock: Clock
             SavedLight(row.id, row.lux, LightBand.entries.firstOrNull { it.name == row.band } ?: LightBand.Dark)
         }
     }
+
+    /** Deletes every saved reading, so the list starts empty. */
+    suspend fun clear() = withContext(NonCancellable) { dao.clear() }
 
     /**
      * Saves [lux] as it is now; a negative or broken reading counts as 0. Returns the new id.

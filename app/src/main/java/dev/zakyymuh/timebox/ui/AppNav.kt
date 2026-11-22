@@ -233,6 +233,7 @@ fun AppNav(start: String?) {
                 readings = readings,
                 onBack = { entry.ifResumed { nav.popBackStack() } },
                 onSave = { ServiceLocator.lightRepository(context).save(it) },
+                onClear = { ServiceLocator.lightRepository(context).clear() },
             )
         }
 
