@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
@@ -226,7 +227,10 @@ fun AppNav(start: String?) {
         }
 
         composable(Destinations.LIGHT) { entry ->
+            val readings by remember { ServiceLocator.lightRepository(context).readingsFlow() }
+                .collectAsStateWithLifecycle(initialValue = emptyList())
             LightScreen(
+                readings = readings,
                 onBack = { entry.ifResumed { nav.popBackStack() } },
                 onSave = { ServiceLocator.lightRepository(context).save(it) },
             )

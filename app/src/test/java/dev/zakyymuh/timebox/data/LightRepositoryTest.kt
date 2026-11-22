@@ -2,7 +2,9 @@ package dev.zakyymuh.timebox.data
 
 import androidx.room.Room
 import dev.zakyymuh.timebox.TestClock
+import dev.zakyymuh.timebox.core.light.LightBand
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -66,5 +68,23 @@ class LightRepositoryTest {
         job.cancel()
         job.join()
         assertEquals(listOf(4_000f), db.lightDao().all().map { it.lux })
+    }
+
+    @Test
+    fun `the saved list shows each reading's lux and band, newest first, and grows with each save`() = runTest {
+        assertEquals(emptyList<SavedLight>(), light.readingsFlow().first())
+        light.save(420f)
+        clock.now = clock.now.plus(Duration.ofMinutes(5))
+        light.save(12_300f)
+        assertEquals(
+            listOf(SavedLight(2, 12_300f, LightBand.Bright), SavedLight(1, 420f, LightBand.Dark)),
+            light.readingsFlow().first(),
+        )
+    }
+
+    @Test
+    fun `a band name the app no longer knows reads as too dark`() = runTest {
+        db.lightDao().insert(LightReadingEntity(lux = 5f, band = "Gloomy", takenAt = clock.instant()))
+        assertEquals(LightBand.Dark, light.readingsFlow().first().single().band)
     }
 }

@@ -18,10 +18,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -41,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.zakyymuh.timebox.core.light.LightBand
 import dev.zakyymuh.timebox.core.light.LightLevel
+import dev.zakyymuh.timebox.data.SavedLight
 import dev.zakyymuh.timebox.ui.common.RoundButton
 import dev.zakyymuh.timebox.ui.common.SectionTitle
 import dev.zakyymuh.timebox.ui.common.SoftCard
@@ -48,7 +52,6 @@ import dev.zakyymuh.timebox.ui.common.TopBar
 import dev.zakyymuh.timebox.ui.theme.Fresh
 import dev.zakyymuh.timebox.ui.theme.Label
 import dev.zakyymuh.timebox.ui.theme.Small
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Each band's swatch, from shade to full sun. */
@@ -61,18 +64,18 @@ internal fun LightBand.colour(): Color = when (this) {
 }
 
 /**
- * A live lux meter from the phone's light sensor: the reading, what kind of spot that is
- * for a plant, the brightest seen since opening (↺ resets it), and how to hold the phone.
- * The 💾 button saves the current reading with its time.
+ * Light check: the readings you saved, newest first, and a ☀️ that saves the light right
+ * now. The live meter (the reading, the brightest seen since opening with ↺ to reset it,
+ * the scale and how to hold the phone) lives in the ? card.
  */
 @Composable
-fun LightScreen(onBack: () -> Unit, onSave: suspend (Float) -> Unit) {
+fun LightScreen(readings: List<SavedLight>, onBack: () -> Unit, onSave: suspend (Float) -> Unit) {
     val context = LocalContext.current
     val manager = remember { context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager }
     val sensor = remember { manager?.getDefaultSensor(Sensor.TYPE_LIGHT) }
     var lux by remember { mutableStateOf<Float?>(null) }
     var peak by remember { mutableStateOf<Float?>(null) }
-    var saved by remember { mutableStateOf(false) }
+    var showInfo by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     if (manager != null && sensor != null) {
@@ -93,24 +96,21 @@ fun LightScreen(onBack: () -> Unit, onSave: suspend (Float) -> Unit) {
 
     Scaffold(
         containerColor = Fresh.Page,
+        floatingActionButtonPosition = FabPosition.Center,
         floatingActionButton = {
             if (sensor != null) {
                 FloatingActionButton(
                     onClick = {
                         lux?.let { now ->
-                            scope.launch {
-                                // A failed save (disk full, say) just shows no ✓ instead of crashing.
-                                if (runCatching { onSave(now) }.isFailure) return@launch
-                                saved = true
-                                delay(1_000)
-                                saved = false
-                            }
+                            // A failed save (disk full, say) just adds no line instead of crashing.
+                            scope.launch { runCatching { onSave(now) } }
                         }
                     },
                     containerColor = Fresh.Green,
-                    modifier = Modifier.semantics { contentDescription = "Save this reading" },
+                    shape = CircleShape,
+                    modifier = Modifier.semantics { contentDescription = "Save the light right now" },
                 ) {
-                    Text(if (saved) "✓" else "💾", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                    Text("☀️", style = MaterialTheme.typography.titleLarge)
                 }
             }
         },
@@ -119,51 +119,90 @@ fun LightScreen(onBack: () -> Unit, onSave: suspend (Float) -> Unit) {
             Modifier.padding(insets).padding(horizontal = 20.dp).fillMaxSize().verticalScroll(rememberScrollState()),
         ) {
             TopBar(title = "Light check", onBack = onBack) {
-                if (sensor != null) RoundButton("↺", onClick = { peak = lux }, description = "Reset brightest")
+                RoundButton("?", onClick = { showInfo = true }, description = "About the light meter")
             }
-
-            if (sensor == null) {
-                SoftCard(corner = 24.dp) {
-                    Text("No light sensor", style = MaterialTheme.typography.titleMedium, color = Fresh.Ink)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "This phone doesn't have a light sensor, so it can't measure a spot. A plant's sun needs are still in the encyclopedia.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Fresh.InkSoft,
-                    )
-                }
-            } else {
-                Reading(lux)
-                peak?.let {
-                    Text(
-                        "Brightest since you opened this: ${LightLevel.format(it)} lux · ${LightLevel.band(it).title.lowercase()}",
-                        style = Small,
-                        color = Fresh.InkSoft,
-                        modifier = Modifier.padding(start = 4.dp, top = 8.dp),
-                    )
-                }
-                SectionTitle("What the numbers mean")
-                Scale(lux?.let(LightLevel::band))
-            }
-
-            SectionTitle("How to measure")
-            SoftCard(corner = 20.dp) {
-                listOf(
-                    "Put the phone where the plant sits, at the height of its leaves.",
-                    "Face the screen towards the window or lamp: the sensor sits next to the front camera.",
-                    "Keep your hand and shadow off the top of the phone and wait a few seconds for the number to settle.",
-                    "Light changes through the day. Check around midday, and again in the afternoon, to know a spot.",
-                ).forEachIndexed { i, step ->
-                    Row(Modifier.padding(bottom = 8.dp)) {
-                        Text("${i + 1}.", style = MaterialTheme.typography.bodyMedium, color = Fresh.Green, modifier = Modifier.width(22.dp))
-                        Text(step, style = MaterialTheme.typography.bodyMedium, color = Fresh.Ink)
-                    }
-                }
-                Text("Phones differ: treat it as a guide, not a meter.", style = Small, color = Fresh.InkSoft)
-            }
-
+            if (readings.isNotEmpty()) SavedList(readings)
             Spacer(Modifier.height(96.dp))
         }
+    }
+
+    if (showInfo) {
+        AlertDialog(
+            onDismissRequest = { showInfo = false },
+            containerColor = Fresh.Page,
+            confirmButton = {
+                TextButton(onClick = { showInfo = false }) { Text("Close", color = Fresh.GreenDeep) }
+            },
+            text = { Column(Modifier.verticalScroll(rememberScrollState())) { MeterInfo(sensor != null, lux, peak, onReset = { peak = lux }) } },
+        )
+    }
+}
+
+/** Each saved reading: its band's swatch, the lux, and what kind of spot that is. */
+@Composable
+private fun SavedList(readings: List<SavedLight>) {
+    SoftCard(corner = 24.dp) {
+        readings.forEach { r ->
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 6.dp)) {
+                Box(Modifier.size(12.dp).background(r.band.colour(), CircleShape))
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    "${LightLevel.format(r.lux)} lux",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Fresh.Ink,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(r.band.title, style = MaterialTheme.typography.bodyMedium, color = Fresh.InkSoft)
+            }
+        }
+    }
+}
+
+/** What the page used to show: the live reading, the brightest, the scale, how to measure. */
+@Composable
+private fun MeterInfo(hasSensor: Boolean, lux: Float?, peak: Float?, onReset: () -> Unit) {
+    if (!hasSensor) {
+        SoftCard(corner = 24.dp) {
+            Text("No light sensor", style = MaterialTheme.typography.titleMedium, color = Fresh.Ink)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "This phone doesn't have a light sensor, so it can't measure a spot. A plant's sun needs are still in the encyclopedia.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Fresh.InkSoft,
+            )
+        }
+    } else {
+        Reading(lux)
+        peak?.let {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 4.dp, top = 8.dp)) {
+                Text(
+                    "Brightest since you opened this: ${LightLevel.format(it)} lux · ${LightLevel.band(it).title.lowercase()}",
+                    style = Small,
+                    color = Fresh.InkSoft,
+                    modifier = Modifier.weight(1f),
+                )
+                RoundButton("↺", onClick = onReset, size = 36.dp, description = "Reset brightest")
+            }
+        }
+        SectionTitle("What the numbers mean")
+        Scale(lux?.let(LightLevel::band))
+    }
+
+    SectionTitle("How to measure")
+    SoftCard(corner = 20.dp) {
+        listOf(
+            "Put the phone where the plant sits, at the height of its leaves.",
+            "Face the screen towards the window or lamp: the sensor sits next to the front camera.",
+            "Keep your hand and shadow off the top of the phone and wait a few seconds for the number to settle.",
+            "Light changes through the day. Check around midday, and again in the afternoon, to know a spot.",
+        ).forEachIndexed { i, step ->
+            Row(Modifier.padding(bottom = 8.dp)) {
+                Text("${i + 1}.", style = MaterialTheme.typography.bodyMedium, color = Fresh.Green, modifier = Modifier.width(22.dp))
+                Text(step, style = MaterialTheme.typography.bodyMedium, color = Fresh.Ink)
+            }
+        }
+        Text("Phones differ: treat it as a guide, not a meter.", style = Small, color = Fresh.InkSoft)
     }
 }
 
